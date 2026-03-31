@@ -137,7 +137,7 @@ export const useAuthStore = create<AuthState>()(
       session: null,
       organization: null,
       supabaseSession: null,
-      isLoadingAuth: false,
+      isLoadingAuth: true,
       users: SEED_USERS,
       passwords: SEED_PASSWORDS,
       invitations: [],

@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Schema & Multi-Tenancy** — Add `organization_id` + RLS to all tables; create organizations, members, invitations, and gmail_tokens tables
+- [x] **Phase 1: Schema & Multi-Tenancy** — Add `organization_id` + RLS to all tables; create organizations, members, invitations, and gmail_tokens tables (completed 2026-03-31)
 - [ ] **Phase 2: Supabase Auth** — Replace mock djb2 auth with real Supabase Auth (signup, login, session, password reset, logout)
 - [ ] **Phase 3: Organization Onboarding** — First-login org creation, member invitations, roles, and org-scoped JWT claims
 - [ ] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS in AIAgent, remove dangerouslyAllowBrowser, add dev warning for missing env vars
@@ -27,7 +27,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Schema & Multi-Tenancy | 0/5 | Not started | - |
+| 1. Schema & Multi-Tenancy | 0/5 | Complete    | 2026-03-31 |
 | 2. Supabase Auth | 0/5 | Not started | - |
 | 3. Organization Onboarding | 0/4 | Not started | - |
 | 4. Security Fixes | 0/4 | Not started | - |

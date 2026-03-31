@@ -28,7 +28,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Schema & Multi-Tenancy | 0/5 | Complete    | 2026-03-31 |
-| 2. Supabase Auth | 0/5 | Not started | - |
+| 2. Supabase Auth | 2/6 | In Progress|  |
 | 3. Organization Onboarding | 0/4 | Not started | - |
 | 4. Security Fixes | 0/4 | Not started | - |
 | 5. Core Data Stores + Real-Time | 0/6 | Not started | - |

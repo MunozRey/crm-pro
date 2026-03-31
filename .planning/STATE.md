@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 02
-last_updated: "2026-03-31T14:20:23.055Z"
+status: Ready to execute
+last_updated: "2026-03-31T14:28:57.235Z"
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # CRM Pro — Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Milestone:** v1.0 — Full SaaS Upgrade
 **Phase:** 2 of 11 (supabase auth)
-**Plan:** 1 of 6 complete (02.0 done)
+**Plan:** 2 of 6 complete (02.0, 02.1 done)
 
 ## Key Decisions
 
@@ -38,6 +38,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | Vercel for frontend deploy | Zero-config Vite support, free tier, global CDN | 2026-03-31 |
 | Free beta (no Stripe in v1.0) | Validate product before billing complexity | 2026-03-31 |
 | Per-file vi.mock() for Supabase (02.0) | Inline mocking gives explicit control over each test file vs auto-hoisting | 2026-03-31 |
+| vi.hoisted() for Register test mock factories (02.1) | vi.mock() is hoisted, making outer const inaccessible — vi.hoisted() evaluates at hoist time | 2026-03-31 |
 
 ## Blockers
 
@@ -53,4 +54,4 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-03-31T16:19:50Z — Completed 02-supabase-auth/02.0-PLAN.md (Vitest infrastructure + stub tests)*
+*Last session: 2026-03-31T14:28:08Z — Completed 02-supabase-auth/02.1-PLAN.md (Supabase signUp wiring + SEC-06 dev warning)*

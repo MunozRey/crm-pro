@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAuthStore, initSupabaseAuth } from '../../src/store/authStore'
+import { supabase } from '../../src/lib/supabase'
 
 const { mockOnAuthStateChange } = vi.hoisted(() => ({
   mockOnAuthStateChange: vi.fn(),
@@ -92,7 +93,18 @@ describe('initSupabaseAuth', () => {
     expect(useAuthStore.getState().currentUser).toBeNull()
   })
 
-  it('AUTH-05: authStore.test.ts - logout stub (filled in plan 2.5)', () => {
-    expect(true).toBe(true)
+  it('AUTH-05: logout calls supabase.auth.signOut', async () => {
+    useAuthStore.setState({
+      currentUser: { id: 'u1', email: 'a@b.com', name: 'A', role: 'sales_rep', jobTitle: '', isActive: true, createdAt: '', updatedAt: '' },
+      session: { token: 'tok' } as any,
+      supabaseSession: { access_token: 'at' } as any,
+    })
+
+    await useAuthStore.getState().logout()
+
+    expect(supabase!.auth.signOut).toHaveBeenCalled()
+    expect(useAuthStore.getState().currentUser).toBeNull()
+    expect(useAuthStore.getState().session).toBeNull()
+    expect(useAuthStore.getState().supabaseSession).toBeNull()
   })
 })

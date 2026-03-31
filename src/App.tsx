@@ -21,6 +21,8 @@ import { AuditLog } from './pages/AuditLog'
 import { SalesGoals } from './pages/SalesGoals'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { ForgotPassword } from './pages/ForgotPassword'
+import { ResetPassword } from './pages/ResetPassword'
 import { TeamManagement } from './pages/TeamManagement'
 import { UserProfile } from './pages/UserProfile'
 import { Notifications } from './pages/Notifications'
@@ -50,6 +52,8 @@ function AppRoutes() {
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedPage title={t.nav.dashboard}><Dashboard /></ProtectedPage>} />

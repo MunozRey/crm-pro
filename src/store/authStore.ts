@@ -32,7 +32,7 @@ export interface AuthState {
 
   // Actions
   login: (email: string, password: string) => { success: boolean; error?: string }
-  logout: () => void
+  logout: () => Promise<void>
   register: (data: {
     name: string
     email: string
@@ -184,8 +184,19 @@ export const useAuthStore = create<AuthState>()(
         return { success: true }
       },
 
-      logout: () => {
-        set({ currentUser: null, session: null })
+      logout: async () => {
+        if (isSupabaseConfigured && supabase) {
+          // supabase.auth.signOut() clears the SDK's own localStorage key (sb-<ref>-auth-token)
+          // and broadcasts SIGNED_OUT event via onAuthStateChange, which also calls setCurrentUser(null).
+          // We clear Zustand state defensively below to ensure immediate UI update.
+          await supabase.auth.signOut()
+        }
+        set({
+          currentUser: null,
+          session: null,
+          supabaseSession: null,
+          organization: null,
+        })
       },
 
       register: (data) => {

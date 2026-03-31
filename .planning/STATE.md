@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-last_updated: "2026-03-31T14:46:31.384Z"
+last_updated: "2026-03-31T14:53:16.026Z"
 progress:
   total_phases: 11
   completed_phases: 1
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # CRM Pro — Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Milestone:** v1.0 — Full SaaS Upgrade
 **Phase:** 2 of 11 (supabase auth)
-**Plan:** 4 of 6 complete (02.0, 02.1, 02.2, 02.3 done)
+**Plan:** 5 of 6 complete (02.0, 02.1, 02.2, 02.3, 02.4 done)
 
 ## Key Decisions
 
@@ -41,6 +41,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | vi.hoisted() for Register test mock factories (02.1) | vi.mock() is hoisted, making outer const inaccessible — vi.hoisted() evaluates at hoist time | 2026-03-31 |
 | window.location.replace for PASSWORD_RECOVERY redirect (02.2) | initSupabaseAuth runs outside React component tree — React Router navigate not available | 2026-03-31 |
 | vi.hoisted() for ForgotPassword/ResetPassword test mock factories (02.3) | Same pattern as 02.1 — vi.mock() hoisted above const declarations, vi.hoisted() evaluates at hoist time | 2026-03-31 |
+| isLoadingAuth default is true (02.4) | Cold render holds at null until INITIAL_SESSION fires — prevents /login flash for authenticated users on hard refresh | 2026-03-31 |
+| ProtectedRoute returns null while loading (02.4) | return null chosen over spinner — no layout shift, loading is invisible until Supabase resolves | 2026-03-31 |
 
 ## Blockers
 
@@ -56,4 +58,4 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-03-31T14:45:31Z — Completed 02-supabase-auth/02.3-PLAN.md (ForgotPassword + ResetPassword pages, public routes, Login forgot link, 4 tests)*
+*Last session: 2026-03-31T14:57:00Z — Completed 02-supabase-auth/02.4-PLAN.md (isLoadingAuth default fix + ProtectedRoute loading guard + 3 passing tests)*

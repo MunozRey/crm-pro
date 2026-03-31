@@ -7,11 +7,11 @@
 
 ### Authentication & Organizations
 
-- [ ] **AUTH-01**: User can sign up with email and password via Supabase Auth
-- [ ] **AUTH-02**: User receives email verification after signup
-- [ ] **AUTH-03**: User can reset password via email link
-- [ ] **AUTH-04**: User session persists across browser refresh (onAuthStateChange + `isLoadingAuth: true` initial state to prevent race condition redirect)
-- [ ] **AUTH-05**: User can log out and session is fully cleared
+- [x] **AUTH-01**: User can sign up with email and password via Supabase Auth
+- [x] **AUTH-02**: User receives email verification after signup
+- [x] **AUTH-03**: User can reset password via email link
+- [x] **AUTH-04**: User session persists across browser refresh (onAuthStateChange + `isLoadingAuth: true` initial state to prevent race condition redirect)
+- [x] **AUTH-05**: User can log out and session is fully cleared
 - [ ] **AUTH-06**: New user creates an organization on first login (org name, slug)
 - [ ] **AUTH-07**: User can invite team members by email (Supabase Edge Function — requires service role key)
 - [ ] **AUTH-08**: Invited user receives email and can accept invitation to join organization
@@ -67,7 +67,7 @@
 - [ ] **SEC-03**: `dangerouslySetInnerHTML` in `AIAgent.tsx` replaced with `react-markdown` + `rehype-sanitize`
 - [ ] **SEC-04**: `dangerouslyAllowBrowser: true` removed from `aiService.ts` — all Claude calls go through Edge Function proxy
 - [ ] **SEC-05**: Gmail access token stored in memory only (not localStorage); refresh token stored in `gmail_tokens` Supabase table
-- [ ] **SEC-06**: Dev-mode console warning when Supabase env vars are absent (currently silent no-op)
+- [x] **SEC-06**: Dev-mode console warning when Supabase env vars are absent (currently silent no-op)
 
 ### AI Features
 

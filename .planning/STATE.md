@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-last_updated: "2026-03-31T13:50:54.399Z"
+status: Executing Phase 02
+last_updated: "2026-03-31T14:20:23.055Z"
 progress:
   total_phases: 11
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 11
+  completed_plans: 6
 ---
 
 # CRM Pro — Project State
@@ -18,13 +18,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time — with AI that drafts emails, scores leads, and surfaces insights automatically.
-**Current focus:** Phase 01 — Schema & Multi-Tenancy
+**Current focus:** Phase 02 — supabase-auth
 
 ## Current Status
 
 **Milestone:** v1.0 — Full SaaS Upgrade
 **Phase:** 2 of 11 (supabase auth)
-**Plan:** Not started
+**Plan:** 1 of 6 complete (02.0 done)
 
 ## Key Decisions
 
@@ -37,6 +37,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | react-markdown + rehype-sanitize | Replace dangerouslySetInnerHTML in AIAgent — live XSS vector | 2026-03-31 |
 | Vercel for frontend deploy | Zero-config Vite support, free tier, global CDN | 2026-03-31 |
 | Free beta (no Stripe in v1.0) | Validate product before billing complexity | 2026-03-31 |
+| Per-file vi.mock() for Supabase (02.0) | Inline mocking gives explicit control over each test file vs auto-hoisting | 2026-03-31 |
 
 ## Blockers
 
@@ -52,3 +53,4 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ---
 *Initialized: 2026-03-31*
+*Last session: 2026-03-31T16:19:50Z — Completed 02-supabase-auth/02.0-PLAN.md (Vitest infrastructure + stub tests)*

@@ -24,6 +24,7 @@ import { Register } from './pages/Register'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
 import { OrgSetup } from './pages/OrgSetup'
+import { AcceptInvite } from './pages/AcceptInvite'
 import { TeamManagement } from './pages/TeamManagement'
 import { UserProfile } from './pages/UserProfile'
 import { Notifications } from './pages/Notifications'
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/org-setup" element={<OrgSetup />} />
+      <Route path="/accept-invite" element={<AcceptInvite />} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedPage title={t.nav.dashboard}><Dashboard /></ProtectedPage>} />

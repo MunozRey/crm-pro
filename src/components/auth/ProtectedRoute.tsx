@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { hasPermission } from '../../utils/permissions'
+import { isSupabaseConfigured } from '../../lib/supabase'
 import type { Permission } from '../../types/auth'
 
 interface ProtectedRouteProps {
@@ -12,6 +13,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   const isLoadingAuth = useAuthStore((s) => s.isLoadingAuth)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
   const currentUser = useAuthStore((s) => s.currentUser)
+  const organizationId = useAuthStore((s) => s.organizationId)
 
   // AUTH-04: Do NOT redirect until Supabase has fired the first auth event.
   // isLoadingAuth starts as true and is set to false inside onAuthStateChange.
@@ -22,6 +24,12 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  // AUTH-06: Authenticated users without an org must create one before accessing the CRM.
+  // Skip this check for Supabase mock mode (isSupabaseConfigured = false) so demo/dev still works.
+  if (isAuthenticated && !organizationId && isSupabaseConfigured) {
+    return <Navigate to="/org-setup" replace />
   }
 
   if (requiredPermission && currentUser && !hasPermission(currentUser.role, requiredPermission)) {

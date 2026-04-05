@@ -10,7 +10,7 @@
 ## Phases
 
 - [x] **Phase 1: Schema & Multi-Tenancy** — Add `organization_id` + RLS to all tables; create organizations, members, invitations, and gmail_tokens tables (completed 2026-03-31)
-- [ ] **Phase 2: Supabase Auth** — Replace mock djb2 auth with real Supabase Auth (signup, login, session, password reset, logout)
+- [x] **Phase 2: Supabase Auth** — Replace mock djb2 auth with real Supabase Auth (signup, login, session, password reset, logout) (completed 2026-04-05)
 - [ ] **Phase 3: Organization Onboarding** — First-login org creation, member invitations, roles, and org-scoped JWT claims
 - [ ] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS in AIAgent, remove dangerouslyAllowBrowser, add dev warning for missing env vars
 - [ ] **Phase 5: Core Data Stores + Real-Time** — Migrate contacts, companies, deals, activities, notifications stores from localStorage to Supabase with real-time subscriptions
@@ -28,7 +28,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Schema & Multi-Tenancy | 0/5 | Complete    | 2026-03-31 |
-| 2. Supabase Auth | 5/6 | In Progress|  |
+| 2. Supabase Auth | 5/6 | Complete    | 2026-04-05 |
 | 3. Organization Onboarding | 0/4 | Not started | - |
 | 4. Security Fixes | 0/4 | Not started | - |
 | 5. Core Data Stores + Real-Time | 0/6 | Not started | - |

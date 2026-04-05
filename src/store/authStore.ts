@@ -424,6 +424,17 @@ export const useAuthStore = create<AuthState>()(
   )
 )
 
+/**
+ * Maps raw JWT role strings to the canonical UserRole type.
+ * 'owner' is an alias emitted by some org creation flows — treated as 'admin'.
+ * Any unrecognized string falls back to 'sales_rep' (least-privilege default).
+ */
+function normalizeRole(raw: string | undefined): UserRole {
+  if (raw === 'owner') return 'admin'
+  const valid: UserRole[] = ['admin', 'manager', 'sales_rep', 'viewer']
+  return valid.includes(raw as UserRole) ? (raw as UserRole) : 'sales_rep'
+}
+
 export function initSupabaseAuth(): (() => void) | undefined {
   if (!isSupabaseConfigured || !supabase) {
     // Mock mode: auth is synchronous, no async loading needed
@@ -453,7 +464,7 @@ export function initSupabaseAuth(): (() => void) | undefined {
         id: sbUser.id,
         name: sbUser.user_metadata?.full_name ?? sbUser.email?.split('@')[0] ?? 'User',
         email: sbUser.email ?? '',
-        role: (sbUser.user_metadata?.role ?? 'sales_rep') as UserRole,
+        role: normalizeRole(sbUser.app_metadata?.user_role ?? sbUser.user_metadata?.role),
         jobTitle: sbUser.user_metadata?.job_title ?? '',
         organizationId: (sbUser.app_metadata?.organization_id as string | undefined) ?? sbUser.user_metadata?.org_id,
         isActive: true,

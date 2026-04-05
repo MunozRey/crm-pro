@@ -25,6 +25,9 @@ export interface AuthState {
   supabaseSession: unknown | null
   isLoadingAuth: boolean
 
+  // Derived from currentUser.organizationId (not persisted — re-derived from JWT on load)
+  organizationId: string | null
+
   // All users in the org
   users: AuthUser[]
   passwords: Record<string, string> // userId -> hashed password
@@ -138,12 +141,13 @@ export const useAuthStore = create<AuthState>()(
       organization: null,
       supabaseSession: null,
       isLoadingAuth: true,
+      organizationId: null,
       users: SEED_USERS,
       passwords: SEED_PASSWORDS,
       invitations: [],
 
       setCurrentUser: (user) => {
-        set({ currentUser: user })
+        set({ currentUser: user, organizationId: user?.organizationId ?? null })
       },
 
       setSupabaseSession: (session) => {
@@ -411,6 +415,7 @@ export const useAuthStore = create<AuthState>()(
         // supabaseSession intentionally excluded — Supabase SDK manages its own storage
         // under localStorage key sb-<ref>-auth-token. Including it here causes stale
         // copies to survive after supabase.auth.signOut().
+        // organizationId intentionally excluded — derived state, always re-computed from JWT on load.
         users: state.users,
         passwords: state.passwords,
         invitations: state.invitations,

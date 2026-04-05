@@ -62,7 +62,7 @@
 
 ### Security Fixes
 
-- [ ] **SEC-01**: `authStore` weak djb2 hash replaced by Supabase Auth — passwords never stored locally
+- [x] **SEC-01**: `authStore` weak djb2 hash replaced by Supabase Auth — passwords never stored locally
 - [ ] **SEC-02**: Anthropic API key removed from localStorage — stored only in Supabase Edge Function env vars
 - [ ] **SEC-03**: `dangerouslySetInnerHTML` in `AIAgent.tsx` replaced with `react-markdown` + `rehype-sanitize`
 - [ ] **SEC-04**: `dangerouslyAllowBrowser: true` removed from `aiService.ts` — all Claude calls go through Edge Function proxy

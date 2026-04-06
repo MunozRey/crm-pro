@@ -284,7 +284,7 @@ export function TeamManagement() {
       )}
 
       {/* Active users list */}
-      <div className="glass rounded-2xl border-white/8 overflow-hidden">
+      <div className="glass rounded-2xl border-white/8">
         <div className="px-5 py-3 border-b border-white/6">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.team.activeSection}</p>
         </div>
@@ -313,7 +313,7 @@ export function TeamManagement() {
                         setEditingRole(null)
                         toast.success(t.team.toastRoleUpdated.replace('{name}', user.name))
                       }}
-                      className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                      className="bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-100 outline-none appearance-none"
                       autoFocus
                     >
                       <option value="admin">{t.team.roleLabels.admin}</option>

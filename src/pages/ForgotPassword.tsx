@@ -80,7 +80,7 @@ export function ForgotPassword() {
                     placeholder="tu@empresa.com"
                     required
                     autoFocus
-                    className="w-full bg-white/4 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/50 transition-colors"
+                    className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/50 transition-colors"
                   />
                 </div>
               </div>

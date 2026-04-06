@@ -559,7 +559,7 @@ export function Deals() {
               action={{ label: t.deals.newDeal, onClick: () => setIsFormOpen(true) }}
             />
           ) : (
-            <div className="bg-navy-800/60 backdrop-blur-sm border border-white/8 rounded-2xl overflow-hidden">
+            <div className="bg-[#111220] border border-white/8 rounded-2xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/6 bg-navy-800/30">
@@ -748,7 +748,7 @@ export function Deals() {
             </div>
 
             {/* AI Enrichment Section */}
-            <div className="bg-navy-800/60 backdrop-blur-sm border border-white/8 rounded-2xl p-5 space-y-4">
+            <div className="bg-[#111220] border border-white/8 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
                 <span>{t.nav.aiAssistant}</span>
               </h3>

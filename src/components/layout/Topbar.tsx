@@ -87,7 +87,7 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
   }, [])
 
   return (
-    <header className="h-16 flex items-center gap-4 px-6 border-b border-white/6 bg-navy-900/80 backdrop-blur-xl flex-shrink-0 relative z-30">
+    <header className="h-16 flex items-center gap-4 px-6 border-b border-white/6 bg-[#0d0e1a] flex-shrink-0 relative z-30">
       <h1 className="text-base font-semibold text-white mr-auto tracking-tight">{title}</h1>
 
       {/* Command palette trigger */}

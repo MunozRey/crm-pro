@@ -179,7 +179,7 @@ export function EmailComposer({
         {/* Template picker */}
         {showTemplates && (
           <div className="border-b border-white/8 max-h-56 overflow-y-auto">
-            <div className="px-4 py-2 border-b border-white/6 sticky top-0 bg-navy-800/95 backdrop-blur-sm">
+            <div className="px-4 py-2 border-b border-white/6 sticky top-0 bg-[#111220]">
               <p className="text-xs font-medium text-amber-400">{t.emailTemplates.title}</p>
             </div>
             {templates.length === 0 ? (

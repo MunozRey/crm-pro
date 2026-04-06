@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import {
   ArrowLeft, Edit2, Plus, Building2, Phone, Mail, Calendar,
-  FileText, Loader2, Copy, RefreshCw, CheckCircle2, Eye, MousePointerClick, Brain,
+  FileText, Loader2, Copy, RefreshCw, CheckCircle2, Eye, MousePointerClick,
 } from 'lucide-react'
 import { useContactsStore } from '../store/contactsStore'
 import { useCompaniesStore } from '../store/companiesStore'
@@ -28,7 +28,6 @@ import { formatDate, formatCurrency, formatRelativeDate } from '../utils/formatt
 import { CONTACT_SOURCE_LABELS, DEAL_STAGE_COLORS } from '../utils/constants'
 import type { Contact, DealStage, LeadScoreBreakdown, ActivityType } from '../types'
 import { CustomFieldsDisplay } from '../components/shared/CustomFieldRenderer'
-import { MeetingPrepModal } from '../components/ai/MeetingPrepModal'
 import { useTranslations, useI18nStore } from '../i18n'
 import { format } from 'date-fns'
 import type { Locale } from 'date-fns'
@@ -99,7 +98,6 @@ export function ContactDetail() {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isActivityOpen, setIsActivityOpen] = useState(false)
-  const [showMeetingPrep, setShowMeetingPrep] = useState(false)
   const [isEmailOpen, setIsEmailOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [notesSaved, setNotesSaved] = useState(false)
@@ -266,14 +264,6 @@ export function ContactDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  leftIcon={<Brain size={13} />}
-                  onClick={() => setShowMeetingPrep(true)}
-                >
-                  Meeting Prep
-                </Button>
                 <PermissionGate permission="contacts:update">
                   <Button variant="secondary" size="sm" leftIcon={<Edit2 size={14} />} onClick={() => setIsEditOpen(true)}>
                     {t.common.edit}
@@ -762,12 +752,6 @@ export function ContactDetail() {
         <ActivityForm defaultContactId={id} onSubmit={handleAddActivity} onCancel={() => setIsActivityOpen(false)} />
       </SlideOver>
 
-      {/* Meeting Prep Modal */}
-      <MeetingPrepModal
-        isOpen={showMeetingPrep}
-        onClose={() => setShowMeetingPrep(false)}
-        contactId={contact.id}
-      />
 
       {/* Email Composer */}
       <EmailComposer

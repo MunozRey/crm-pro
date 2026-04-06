@@ -14,7 +14,6 @@ import { Activities } from './pages/Activities'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
 import { Inbox } from './pages/Inbox'
-import { AIAgent } from './pages/AIAgent'
 import { EmailTemplates } from './pages/EmailTemplates'
 import { FollowUps } from './pages/FollowUps'
 import { AuditLog } from './pages/AuditLog'
@@ -69,7 +68,6 @@ function AppRoutes() {
       <Route path="/activities" element={<ProtectedPage title={t.nav.activities} requiredPermission="activities:read"><Activities /></ProtectedPage>} />
       <Route path="/reports" element={<ProtectedPage title={t.nav.reports} requiredPermission="reports:read"><Reports /></ProtectedPage>} />
       <Route path="/inbox" element={<ProtectedPage title={t.nav.inbox} requiredPermission="email:read"><Inbox /></ProtectedPage>} />
-      <Route path="/ai-agent" element={<ProtectedPage title={t.nav.aiAssistant} requiredPermission="ai:use"><AIAgent /></ProtectedPage>} />
       <Route path="/settings" element={<ProtectedPage title={t.nav.settings} requiredPermission="settings:read"><Settings /></ProtectedPage>} />
       <Route path="/templates" element={<ProtectedPage title={t.nav.templates} requiredPermission="templates:read"><EmailTemplates /></ProtectedPage>} />
       <Route path="/follow-ups" element={<ProtectedPage title={t.nav.followUps} requiredPermission="contacts:read"><FollowUps /></ProtectedPage>} />

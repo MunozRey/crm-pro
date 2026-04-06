@@ -15,8 +15,8 @@
 - [ ] **AUTH-06**: New user creates an organization on first login (org name, slug)
 - [ ] **AUTH-07**: User can invite team members by email (Supabase Edge Function — requires service role key)
 - [ ] **AUTH-08**: Invited user receives email and can accept invitation to join organization
-- [ ] **AUTH-09**: User has a role within organization (owner, admin, member)
-- [ ] **AUTH-10**: All CRM data is scoped to organization via RLS — no cross-tenant data leakage
+- [x] **AUTH-09**: User has a role within organization (owner, admin, member)
+- [x] **AUTH-10**: All CRM data is scoped to organization via RLS — no cross-tenant data leakage
 
 ### Schema & Multi-Tenancy
 

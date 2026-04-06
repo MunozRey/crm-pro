@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-last_updated: "2026-04-05T14:07:45.077Z"
+status: Executing Phase 03
+last_updated: "2026-04-06T08:20:00.000Z"
 progress:
   total_phases: 11
   completed_phases: 2
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 15
+  completed_plans: 12
 ---
 
 # CRM Pro — Project State
@@ -18,7 +18,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time — with AI that drafts emails, scores leads, and surfaces insights automatically.
-**Current focus:** Phase 02 — supabase-auth
+**Current focus:** Phase 03 — Organization Onboarding
 
 ## Current Status
 
@@ -32,6 +32,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 |----------|-----------|------|
 | Supabase for backend | Schema already written, RLS built-in for multi-tenancy, SDK installed | 2026-03-31 |
 | JWT claim for RLS (not JOIN subquery) | Performance critical — O(1) vs per-row subquery at scale | 2026-03-31 |
+| normalizeRole co-located in authStore.ts (03.4) | Avoids circular dependency with permissions.ts; keeps JWT parsing self-contained in the auth layer | 2026-04-06 |
+| Fallback chain for role: app_metadata first, then user_metadata (03.4) | app_metadata is server-controlled (DB trigger); user_metadata fallback preserves backwards-compat with existing mock flow | 2026-04-06 |
 | Edge Functions for API key proxying | Anthropic + Gmail secrets must never reach the browser | 2026-03-31 |
 | Auth Code + PKCE for Gmail OAuth | Current initTokenClient cannot obtain refresh tokens | 2026-03-31 |
 | react-markdown + rehype-sanitize | Replace dangerouslySetInnerHTML in AIAgent — live XSS vector | 2026-03-31 |
@@ -58,4 +60,4 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-03-31T14:57:00Z — Completed 02-supabase-auth/02.4-PLAN.md (isLoadingAuth default fix + ProtectedRoute loading guard + 3 passing tests)*
+*Last session: 2026-04-06T08:20:00Z — Completed 03-organization-onboarding/03.4-PLAN.md (normalizeRole helper + JWT app_metadata role source + VALID_ROLES export — 19 tests passing)*

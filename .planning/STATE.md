@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 03
-last_updated: "2026-04-06T08:20:00.000Z"
+status: Phase 04 Complete
+last_updated: "2026-04-05T09:20:00Z"
 progress:
   total_phases: 11
-  completed_phases: 2
-  total_plans: 15
-  completed_plans: 12
+  completed_phases: 4
+  total_plans: 19
+  completed_plans: 19
 ---
 
 # CRM Pro — Project State
@@ -18,13 +18,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time — with AI that drafts emails, scores leads, and surfaces insights automatically.
-**Current focus:** Phase 03 — Organization Onboarding
+**Current focus:** Phase 04 — Security Fixes
 
 ## Current Status
 
 **Milestone:** v1.0 — Full SaaS Upgrade
-**Phase:** 3 of 11 (organization onboarding)
-**Plan:** Not started
+**Phase:** 4 of 11 (security fixes) — COMPLETE
+**Plan:** 4/4 complete (04.1-04.4)
 
 ## Key Decisions
 
@@ -37,6 +37,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | Edge Functions for API key proxying | Anthropic + Gmail secrets must never reach the browser | 2026-03-31 |
 | Auth Code + PKCE for Gmail OAuth | Current initTokenClient cannot obtain refresh tokens | 2026-03-31 |
 | react-markdown + rehype-sanitize | Replace dangerouslySetInnerHTML in AIAgent — live XSS vector | 2026-03-31 |
+| Anthropic SDK removed entirely (04.3) | dangerouslyAllowBrowser is a security anti-pattern; all AI calls go through OpenRouter fetch until Phase 7 Edge Function proxy | 2026-04-05 |
+| openRouterKey replaces apiKey as the single AI key guard (04.1) | Anthropic key never stored in browser — OpenRouter is the only supported browser-side AI transport | 2026-04-05 |
 | Vercel for frontend deploy | Zero-config Vite support, free tier, global CDN | 2026-03-31 |
 | Free beta (no Stripe in v1.0) | Validate product before billing complexity | 2026-03-31 |
 | Per-file vi.mock() for Supabase (02.0) | Inline mocking gives explicit control over each test file vs auto-hoisting | 2026-03-31 |

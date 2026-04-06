@@ -145,7 +145,7 @@ export function TeamManagement() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowInvite(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/8 text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d0e1a] border border-white/10 text-slate-300 hover:text-white hover:bg-white/8 text-sm font-medium transition-all"
             >
               <Mail size={15} />
               {t.team.invite}
@@ -194,19 +194,19 @@ export function TeamManagement() {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.team.labelName} *</label>
-              <input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder={t.team.placeholderFullName} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
+              <input value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} placeholder={t.team.placeholderFullName} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.team.labelEmail} *</label>
-              <input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder={t.team.placeholderEmail} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
+              <input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} placeholder={t.team.placeholderEmail} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.team.labelPassword} *</label>
-              <input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder={t.team.placeholderMinPassword} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
+              <input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder={t.team.placeholderMinPassword} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.team.role}</label>
-              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
+              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
                 <option value="admin">{t.team.roleLabels.admin}</option>
                 <option value="manager">{t.team.roleLabels.manager}</option>
                 <option value="sales_rep">{t.team.roleLabels.sales_rep}</option>
@@ -215,11 +215,11 @@ export function TeamManagement() {
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.team.labelJobTitle}</label>
-              <input value={newUser.jobTitle} onChange={(e) => setNewUser({ ...newUser, jobTitle: e.target.value })} placeholder={t.team.placeholderJobTitle} className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
+              <input value={newUser.jobTitle} onChange={(e) => setNewUser({ ...newUser, jobTitle: e.target.value })} placeholder={t.team.placeholderJobTitle} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.common.phone}</label>
-              <input value={newUser.phone || ''} onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })} placeholder="+34 600 000 000" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
+              <input value={newUser.phone || ''} onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })} placeholder="+34 600 000 000" className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -244,8 +244,8 @@ export function TeamManagement() {
             </button>
           </div>
           <div className="flex gap-3 mb-4">
-            <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder={t.team.placeholderEmail} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
-            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
+            <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder={t.team.placeholderEmail} className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
+            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)} className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
               <option value="manager">{t.team.roleLabels.manager}</option>
               <option value="sales_rep">{t.team.roleLabels.sales_rep}</option>
               <option value="viewer">{t.team.roleLabels.viewer}</option>
@@ -387,7 +387,7 @@ export function TeamManagement() {
                       value={newPw}
                       onChange={(e) => setNewPw(e.target.value)}
                       placeholder={t.team.placeholderNewPassword}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none"
+                      className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none"
                       autoFocus
                     />
                     <button onClick={() => handleResetPassword(user.id)} disabled={newPw.length < 6} className="px-3 py-1.5 rounded-lg btn-gradient text-xs text-white font-medium disabled:opacity-40">{t.common.save}</button>

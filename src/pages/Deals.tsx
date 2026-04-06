@@ -126,7 +126,7 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
         <select
           defaultValue=""
           onChange={(e) => { if (e.target.value) { addFromProduct(e.target.value); e.target.value = '' } }}
-          className="flex-1 bg-white/4 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
+          className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
         >
           <option value="" disabled>+ {t.deals.addItem}...</option>
           {products.map((p) => (

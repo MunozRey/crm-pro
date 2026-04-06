@@ -332,7 +332,7 @@ export function Settings() {
                   value={openRouterKeyInput}
                   onChange={(e) => setOpenRouterKeyInput(e.target.value)}
                   placeholder="sk-or-v1-..."
-                  className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40 pr-10"
+                  className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40 pr-10"
                 />
                 <button
                   onClick={() => setShowApiKey((v) => !v)}
@@ -490,7 +490,7 @@ export function Settings() {
                 value={googleClientId}
                 onChange={(e) => setGoogleClientId(e.target.value)}
                 placeholder="123456789-abc.apps.googleusercontent.com"
-                className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
+                className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
               />
             </div>
             <Button
@@ -549,7 +549,7 @@ export function Settings() {
 
         {/* Inline add / edit form */}
         {cfShowForm && (
-          <div className="mb-4 p-4 bg-white/4 border border-white/10 rounded-xl space-y-3">
+          <div className="mb-4 p-4 bg-[#0d0e1a] border border-white/10 rounded-xl space-y-3">
             <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
               {cfEditingId ? `${t.common.edit}` : `${t.common.add} — ${t.settings.entityLabels[cfActiveEntity]}`}
             </p>
@@ -563,7 +563,7 @@ export function Settings() {
                   value={cfLabel}
                   onChange={(e) => setCfLabel(e.target.value)}
                   placeholder={t.settings.fieldPlaceholderHint}
-                  className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
+                  className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
                 />
               </div>
               <div className="w-44">
@@ -571,7 +571,7 @@ export function Settings() {
                 <select
                   value={cfFieldType}
                   onChange={(e) => setCfFieldType(e.target.value as CustomFieldType)}
-                  className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 appearance-none cursor-pointer"
+                  className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 appearance-none cursor-pointer"
                 >
                   {FIELD_TYPES.map((ft) => (
                     <option key={ft} value={ft} className="bg-navy-900 text-white">
@@ -593,7 +593,7 @@ export function Settings() {
                   onChange={(e) => setCfOptions(e.target.value)}
                   placeholder={t.settings.optionsPlaceholder}
                   rows={4}
-                  className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40 resize-none"
+                  className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40 resize-none"
                 />
               </div>
             )}
@@ -607,7 +607,7 @@ export function Settings() {
                   value={cfPlaceholder}
                   onChange={(e) => setCfPlaceholder(e.target.value)}
                   placeholder={t.settings.valuePlaceholderHint}
-                  className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
+                  className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
                 />
               </div>
             )}
@@ -770,7 +770,7 @@ export function Settings() {
         </div>
         <div className="flex flex-wrap gap-2">
           {settings.tags.map((tag) => (
-            <div key={tag} className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+            <div key={tag} className="flex items-center gap-1.5 bg-[#0d0e1a] border border-white/10 rounded-full px-3 py-1">
               <span className="text-xs text-slate-300">{tag}</span>
               <button
                 onClick={() => { removeTag(tag); toast.success(t.common.delete + ' ✓') }}

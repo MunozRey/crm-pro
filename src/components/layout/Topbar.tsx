@@ -93,7 +93,7 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
       {/* Command palette trigger */}
       <button
         onClick={onOpenCommandPalette}
-        className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/4 border border-white/8 hover:bg-white/6 hover:border-white/12 transition-all duration-150 text-slate-500 hover:text-slate-300 text-xs"
+        className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0d0e1a] border border-white/8 hover:bg-white/6 hover:border-white/12 transition-all duration-150 text-slate-500 hover:text-slate-300 text-xs"
       >
         <Search size={13} />
         <span>{t.common.search}...</span>

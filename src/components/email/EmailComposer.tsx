@@ -215,7 +215,7 @@ export function EmailComposer({
                 value={aiIntent}
                 onChange={(e) => setAiIntent(e.target.value)}
                 placeholder={`${t.activities.subject}...`}
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
+                className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateDraft() }}
               />
               <button

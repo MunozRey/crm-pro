@@ -386,7 +386,7 @@ export function AIAgent() {
               <select
                 value={selectedContactId}
                 onChange={(e) => setSelectedContactId(e.target.value)}
-                className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-brand-500/40 appearance-none pr-6"
+                className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-brand-500/40 appearance-none pr-6"
               >
                 <option value="">{t.deals.contact}</option>
                 {contacts.map((c) => (
@@ -420,7 +420,7 @@ export function AIAgent() {
               <select
                 value={selectedDealId}
                 onChange={(e) => setSelectedDealId(e.target.value)}
-                className="w-full bg-white/4 border border-white/8 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-brand-500/40 appearance-none pr-6"
+                className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-brand-500/40 appearance-none pr-6"
               >
                 <option value="">{t.deals.title}</option>
                 {deals.filter((d) => !['closed_won', 'closed_lost'].includes(d.stage)).map((d) => (

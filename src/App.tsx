@@ -35,6 +35,7 @@ import { Automations } from './pages/Automations'
 import { Products } from './pages/Products'
 import { Calendar } from './pages/Calendar'
 import { useTranslations } from './i18n'
+import { useDataInit } from './hooks/useDataInit'
 
 function ProtectedPage({ title, children, requiredPermission }: { title: string; children: React.ReactNode; requiredPermission?: import('./types/auth').Permission }) {
   return (
@@ -48,6 +49,7 @@ function ProtectedPage({ title, children, requiredPermission }: { title: string;
 
 function AppRoutes() {
   const t = useTranslations()
+  useDataInit()
   return (
     <Routes>
       {/* Public routes */}

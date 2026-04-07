@@ -12,7 +12,7 @@
 - [x] **Phase 1: Schema & Multi-Tenancy** — Add `organization_id` + RLS to all tables; create organizations, members, invitations, and gmail_tokens tables (completed 2026-03-31)
 - [x] **Phase 2: Supabase Auth** — Replace mock djb2 auth with real Supabase Auth (signup, login, session, password reset, logout) (completed 2026-04-05)
 - [x] **Phase 3: Organization Onboarding** — First-login org creation, member invitations, roles, and org-scoped JWT claims (completed 2026-04-06)
-- [ ] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS in AIAgent, remove dangerouslyAllowBrowser, add dev warning for missing env vars
+- [x] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS in AIAgent, remove dangerouslyAllowBrowser, add dev warning for missing env vars
 - [ ] **Phase 5: Core Data Stores + Real-Time** — Migrate contacts, companies, deals, activities, notifications stores from localStorage to Supabase with real-time subscriptions
 - [ ] **Phase 6: Secondary Stores & Real Users** — Migrate goals, sequences, automations, templates, products, audit, custom fields; replace MOCK_USERS with real org members
 - [ ] **Phase 7: AI Features** — Edge Function proxy for Claude; lead scoring, email drafting, call summary, and AIAgent chat via proxy
@@ -30,7 +30,7 @@
 | 1. Schema & Multi-Tenancy | 0/5 | Complete    | 2026-03-31 |
 | 2. Supabase Auth | 5/6 | Complete    | 2026-04-05 |
 | 3. Organization Onboarding | 4/4 | Complete   | 2026-04-06 |
-| 4. Security Fixes | 0/4 | Not started | - |
+| 4. Security Fixes | 4/4 | Complete | 2026-04-05 |
 | 5. Core Data Stores + Real-Time | 0/6 | Not started | - |
 | 6. Secondary Stores & Real Users | 0/5 | Not started | - |
 | 7. AI Features | 0/5 | Not started | - |

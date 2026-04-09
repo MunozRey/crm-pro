@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Download, Upload, RotateCcw, Tag, Bot, Mail, Eye, EyeOff, Wifi, WifiOff, FileSpreadsheet, SlidersHorizontal, Pencil, X, Check, Globe, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Download, Upload, RotateCcw, Tag, Mail, Wifi, WifiOff, FileSpreadsheet, SlidersHorizontal, Pencil, X, Check, Globe } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 import { useContactsStore } from '../store/contactsStore'
 import { useCompaniesStore } from '../store/companiesStore'
 import { useDealsStore } from '../store/dealsStore'
 import { useActivitiesStore } from '../store/activitiesStore'
-import { useAIStore } from '../store/aiStore'
 import { useEmailStore } from '../store/emailStore'
 import { useCustomFieldsStore } from '../store/customFieldsStore'
 import { Button } from '../components/ui/Button'
@@ -18,7 +17,7 @@ import { seedContacts } from '../utils/seedData'
 import { seedCompanies } from '../utils/seedData'
 import { seedDeals } from '../utils/seedData'
 import { seedActivities } from '../utils/seedData'
-import { requestGmailAccess } from '../services/gmailService'
+import { initiateGmailOAuth } from '../services/gmailService'
 import { CSVImport } from '../components/import/CSVImport'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { useNotificationsStore, ALL_NOTIFICATION_TYPES } from '../store/notificationsStore'
@@ -26,8 +25,6 @@ import { useTranslations, useI18nStore, LANGUAGE_LABELS, LANGUAGE_FLAGS } from '
 import type { Language } from '../i18n'
 import type { DealCurrency, CustomFieldEntityType, CustomFieldType } from '../types'
 import type { NotificationType } from '../types'
-import { ANTHROPIC_MODELS, OPENROUTER_MODELS, getModelDef } from '../constants/aiModels'
-
 const ENTITY_TABS: CustomFieldEntityType[] = ['contact', 'company', 'deal']
 
 const FIELD_TYPES: CustomFieldType[] = [
@@ -44,8 +41,7 @@ export function Settings() {
   const companiesStore = useCompaniesStore()
   const dealsStore = useDealsStore()
   const activitiesStore = useActivitiesStore()
-  const { openRouterKey, setOpenRouterKey, selectedModel, setSelectedModel } = useAIStore()
-  const { isGmailConnected, gmailAddress, setGmailTokens, setGmailAddress, disconnectGmail } = useEmailStore()
+  const { isGmailConnected, gmailAddress, disconnectGmail } = useEmailStore()
 
   // ── Custom Fields state (manual subscription — persisted store) ────────────
   const [cfDefinitions, setCfDefinitions] = useState(() => useCustomFieldsStore.getState().definitions)
@@ -153,9 +149,6 @@ export function Settings() {
 
   const [newTag, setNewTag] = useState('')
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  const [openRouterKeyInput, setOpenRouterKeyInput] = useState(openRouterKey)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const currentModelDef = getModelDef(selectedModel)
   const [googleClientId, setGoogleClientId] = useState(
     () => (settings as { googleClientId?: string }).googleClientId ?? ''
   )
@@ -237,28 +230,18 @@ export function Settings() {
     input.click()
   }
 
-  const handleSaveOpenRouterKey = () => {
-    setOpenRouterKey(openRouterKeyInput.trim())
-    toast.success('OpenRouter key saved ✓')
-  }
-
-  const handleConnectGmail = () => {
+  const handleConnectGmail = async () => {
     if (!googleClientId.trim()) { toast.error(t.settings.gmailEnterClientId); return }
     // Save client ID to settings
     ;(settings as { googleClientId?: string }).googleClientId = googleClientId.trim()
     setConnectingGmail(true)
-    requestGmailAccess(
-      googleClientId.trim(),
-      async (tokens) => {
-        setGmailTokens(tokens)
-        setConnectingGmail(false)
-        toast.success(t.settings.gmailConnectedSuccess)
-      },
-      (err) => {
-        setConnectingGmail(false)
-        toast.error(err)
-      },
-    )
+    try {
+      await initiateGmailOAuth(googleClientId.trim())
+      // Browser will redirect — no further action needed here
+    } catch (err) {
+      setConnectingGmail(false)
+      toast.error(err instanceof Error ? err.message : 'Error al conectar Gmail')
+    }
   }
 
   const handleReset = () => {
@@ -305,153 +288,6 @@ export function Settings() {
               <span>{LANGUAGE_LABELS[lang]}</span>
             </button>
           ))}
-        </div>
-      </section>
-
-      {/* ── AI Configuration ────────────────────────────────────────────── */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-lg btn-gradient flex items-center justify-center">
-            <Bot size={14} className="text-white" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">{t.settings.aiConfig}</h2>
-            <p className="text-xs text-slate-500">Claude (Anthropic)</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-slate-300 block mb-1.5">
-                OpenRouter API Key
-              </label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={openRouterKeyInput}
-                  onChange={(e) => setOpenRouterKeyInput(e.target.value)}
-                  placeholder="sk-or-v1-..."
-                  className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40 pr-10"
-                />
-                <button
-                  onClick={() => setShowApiKey((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <Button size="sm" onClick={handleSaveOpenRouterKey}>{t.common.save}</Button>
-          </div>
-          <p className="text-xs text-slate-600">
-            Get your key at <span className="text-brand-400">openrouter.ai/keys</span>. Required for non-Claude models.
-          </p>
-        </div>
-      </section>
-
-      {/* ── Model Selection ─────────────────────────────────────────────── */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center">
-            <Sparkles size={14} className="text-violet-400" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">AI Model</h2>
-            <p className="text-xs text-slate-500">
-              Active: <span className="text-white">{currentModelDef.name}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Anthropic models */}
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600 mb-2">Anthropic</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-          {ANTHROPIC_MODELS.map((model) => {
-            const isSelected = selectedModel === model.id
-            return (
-              <button
-                key={model.id}
-                onClick={() => setSelectedModel(model.id)}
-                className={`text-left p-3 rounded-xl border transition-all ${
-                  isSelected
-                    ? 'bg-brand-500/15 border-brand-500/40 shadow-brand-sm'
-                    : 'bg-white/4 border-white/8 hover:border-white/15 hover:bg-white/6'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                    {model.name}
-                  </span>
-                  {model.badge && (
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 ${
-                      model.badge === 'flagship' ? 'bg-brand-500/20 text-brand-400' :
-                      model.badge === 'fast' ? 'bg-emerald-500/20 text-emerald-400' :
-                      model.badge === 'reasoning' ? 'bg-violet-500/20 text-violet-400' :
-                      'bg-sky-500/20 text-sky-400'
-                    }`}>
-                      {model.badge}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{model.description}</p>
-                {model.contextWindow && (
-                  <p className="text-[10px] text-slate-600 mt-1">{model.contextWindow} ctx</p>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* OpenRouter models */}
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600 mb-2">
-          OpenRouter <span className="normal-case font-normal text-slate-700">— requires OpenRouter key</span>
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {OPENROUTER_MODELS.map((model) => {
-            const isSelected = selectedModel === model.id
-            const needsKey = !openRouterKey
-            return (
-              <button
-                key={model.id}
-                onClick={() => {
-                  if (needsKey) {
-                    toast.error('Add your OpenRouter API key above first')
-                    return
-                  }
-                  setSelectedModel(model.id)
-                }}
-                className={`text-left p-3 rounded-xl border transition-all ${
-                  isSelected
-                    ? 'bg-violet-500/15 border-violet-500/40'
-                    : needsKey
-                      ? 'bg-white/2 border-white/5 opacity-50 cursor-not-allowed'
-                      : 'bg-white/4 border-white/8 hover:border-white/15 hover:bg-white/6'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                    {model.name}
-                  </span>
-                  {model.badge && (
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0 ${
-                      model.badge === 'flagship' ? 'bg-brand-500/20 text-brand-400' :
-                      model.badge === 'fast' ? 'bg-emerald-500/20 text-emerald-400' :
-                      model.badge === 'reasoning' ? 'bg-violet-500/20 text-violet-400' :
-                      model.badge === 'long-ctx' ? 'bg-amber-500/20 text-amber-400' :
-                      'bg-sky-500/20 text-sky-400'
-                    }`}>
-                      {model.badge}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{model.description}</p>
-                {model.contextWindow && (
-                  <p className="text-[10px] text-slate-600 mt-1">{model.contextWindow} ctx</p>
-                )}
-              </button>
-            )
-          })}
         </div>
       </section>
 

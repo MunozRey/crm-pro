@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Mail, Send, Inbox as InboxIcon, Loader2, RefreshCw, Wifi, WifiOff, User, Clock, Reply, Trash2, Plus, Eye, MousePointerClick } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useEmailStore } from '../store/emailStore'
 import { useContactsStore } from '../store/contactsStore'
 import { initiateGmailOAuth } from '../services/gmailService'
 import { useGmailToken } from '../contexts/GmailTokenContext'
+import { supabase } from '../lib/supabase'
 import { useSettingsStore } from '../store/settingsStore'
 import { EmailComposer } from '../components/email/EmailComposer'
 import { toast } from '../store/toastStore'
@@ -13,17 +15,26 @@ import type { GmailThread, CRMEmail, Contact } from '../types'
 import { formatRelativeDate } from '../utils/formatters'
 
 // ─── Thread item ──────────────────────────────────────────────────────────────
+function extractEmail(from: string): string {
+  const match = from.match(/<([^>]+)>/)
+  return (match ? match[1] : from).toLowerCase().trim()
+}
+
 function ThreadItem({
   thread,
   selected,
   onClick,
+  contactByEmail,
 }: {
   thread: GmailThread
   selected: boolean
   onClick: () => void
+  contactByEmail: Map<string, { id: string; name: string }>
 }) {
   const lastMsg = thread.messages[thread.messages.length - 1]
   const isUnread = lastMsg?.labelIds?.includes('UNREAD')
+  const senderEmail = extractEmail(lastMsg?.from ?? '')
+  const matchedContact = contactByEmail.get(senderEmail)
 
   return (
     <div
@@ -47,6 +58,16 @@ function ThreadItem({
           </div>
           <p className={`text-xs truncate ${isUnread ? 'text-white' : 'text-slate-400'}`}>{lastMsg?.subject ?? ''}</p>
           <p className="text-[10px] text-slate-600 truncate mt-0.5">{thread.snippet}</p>
+          {matchedContact && (
+            <Link
+              to={`/contacts/${matchedContact.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-brand-600/20 text-brand-300 border border-brand-500/30 hover:bg-brand-600/30 transition-colors mt-1"
+            >
+              <User size={9} />
+              {matchedContact.name}
+            </Link>
+          )}
         </div>
         {isUnread && <div className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0 mt-1" />}
       </div>
@@ -297,7 +318,7 @@ export function Inbox() {
     gmailAddress, loadThreads, deleteEmail, disconnectGmail,
     trackEmailOpen, trackEmailClick,
   } = useEmailStore()
-  const { accessToken, isTokenValid } = useGmailToken()
+  const { accessToken, setGmailToken, clearGmailToken, isTokenValid } = useGmailToken()
   const contacts = useContactsStore((s) => s.contacts)
   const { settings } = useSettingsStore()
 
@@ -308,7 +329,47 @@ export function Inbox() {
   const [replyTo, setReplyTo] = useState<{ to: string; subject: string } | null>(null)
   const [connecting, setConnecting] = useState(false)
 
-  const connected = isGmailConnected()
+  const connected = !!gmailAddress && isTokenValid()
+
+  // Build contact email lookup map for thread chip matching
+  const contactByEmail = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>()
+    for (const c of contacts) {
+      if (c.email) map.set(c.email.toLowerCase(), { id: c.id, name: `${c.firstName} ${c.lastName}`.trim() })
+    }
+    return map
+  }, [contacts])
+
+  // 401 refresh+retry wrapper
+  async function refreshAndRetry<T>(
+    fn: (token: string) => Promise<T>,
+    token: string,
+  ): Promise<T> {
+    try {
+      return await fn(token)
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('401')) {
+        const { data, error } = await supabase!.functions.invoke('gmail-refresh-token')
+        if (error || !data?.access_token) throw new Error('Token refresh failed — please reconnect Gmail')
+        const newExpiry = Date.now() + (data.expires_in ?? 3600) * 1000
+        setGmailToken(data.access_token, newExpiry)
+        return await fn(data.access_token)
+      }
+      throw err
+    }
+  }
+
+  const handleLoadThreads = async (query = '') => {
+    if (!accessToken) return
+    try {
+      await refreshAndRetry(
+        (token) => useEmailStore.getState().loadThreads(token, query),
+        accessToken,
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error loading threads')
+    }
+  }
 
   // Folder list built with translations
   const FOLDERS = [
@@ -318,8 +379,8 @@ export function Inbox() {
 
   // Load gmail threads when connected and token is valid
   useEffect(() => {
-    if (connected && folder === 'inbox' && accessToken && isTokenValid()) {
-      loadThreads(accessToken)
+    if (connected && folder === 'inbox' && accessToken) {
+      handleLoadThreads()
     }
   }, [connected, folder, accessToken])
 
@@ -373,7 +434,7 @@ export function Inbox() {
                 <p className="text-[10px] font-medium text-emerald-400 truncate">{gmailAddress ?? 'Gmail'}</p>
               </div>
               <button
-                onClick={disconnectGmail}
+                onClick={() => { clearGmailToken(); disconnectGmail() }}
                 className="text-slate-600 hover:text-red-400 transition-colors"
                 title={t.settings.disconnect}
               >
@@ -416,7 +477,7 @@ export function Inbox() {
           <span className="text-sm font-semibold text-white capitalize">{FOLDERS.find((f) => f.id === folder)?.label}</span>
           {connected && folder === 'inbox' && (
             <button
-              onClick={() => accessToken && loadThreads(accessToken)}
+              onClick={() => handleLoadThreads()}
               disabled={threadsLoading}
               className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/6 transition-colors"
             >
@@ -450,6 +511,7 @@ export function Inbox() {
                   thread={thread}
                   selected={selectedThreadId === thread.id}
                   onClick={() => { setSelectedThreadId(thread.id); setSelectedEmailId(null) }}
+                  contactByEmail={contactByEmail}
                 />
               ))}
             </>

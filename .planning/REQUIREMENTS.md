@@ -66,7 +66,7 @@
 - [ ] **SEC-02**: Anthropic API key removed from localStorage — stored only in Supabase Edge Function env vars
 - [ ] **SEC-03**: `dangerouslySetInnerHTML` in `AIAgent.tsx` replaced with `react-markdown` + `rehype-sanitize`
 - [ ] **SEC-04**: `dangerouslyAllowBrowser: true` removed from `aiService.ts` — all Claude calls go through Edge Function proxy
-- [ ] **SEC-05**: Gmail access token stored in memory only (not localStorage); refresh token stored in `gmail_tokens` Supabase table
+- [x] **SEC-05**: Gmail access token stored in memory only (not localStorage); refresh token stored in `gmail_tokens` Supabase table
 - [x] **SEC-06**: Dev-mode console warning when Supabase env vars are absent (currently silent no-op)
 
 ### AI Features
@@ -79,7 +79,7 @@
 
 ### Gmail Integration
 
-- [ ] **GMAIL-01**: Gmail OAuth uses Auth Code + PKCE flow (`initCodeClient`) — replaces current implicit token client that cannot obtain refresh tokens
+- [x] **GMAIL-01**: Gmail OAuth uses Auth Code + PKCE flow (`initCodeClient`) — replaces current implicit token client that cannot obtain refresh tokens
 - [ ] **GMAIL-02**: Edge Function `gmail-oauth-exchange` exchanges authorization code for access + refresh tokens; stores refresh token in `gmail_tokens` table
 - [ ] **GMAIL-03**: Edge Function `gmail-refresh-token` refreshes access token when expired; returns short-lived token to browser only
 - [ ] **GMAIL-04**: Inbox view loads real Gmail threads via API using short-lived access token

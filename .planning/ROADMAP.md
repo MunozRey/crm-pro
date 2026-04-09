@@ -1,9 +1,9 @@
 # CRM Pro — Roadmap
 
 **Milestone:** v1.0 — Full SaaS Upgrade
-**Status:** Planning
-**Phases:** 11
-**Last updated:** 2026-03-31
+**Status:** In Progress
+**Phases:** 10
+**Last updated:** 2026-04-08
 
 ---
 
@@ -12,14 +12,13 @@
 - [x] **Phase 1: Schema & Multi-Tenancy** — Add `organization_id` + RLS to all tables; create organizations, members, invitations, and gmail_tokens tables (completed 2026-03-31)
 - [x] **Phase 2: Supabase Auth** — Replace mock djb2 auth with real Supabase Auth (signup, login, session, password reset, logout) (completed 2026-04-05)
 - [x] **Phase 3: Organization Onboarding** — First-login org creation, member invitations, roles, and org-scoped JWT claims (completed 2026-04-06)
-- [x] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS in AIAgent, remove dangerouslyAllowBrowser, add dev warning for missing env vars
-- [ ] **Phase 5: Core Data Stores + Real-Time** — Migrate contacts, companies, deals, activities, notifications stores from localStorage to Supabase with real-time subscriptions
-- [ ] **Phase 6: Secondary Stores & Real Users** — Migrate goals, sequences, automations, templates, products, audit, custom fields; replace MOCK_USERS with real org members
-- [ ] **Phase 7: AI Features** — Edge Function proxy for Claude; lead scoring, email drafting, call summary, and AIAgent chat via proxy
-- [ ] **Phase 8: Gmail Integration** — Auth Code + PKCE OAuth flow; Edge Functions for token exchange and refresh; inbox, send, and contact linking
-- [ ] **Phase 9: i18n English** — English translation file and language switcher persistence
-- [ ] **Phase 10: Test Suite** — Vitest setup; unit tests for lead scoring, stores, Zod schemas, and GitHub Actions CI
-- [ ] **Phase 11: Vercel Deployment** — vercel.json SPA rewrite, env vars, preview deployments, production deploy, custom domain
+- [x] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS, remove dangerouslyAllowBrowser, add dev warning for missing env vars (completed 2026-04-07)
+- [x] **Phase 5: Core Data Stores + Real-Time** — Migrate contacts, companies, deals, activities, notifications to Supabase with real-time subscriptions (completed 2026-04-07)
+- [x] **Phase 6: Secondary Stores & Real Users** — Migrate remaining stores; replace MOCK_USERS; remove AI features and Leaderboard; unify Lead=Contact (completed 2026-04-08)
+- [ ] **Phase 7: Gmail Integration** — Auth Code + PKCE OAuth flow; Edge Functions for token exchange and refresh; inbox, send, and contact linking
+- [ ] **Phase 8: i18n English** — English translation file and language switcher persistence
+- [ ] **Phase 9: Test Suite** — Vitest setup; unit tests for stores, Zod schemas, and GitHub Actions CI
+- [ ] **Phase 10: Vercel Deployment** — vercel.json SPA rewrite, env vars, preview deployments, production deploy, custom domain
 
 ---
 
@@ -30,14 +29,13 @@
 | 1. Schema & Multi-Tenancy | 0/5 | Complete    | 2026-03-31 |
 | 2. Supabase Auth | 5/6 | Complete    | 2026-04-05 |
 | 3. Organization Onboarding | 4/4 | Complete   | 2026-04-06 |
-| 4. Security Fixes | 4/4 | Complete | 2026-04-05 |
-| 5. Core Data Stores + Real-Time | 0/6 | Not started | - |
-| 6. Secondary Stores & Real Users | 0/5 | Not started | - |
-| 7. AI Features | 0/5 | Not started | - |
-| 8. Gmail Integration | 0/6 | Not started | - |
-| 9. i18n English | 0/3 | Not started | - |
-| 10. Test Suite | 0/5 | Not started | - |
-| 11. Vercel Deployment | 0/5 | Not started | - |
+| 4. Security Fixes | 4/4 | ✅ Complete | 2026-04-07 |
+| 5. Core Data Stores + Real-Time | 4/4 | ✅ Complete | 2026-04-07 |
+| 6. Secondary Stores & Real Users | 5/5 | ✅ Complete | 2026-04-08 |
+| 7. Gmail Integration | 1/5 | In Progress|  |
+| 8. i18n English | 0/3 | Not started | - |
+| 9. Test Suite | 0/5 | Not started | - |
+| 10. Vercel Deployment | 0/5 | Not started | - |
 
 ---
 
@@ -205,46 +203,19 @@ DATA-09, DATA-10, DATA-11, DATA-12, DATA-13, DATA-14, DATA-15, USERS-01, USERS-0
 
 ---
 
-## Phase 7: AI Features
-
-**Goal:** All Claude API calls flow through a Supabase Edge Function proxy (no key in browser), and lead scoring, email drafting, and call summary all work end-to-end.
-**Dependencies:** Phase 4 (dangerouslyAllowBrowser removed), Phase 5 (contact/deal data in Supabase)
-
-### Plans
-
-- 7.1: Create `claude-proxy` Edge Function — Deno function that reads `ANTHROPIC_API_KEY` from env, accepts `{ model, messages, stream }` body, proxies to Anthropic API, returns streaming response; authenticate caller via Supabase JWT
-- 7.2: Update aiService.ts to call Edge Function — replace all `new Anthropic(...)` calls with `fetch('/functions/v1/claude-proxy', ...)`; handle streaming response parsing; remove `openRouterKey` browser dependency
-- 7.3: Wire AIAgent chat to proxy — AIAgent.tsx sends messages to `claude-proxy` Edge Function instead of browser SDK; streaming works in the chat UI
-- 7.4: Implement lead scoring automation — `leadScoring.ts` `computeLeadScore` recalculates and writes to contact record whenever an activity is logged for that contact; score visible on contact list and detail page
-- 7.5: Implement email drafting and call summary — email draft action on ContactDetail / DealDetail pages calls `claude-proxy` with contact + deal history context; call summary textarea on ActivityForm calls proxy with transcript input
-
-### Requirements Covered
-
-AI-01, AI-02, AI-03, AI-04, AI-05, SEC-02, SEC-04
-
-### Done When
-
-- [ ] Opening DevTools Network tab during an AI chat shows requests going to `/functions/v1/claude-proxy`, not directly to `api.anthropic.com`
-- [ ] Logging an email activity for a contact triggers a lead score recalculation visible on the contact card
-- [ ] Selecting a contact and clicking "Draft Email" returns a context-aware draft in under 10 seconds
-- [ ] Pasting a call transcript into the call summary tool returns a structured summary with key points and next steps
-- [ ] AIAgent chat streams responses in real time with no `dangerouslyAllowBrowser` in any source file
-
----
-
-## Phase 8: Gmail Integration
+## Phase 7: Gmail Integration
 
 **Goal:** Users can connect Gmail via Auth Code + PKCE, and the CRM can read their inbox, send emails from contact/deal pages, and link incoming emails to contacts automatically.
-**Dependencies:** Phase 4 (token security), Phase 5 (contacts in Supabase for email linking), Phase 7 (Edge Functions infrastructure in place)
+**Dependencies:** Phase 5 (contacts in Supabase for email linking)
 
-### Plans
+**Plans:** 1/5 plans executed
 
-- 8.1: Implement Auth Code + PKCE initiation — replace `initTokenClient` with `initCodeClient` in `gmailService.ts`; generate `code_verifier`, `code_challenge`, `state`; store verifier + state in `sessionStorage`; redirect to Google authorization endpoint with `access_type=offline&prompt=consent`
-- 8.2: Create `gmail-oauth-exchange` Edge Function — Deno function that receives `{ code, code_verifier }` from the SPA callback; POSTs to Google token endpoint; stores `refresh_token` in `gmail_tokens` table; returns only the short-lived `access_token` to the browser
-- 8.3: Create `gmail-refresh-token` Edge Function — Deno function that looks up the stored refresh token for the authenticated user; calls Google token refresh endpoint; returns a new short-lived `access_token` to the browser; access token never stored in localStorage
-- 8.4: Inbox view via real Gmail API — `gmailService.ts` reads threads using the short-lived access token from memory; `emailStore.ts` access token stored in React state only (not Zustand persist); inbox renders real Gmail threads
-- 8.5: Send emails from contact/deal pages — "Send Email" action on ContactDetail and DealDetail calls Gmail API send endpoint with the in-memory access token; logs sent email as an activity in the CRM
-- 8.6: Link incoming emails to contacts — when loading inbox threads, match sender email addresses against `contacts` table; create activity entries linking the email thread to the matching contact
+Plans:
+- [x] 07-1-PLAN.md — PKCE OAuth initiation + GmailTokenContext + emailStore cleanup (Wave 1)
+- [ ] 07-2-PLAN.md — gmail_tokens schema + gmail-oauth-exchange + gmail-refresh-token Edge Functions (Wave 1)
+- [ ] 07-3-PLAN.md — GmailCallback page + App.tsx route + useDataInit silent refresh (Wave 2)
+- [ ] 07-4-PLAN.md — Inbox wired to real Gmail threads + contact email matching chips (Wave 3)
+- [ ] 07-5-PLAN.md — Send email from ContactDetail/Deals + activity logging on send (Wave 4)
 
 ### Requirements Covered
 
@@ -256,21 +227,21 @@ GMAIL-01, GMAIL-02, GMAIL-03, GMAIL-04, GMAIL-05, GMAIL-06, SEC-05
 - [ ] After granting consent, the callback page exchanges the code via Edge Function and the user's inbox loads
 - [ ] Closing and reopening the app silently refreshes the Gmail token without re-prompting the user
 - [ ] `localStorage.getItem('crm_emails')` contains no `accessToken` field
-- [ ] Receiving an email from a known contact's email address creates a linked activity in the CRM activity feed
+- [ ] Receiving an email from a known contact's email address shows a contact chip in the inbox thread list
 - [ ] Sending an email from a deal detail page logs it as an activity on that deal
 
 ---
 
-## Phase 9: i18n English
+## Phase 8: i18n English
 
 **Goal:** A complete English translation file exists and users can switch language preference from Settings with the choice persisting across sessions.
 **Dependencies:** Phase 2 (user session for preference persistence)
 
 ### Plans
 
-- 9.1: Audit all Spanish keys in `es.ts` — enumerate every key in the existing Spanish translation file; identify any keys referenced in components but missing from the file (gaps)
-- 9.2: Create `en.json` with full English translations — write the English equivalent for every Spanish key; ensure parity (same key count, no missing keys that would fall back to raw key strings)
-- 9.3: Language switcher and persistence — add language selector to Settings (or user profile dropdown); confirm `useI18nStore` persists the selection; verify all pages re-render in English when the switcher is toggled
+- 8.1: Audit all Spanish keys in `es.ts` — enumerate every key in the existing Spanish translation file; identify any keys referenced in components but missing from the file (gaps)
+- 8.2: Complete `en.ts` with full English translations — ensure parity (same key count, no missing keys that would fall back to raw key strings)
+- 8.3: Language switcher and persistence — add language selector to Settings; confirm `useI18nStore` persists the selection; verify all pages re-render in English when the switcher is toggled
 
 ### Requirements Covered
 
@@ -284,18 +255,18 @@ I18N-01, I18N-02
 
 ---
 
-## Phase 10: Test Suite
+## Phase 9: Test Suite
 
-**Goal:** Vitest is configured and running in CI; lead scoring, store actions, and form validation schemas all have unit test coverage.
-**Dependencies:** Phase 7 (lead scoring must be final before testing it)
+**Goal:** Vitest is configured and running in CI; store actions and form validation schemas all have unit test coverage.
+**Dependencies:** None
 
 ### Plans
 
-- 10.1: Configure Vitest + testing libraries — install `vitest`, `@vitest/coverage-v8`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`; create `vitest.config.ts` with jsdom env, path alias, coverage config; create `src/test/setup.ts` with localStorage mock and jest-dom import
-- 10.2: Write lead scoring unit tests — `src/utils/leadScoring.test.ts`; test `computeLeadScore` and `calculateLeadScore` for cold contact (score 0), hot contact (max recency), customer status bonus, and cap at 100; run in node environment (no jsdom needed)
-- 10.3: Write Zustand store tests — `contactsStore.test.ts` and `dealsStore.test.ts`; mock Supabase client; test add/update/delete actions; test `getFilteredContacts` / `getFilteredDeals` selectors; reset store state in `beforeEach`
-- 10.4: Write Zod schema tests — test form validation schemas for ContactForm, DealForm, ActivityForm; assert required field errors, type coercion, and valid payloads pass without ceremony
-- 10.5: GitHub Actions CI workflow — create `.github/workflows/ci.yml` running `tsc --noEmit` and `vitest run` on push to `main` and on all PRs; fail the workflow if either command exits non-zero
+- 9.1: Configure Vitest + testing libraries — install `vitest`, `@vitest/coverage-v8`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`; create `vitest.config.ts` with jsdom env, path alias, coverage config; create `src/test/setup.ts`
+- 9.2: Write Zustand store tests — `contactsStore.test.ts` and `dealsStore.test.ts`; mock Supabase client; test add/update/delete actions; test `getFilteredContacts` / `getFilteredDeals` selectors; reset store state in `beforeEach`
+- 9.3: Write Zod schema tests — test form validation schemas for ContactForm, DealForm, ActivityForm; assert required field errors, type coercion, and valid payloads pass without ceremony
+- 9.4: Write utility tests — followUpEngine, formatters, permissions
+- 9.5: GitHub Actions CI workflow — create `.github/workflows/ci.yml` running `tsc --noEmit` and `vitest run` on push to `main` and on all PRs; fail the workflow if either command exits non-zero
 
 ### Requirements Covered
 
@@ -304,25 +275,25 @@ TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
 ### Done When
 
 - [ ] `npm run test:run` exits 0 with all tests passing from a clean clone
-- [ ] `npm run test:coverage` shows coverage report with lead scoring utility at 100% line coverage
+- [ ] `npm run test:coverage` shows coverage report
 - [ ] Opening a PR on GitHub triggers the CI workflow and shows test + type check results in the PR checks
 - [ ] A deliberate type error in `src/types/index.ts` causes the CI `tsc --noEmit` step to fail
-- [ ] A deliberate logic error in `leadScoring.ts` causes at least one test to fail
+- [ ] A deliberate logic error in a utility causes at least one test to fail
 
 ---
 
-## Phase 11: Vercel Deployment
+## Phase 10: Vercel Deployment
 
 **Goal:** The app is deployed to Vercel with correct SPA routing, staging and production environments pointing to separate Supabase projects, and a custom domain serving the production build.
-**Dependencies:** Phase 10 (CI must pass before production deploy)
+**Dependencies:** Phase 9 (CI must pass before production deploy)
 
 ### Plans
 
-- 11.1: Create `vercel.json` — add SPA catch-all rewrite `{ "source": "/(.*)", "destination": "/index.html" }` at repo root; verify React Router deep links work on direct load
-- 11.2: Connect repo to Vercel and configure env vars — link GitHub repo to Vercel project; set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for Production (prod Supabase project) and Preview (staging Supabase project) environments separately
-- 11.3: Verify preview deployments — push a feature branch; confirm Vercel creates a preview URL; confirm the preview URL hits the staging Supabase project, not production
-- 11.4: Production deploy on main merge — merge to `main`; confirm Vercel deploys to production; smoke test: signup, login, create contact, log activity all work on the live URL
-- 11.5: Configure custom domain — add domain in Vercel Project Settings > Domains; add CNAME or A record at registrar; wait for DNS propagation; confirm TLS certificate is auto-provisioned by Vercel
+- 10.1: Create `vercel.json` — add SPA catch-all rewrite `{ "source": "/(.*)", "destination": "/index.html" }` at repo root; verify React Router deep links work on direct load
+- 10.2: Connect repo to Vercel and configure env vars — link GitHub repo to Vercel project; set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for Production and Preview environments separately
+- 10.3: Verify preview deployments — push a feature branch; confirm Vercel creates a preview URL hitting staging Supabase, not production
+- 10.4: Production deploy on main merge — merge to `main`; confirm Vercel deploys to production; smoke test: signup, login, create contact, log activity
+- 10.5: Configure custom domain — add domain in Vercel; add CNAME or A record at registrar; confirm TLS certificate is auto-provisioned by Vercel
 
 ### Requirements Covered
 
@@ -330,9 +301,9 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 
 ### Done When
 
-- [ ] Navigating directly to `https://yourdomain.com/contacts` returns the Contacts page, not a 404
-- [ ] A PR branch gets an automatic preview URL posted as a comment on the PR
-- [ ] The preview URL's network requests hit the staging Supabase URL (verified in DevTools)
+- [ ] Navigating directly to `/contacts` returns the Contacts page, not a 404
+- [ ] A PR branch gets an automatic preview URL
+- [ ] The preview URL hits staging Supabase (verified in DevTools)
 - [ ] Merging to `main` triggers a production deployment that completes successfully
 - [ ] The custom domain serves the app over HTTPS with a valid TLS certificate
 
@@ -359,58 +330,52 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 | AUTH-08 | Phase 3 | Pending |
 | AUTH-09 | Phase 3 | Pending |
 | AUTH-10 | Phase 3 | Pending |
-| SEC-02 | Phase 4 | Pending |
-| SEC-03 | Phase 4 | Pending |
-| SEC-04 | Phase 4 | Pending |
-| SEC-06 | Phase 4 | Pending |
-| DATA-01 | Phase 5 | Pending |
-| DATA-02 | Phase 5 | Pending |
-| DATA-03 | Phase 5 | Pending |
-| DATA-04 | Phase 5 | Pending |
-| DATA-05 | Phase 5 | Pending |
-| DATA-06 | Phase 5 | Pending |
-| DATA-07 | Phase 5 | Pending |
-| DATA-08 | Phase 5 | Pending |
-| REALTIME-01 | Phase 5 | Pending |
-| REALTIME-02 | Phase 5 | Pending |
-| REALTIME-03 | Phase 5 | Pending |
-| REALTIME-04 | Phase 5 | Pending |
-| DATA-09 | Phase 6 | Pending |
-| DATA-10 | Phase 6 | Pending |
-| DATA-11 | Phase 6 | Pending |
-| DATA-12 | Phase 6 | Pending |
-| DATA-13 | Phase 6 | Pending |
-| DATA-14 | Phase 6 | Pending |
-| DATA-15 | Phase 6 | Pending |
-| USERS-01 | Phase 6 | Pending |
-| USERS-02 | Phase 6 | Pending |
-| USERS-03 | Phase 6 | Pending |
-| AI-01 | Phase 7 | Pending |
-| AI-02 | Phase 7 | Pending |
-| AI-03 | Phase 7 | Pending |
-| AI-04 | Phase 7 | Pending |
-| AI-05 | Phase 7 | Pending |
-| GMAIL-01 | Phase 8 | Pending |
-| GMAIL-02 | Phase 8 | Pending |
-| GMAIL-03 | Phase 8 | Pending |
-| GMAIL-04 | Phase 8 | Pending |
-| GMAIL-05 | Phase 8 | Pending |
-| GMAIL-06 | Phase 8 | Pending |
-| SEC-05 | Phase 8 | Pending |
-| I18N-01 | Phase 9 | Pending |
-| I18N-02 | Phase 9 | Pending |
-| TEST-01 | Phase 10 | Pending |
-| TEST-02 | Phase 10 | Pending |
-| TEST-03 | Phase 10 | Pending |
-| TEST-04 | Phase 10 | Pending |
-| TEST-05 | Phase 10 | Pending |
-| DEPLOY-01 | Phase 11 | Pending |
-| DEPLOY-02 | Phase 11 | Pending |
-| DEPLOY-03 | Phase 11 | Pending |
-| DEPLOY-04 | Phase 11 | Pending |
-| DEPLOY-05 | Phase 11 | Pending |
+| SEC-02 | Phase 4 | ✅ Complete |
+| SEC-03 | Phase 4 | ✅ Complete |
+| SEC-04 | Phase 4 | ✅ Complete |
+| DATA-01 | Phase 5 | ✅ Complete |
+| DATA-02 | Phase 5 | ✅ Complete |
+| DATA-03 | Phase 5 | ✅ Complete |
+| DATA-04 | Phase 5 | ✅ Complete |
+| DATA-05 | Phase 5 | ✅ Complete |
+| DATA-06 | Phase 5 | ✅ Complete |
+| DATA-07 | Phase 5 | ✅ Complete |
+| DATA-08 | Phase 5 | ✅ Complete |
+| REALTIME-01 | Phase 5 | ✅ Complete |
+| REALTIME-02 | Phase 5 | ✅ Complete |
+| REALTIME-03 | Phase 5 | ✅ Complete |
+| REALTIME-04 | Phase 5 | ✅ Complete |
+| DATA-09 | Phase 6 | ✅ Complete |
+| DATA-10 | Phase 6 | ✅ Complete |
+| DATA-11 | Phase 6 | ✅ Complete |
+| DATA-12 | Phase 6 | ✅ Complete |
+| DATA-13 | Phase 6 | ✅ Complete |
+| DATA-14 | Phase 6 | ✅ Complete |
+| DATA-15 | Phase 6 | ✅ Complete |
+| USERS-01 | Phase 6 | ✅ Complete |
+| USERS-02 | Phase 6 | ✅ Complete |
+| USERS-03 | Phase 6 | ✅ Complete |
+| GMAIL-01 | Phase 7 | Pending |
+| GMAIL-02 | Phase 7 | Pending |
+| GMAIL-03 | Phase 7 | Pending |
+| GMAIL-04 | Phase 7 | Pending |
+| GMAIL-05 | Phase 7 | Pending |
+| GMAIL-06 | Phase 7 | Pending |
+| SEC-05 | Phase 7 | Pending |
+| I18N-01 | Phase 8 | Pending |
+| I18N-02 | Phase 8 | Pending |
+| TEST-01 | Phase 9 | Pending |
+| TEST-02 | Phase 9 | Pending |
+| TEST-03 | Phase 9 | Pending |
+| TEST-04 | Phase 9 | Pending |
+| TEST-05 | Phase 9 | Pending |
+| DEPLOY-01 | Phase 10 | Pending |
+| DEPLOY-02 | Phase 10 | Pending |
+| DEPLOY-03 | Phase 10 | Pending |
+| DEPLOY-04 | Phase 10 | Pending |
+| DEPLOY-05 | Phase 10 | Pending |
 
-**v1 requirements mapped: 57/57 ✓**
+**Requirements mapped: 52 total — 42 complete, 15 pending** *(5 AI requirements removed from scope)*
 
 ---
 

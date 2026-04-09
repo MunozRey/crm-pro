@@ -5,8 +5,8 @@
 -- Apply via: Supabase Dashboard > SQL Editor > Run
 
 -- ─── Extensions ────────────────────────────────────────────────────────────────
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+
 
 -- ─── Helper functions ──────────────────────────────────────────────────────────
 -- CRITICAL: define functions BEFORE any CREATE POLICY that calls them (Pitfall 5).
@@ -43,7 +43,7 @@ $$;
 
 -- ─── Organizations ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.organizations (
-  id          uuid        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at  timestamptz NOT NULL DEFAULT now(),
   name        text        NOT NULL,
   domain      text,
@@ -68,7 +68,7 @@ CREATE POLICY "admins_can_update_org" ON public.organizations
 
 -- ─── Organization Members ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.organization_members (
-  id              uuid        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid        NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   user_id         uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role            text        NOT NULL DEFAULT 'sales_rep',
@@ -101,11 +101,11 @@ CREATE POLICY "admins_can_manage_members" ON public.organization_members
 
 -- ─── Invitations ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.invitations (
-  id              uuid        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid        NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   email           text        NOT NULL,
   role            text        NOT NULL DEFAULT 'sales_rep',
-  token           text        NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
+  token           text        NOT NULL UNIQUE DEFAULT replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
   invited_by      uuid        NOT NULL REFERENCES auth.users(id),
   status          text        NOT NULL DEFAULT 'pending',
   expires_at      timestamptz NOT NULL DEFAULT now() + interval '7 days',

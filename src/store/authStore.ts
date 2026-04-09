@@ -400,6 +400,10 @@ export const useAuthStore = create<AuthState>()(
       },
 
       isAuthenticated: () => {
+        if (isSupabaseConfigured) {
+          const { supabaseSession, currentUser } = get()
+          return !!(supabaseSession && currentUser)
+        }
         const { session, currentUser } = get()
         if (!session || !currentUser) return false
         if (session.expiresAt < Date.now()) return false
@@ -420,6 +424,14 @@ export const useAuthStore = create<AuthState>()(
         passwords: state.passwords,
         invitations: state.invitations,
       }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<AuthState> | undefined
+        if (!p) return current
+        // Ensure SEED_USERS are always present (stale localStorage may have empty users)
+        const users = (p.users && p.users.length > 0) ? p.users : SEED_USERS
+        const passwords = (p.passwords && Object.keys(p.passwords).length > 0) ? p.passwords : SEED_PASSWORDS
+        return { ...current, ...p, users, passwords }
+      },
     }
   )
 )

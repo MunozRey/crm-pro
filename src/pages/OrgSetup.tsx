@@ -30,37 +30,18 @@ export function OrgSetup() {
     setError(null)
 
     try {
-      // 1. Insert organization
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: org, error: orgErr } = await (supabase as any)
-        .from('organizations')
-        .insert({ name: orgName.trim(), domain: slug.trim() })
-        .select()
-        .single()
+      // Call Edge Function (uses service role to bypass RLS)
+      const { data, error: fnErr } = await supabase.functions.invoke('create-org', {
+        body: { orgName: orgName.trim(), slug: slug.trim() },
+      })
+      if (fnErr) throw new Error(fnErr.message)
+      if (data?.error) throw new Error(data.error)
 
-      if (orgErr) throw new Error((orgErr as { message: string }).message)
-
-      // 2. Insert organization_members (creator = admin)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Sesión perdida')
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: memberErr } = await (supabase as any)
-        .from('organization_members')
-        .insert({
-          organization_id: (org as { id: string }).id,
-          user_id: session.user.id,
-          role: 'admin',
-        })
-
-      if (memberErr) throw new Error((memberErr as { message: string }).message)
-
-      // 3. Refresh session so JWT carries new organization_id from the DB trigger
+      // Refresh session so JWT carries new organization_id claim
       const { error: refreshErr } = await supabase.auth.refreshSession()
       if (refreshErr) throw new Error(refreshErr.message)
 
-      // 4. onAuthStateChange in authStore will fire and update currentUser.organizationId.
-      // Navigate to dashboard — ProtectedRoute guard will now pass.
+      // onAuthStateChange will fire and update currentUser.organizationId.
       navigate('/', { replace: true })
     } catch (err) {
       setError((err as Error).message)

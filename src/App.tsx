@@ -29,13 +29,13 @@ import { UserProfile } from './pages/UserProfile'
 import { Notifications } from './pages/Notifications'
 import { PipelineTimeline } from './pages/PipelineTimeline'
 import { Forecast } from './pages/Forecast'
-import { Leaderboard } from './pages/Leaderboard'
 import { Sequences } from './pages/Sequences'
 import { Automations } from './pages/Automations'
 import { Products } from './pages/Products'
 import { Calendar } from './pages/Calendar'
 import { useTranslations } from './i18n'
 import { useDataInit } from './hooks/useDataInit'
+import { GmailTokenProvider } from './contexts/GmailTokenContext'
 
 function ProtectedPage({ title, children, requiredPermission }: { title: string; children: React.ReactNode; requiredPermission?: import('./types/auth').Permission }) {
   return (
@@ -79,7 +79,6 @@ function AppRoutes() {
       <Route path="/notifications" element={<ProtectedPage title={t.nav.notifications}><Notifications /></ProtectedPage>} />
       <Route path="/timeline" element={<ProtectedPage title={t.nav.timeline} requiredPermission="deals:read"><PipelineTimeline /></ProtectedPage>} />
       <Route path="/forecast" element={<ProtectedPage title={t.nav.forecast} requiredPermission="reports:read"><Forecast /></ProtectedPage>} />
-      <Route path="/leaderboard" element={<ProtectedPage title={t.nav.leaderboard} requiredPermission="reports:read"><Leaderboard /></ProtectedPage>} />
       <Route path="/sequences" element={<ProtectedPage title={t.nav.sequences} requiredPermission="templates:read"><Sequences /></ProtectedPage>} />
       <Route path="/automations" element={<ProtectedPage title={t.nav.automations} requiredPermission="settings:read"><Automations /></ProtectedPage>} />
       <Route path="/products" element={<ProtectedPage title={t.nav.products} requiredPermission="settings:read"><Products /></ProtectedPage>} />
@@ -96,7 +95,9 @@ export default function App() {
   }, [])
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <GmailTokenProvider>
+        <AppRoutes />
+      </GmailTokenProvider>
     </BrowserRouter>
   )
 }

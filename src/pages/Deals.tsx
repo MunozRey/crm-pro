@@ -4,14 +4,12 @@ import { DragDropContext } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
 import {
   Plus, KanbanSquare, LayoutList, Filter, X,
-  Trophy, XCircle, Edit2, Trash2, Loader2,
+  Trophy, XCircle, Edit2, Trash2, Loader2, Mail,
 } from 'lucide-react'
 import { useDealsStore } from '../store/dealsStore'
 import { useContactsStore } from '../store/contactsStore'
 import { useCompaniesStore } from '../store/companiesStore'
 import { useActivitiesStore } from '../store/activitiesStore'
-import { useAIStore } from '../store/aiStore'
-import { enrichDeal } from '../services/aiService'
 import { KanbanColumn } from '../components/deals/KanbanColumn'
 import { DealForm } from '../components/deals/DealForm'
 import { ActivityForm } from '../components/activities/ActivityForm'
@@ -31,9 +29,11 @@ import {
   DEAL_STAGE_COLORS, DEAL_STAGES_ORDER,
   DEAL_PRIORITY_LABELS, DEAL_PRIORITY_COLORS,
 } from '../utils/constants'
-import { MOCK_USERS } from '../utils/seedData'
+
 import type { Deal, DealStage, QuoteItem, SmartViewFilter } from '../types'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { EmailComposer } from '../components/email/EmailComposer'
+import { useEmailStore } from '../store/emailStore'
 import { useAuthStore } from '../store/authStore'
 import { useProductsStore } from '../store/productsStore'
 import { CustomFieldsForm } from '../components/shared/CustomFieldRenderer'
@@ -246,6 +246,7 @@ export function Deals() {
   const { activities, addActivity, completeActivity, deleteActivity } = useActivitiesStore()
 
   const currentUser = useAuthStore((s) => s.currentUser)
+  const orgUsers = useAuthStore((s) => s.users)
   const isSalesRep = currentUser?.role === 'sales_rep'
 
   const [search, setSearch] = useState('')
@@ -257,20 +258,14 @@ export function Deals() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isActivityOpen, setIsActivityOpen] = useState(false)
+  const [isEmailOpen, setIsEmailOpen] = useState(false)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [isEnriching, setIsEnriching] = useState(false)
   const [selectedDealIds, setSelectedDealIds] = useState<Set<string>>(new Set())
   const [showBulkDelete, setShowBulkDelete] = useState(false)
   const [viewFilters, setViewFilters] = useState<SmartViewFilter[]>([])
 
-  // AI Store
-  const openRouterKey = useAIStore((s) => s.openRouterKey)
-  const dealEnrichments = useAIStore((s) => s.dealEnrichments)
-  const saveDealEnrichment = useAIStore((s) => s.saveDealEnrichment)
-
-  const enrichment = selectedDeal ? dealEnrichments[selectedDeal.id] : undefined
 
   const filtered = useMemo(() => {
     return deals.filter((d) => {
@@ -392,21 +387,6 @@ export function Deals() {
     toast.success(t.activities.newActivity)
   }
 
-  const handleEnrichDeal = async () => {
-    if (!selectedDeal || !openRouterKey) return
-    setIsEnriching(true)
-    try {
-      const contact = getContact(selectedDeal.contactId)
-      const company = getCompany(selectedDeal.companyId)
-      const result = await enrichDeal(selectedDeal, contact, company)
-      saveDealEnrichment(selectedDeal.id, result)
-      toast.success(t.nav.aiAssistant)
-    } catch (err) {
-      toast.error(`${t.nav.aiAssistant} — ${t.settings.apiKeyPlaceholder}`)
-    } finally {
-      setIsEnriching(false)
-    }
-  }
 
   const dealActivities = useMemo(() => {
     if (!selectedDeal) return []
@@ -473,7 +453,7 @@ export function Deals() {
       {showFilters && (
         <div className="flex gap-3 flex-wrap items-center px-4 py-3 border-b border-white/6 bg-navy-800/30">
           <Select
-            options={MOCK_USERS.map((u) => ({ value: u, label: u }))}
+            options={orgUsers.map((u) => ({ value: u.name, label: u.name }))}
             placeholder={t.common.assignedTo}
             value={assignedFilter}
             onChange={(e) => setAssignedFilter(e.target.value)}
@@ -525,7 +505,7 @@ export function Deals() {
               </span>
               <div className="h-4 w-px bg-white/12" />
               <Select
-                options={MOCK_USERS.map((u) => ({ value: u, label: u }))}
+                options={orgUsers.map((u) => ({ value: u.name, label: u.name }))}
                 placeholder={t.common.assignedTo}
                 value=""
                 onChange={(e) => {
@@ -672,6 +652,9 @@ export function Deals() {
                   </>
                 </PermissionGate>
               )}
+              <Button size="sm" variant="secondary" leftIcon={<Mail size={14} />} onClick={() => setIsEmailOpen(true)}>
+                {t.inbox.compose}
+              </Button>
               <PermissionGate permission="deals:update">
                 <Button size="sm" variant="secondary" leftIcon={<Edit2 size={14} />} onClick={() => setIsEditing(true)}>
                   {t.common.edit}
@@ -747,134 +730,6 @@ export function Deals() {
               <QuoteBuilder dealId={selectedDeal.id} initialItems={selectedDeal.quoteItems ?? []} />
             </div>
 
-            {/* AI Enrichment Section */}
-            <div className="bg-[#111220] border border-white/8 rounded-2xl p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                <span>{t.nav.aiAssistant}</span>
-              </h3>
-
-              {enrichment ? (
-                <div className="space-y-4">
-                  {/* Win Probability */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1.5">Win Probability</p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2.5 rounded-full bg-white/6 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            enrichment.winProbabilityAI < 30
-                              ? 'bg-red-500'
-                              : enrichment.winProbabilityAI < 60
-                                ? 'bg-amber-500'
-                                : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${enrichment.winProbabilityAI}%` }}
-                        />
-                      </div>
-                      <span className={`text-sm font-bold ${
-                        enrichment.winProbabilityAI < 30
-                          ? 'text-red-400'
-                          : enrichment.winProbabilityAI < 60
-                            ? 'text-amber-400'
-                            : 'text-emerald-400'
-                      }`}>
-                        {enrichment.winProbabilityAI}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Executive Summary */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Executive Summary</p>
-                    <p className="text-sm text-slate-300 leading-relaxed">{enrichment.executiveSummary}</p>
-                  </div>
-
-                  {/* Key Risks */}
-                  {enrichment.keyRisks.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1.5">Key Risks</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {enrichment.keyRisks.map((risk, i) => (
-                          <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/15 text-red-400">
-                            {risk}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Key Strengths */}
-                  {enrichment.keyStrengths.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1.5">Key Strengths</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {enrichment.keyStrengths.map((strength, i) => (
-                          <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400">
-                            {strength}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Next Steps */}
-                  {enrichment.nextSteps.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1.5">Next Steps</p>
-                      <ol className="space-y-1">
-                        {enrichment.nextSteps.map((step, i) => (
-                          <li key={i} className="text-sm text-slate-300 flex items-start gap-2">
-                            <span className="text-xs font-bold text-brand-400 mt-0.5 flex-shrink-0">{i + 1}.</span>
-                            <span>{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-
-                  {/* Talking Points */}
-                  {enrichment.talkingPoints.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1.5">Talking Points</p>
-                      <ul className="space-y-1">
-                        {enrichment.talkingPoints.map((point, i) => (
-                          <li key={i} className="text-sm text-slate-300 flex items-start gap-2">
-                            <span className="text-slate-600 mt-1 flex-shrink-0">•</span>
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Enriched timestamp */}
-                  <p className="text-[10px] text-slate-600 pt-2 border-t border-white/6">
-                    {t.nav.aiAssistant}: {formatDate(enrichment.enrichedAt)}
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  {!openRouterKey ? (
-                    <p className="text-xs text-slate-500">{t.settings.apiKeyPlaceholder}</p>
-                  ) : (
-                    <button
-                      onClick={handleEnrichDeal}
-                      disabled={isEnriching}
-                      className="btn-gradient inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-all"
-                    >
-                      {isEnriching ? (
-                        <>
-                          <Loader2 size={14} className="animate-spin" />
-                          {t.nav.aiAssistant}...
-                        </>
-                      ) : (
-                        `🤖 ${t.nav.aiAssistant}`
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         )}
       </SlideOver>
@@ -894,6 +749,18 @@ export function Deals() {
             defaultContactId={selectedDeal.contactId}
             onSubmit={handleAddActivity}
             onCancel={() => setIsActivityOpen(false)}
+          />
+        )}
+      </SlideOver>
+
+      {/* Email composer */}
+      <SlideOver isOpen={isEmailOpen} onClose={() => setIsEmailOpen(false)} title={t.inbox.compose}>
+        {selectedDeal && (
+          <EmailComposer
+            isOpen={isEmailOpen}
+            onClose={() => setIsEmailOpen(false)}
+            dealId={selectedDeal.id}
+            contactId={selectedDeal.contactId}
           />
         )}
       </SlideOver>

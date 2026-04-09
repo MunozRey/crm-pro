@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { X, Send, Sparkles, Loader2, ChevronDown, FileText, Eye } from 'lucide-react'
+import { X, Send, ChevronDown, FileText, Eye, Loader2 } from 'lucide-react'
+import { useGmailToken } from '../../contexts/GmailTokenContext'
 import { useEmailStore } from '../../store/emailStore'
-import { useAIStore } from '../../store/aiStore'
+import { useActivitiesStore } from '../../store/activitiesStore'
 import { useContactsStore } from '../../store/contactsStore'
 import { useDealsStore } from '../../store/dealsStore'
 import { useCompaniesStore } from '../../store/companiesStore'
 import { useTemplateStore } from '../../store/templateStore'
-import { generateEmailDraft } from '../../services/aiService'
 import { formatCurrency } from '../../utils/formatters'
 import { toast } from '../../store/toastStore'
 import { useTranslations } from '../../i18n'
@@ -39,14 +39,11 @@ export function EmailComposer({
   const [body, setBody] = useState(defaultBody)
   const [showCc, setShowCc] = useState(false)
   const [sending, setSending] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const [aiIntent, setAiIntent] = useState('')
-  const [showAI, setShowAI] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [trackingEnabled, setTrackingEnabled] = useState(false)
 
   const { sendEmail, isGmailConnected, enableTracking } = useEmailStore()
-  const { openRouterKey } = useAIStore()
+  const { accessToken } = useGmailToken()
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)
   const companies = useCompaniesStore((s) => s.companies)
@@ -98,41 +95,36 @@ export function EmailComposer({
     }
     setSending(true)
     try {
+      const toList = to.split(',').map((e) => e.trim()).filter(Boolean)
       const sent = await sendEmail({
-        to: to.split(',').map((e) => e.trim()).filter(Boolean),
+        to: toList,
         cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
         subject,
         body,
         contactId,
         dealId,
         companyId,
+        accessToken: accessToken ?? undefined,
       })
       if (trackingEnabled) {
         enableTracking(sent.id)
       }
+      // Log email as activity
+      useActivitiesStore.getState().addActivity({
+        type: 'email',
+        subject,
+        description: `Email sent to ${toList.join(', ')}: ${subject}`,
+        status: 'completed',
+        contactId,
+        dealId,
+        createdBy: '',
+      })
       toast.success(`${t.common.email} ✓`)
       onClose()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.common.noResults)
     } finally {
       setSending(false)
-    }
-  }
-
-  const handleGenerateDraft = async () => {
-    if (!openRouterKey) { toast.error(`${t.settings.aiConfig}: ${t.settings.apiKey}`); return }
-    if (!contact) { toast.error(`${t.common.add} ${t.contacts.title.toLowerCase()}`); return }
-    setGenerating(true)
-    try {
-      const draft = await generateEmailDraft({ contact, deal, intent: aiIntent || t.nav.followUps })
-      setSubject(draft.subject)
-      setBody(draft.body)
-      setShowAI(false)
-      toast.success(`${t.nav.aiAssistant} ✓`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.common.noResults)
-    } finally {
-      setGenerating(false)
     }
   }
 
@@ -153,7 +145,7 @@ export function EmailComposer({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setShowTemplates((v) => !v); setShowAI(false) }}
+              onClick={() => setShowTemplates((v) => !v)}
               className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors ${
                 showTemplates ? 'bg-amber-500/20 text-amber-400' : 'bg-white/6 hover:bg-white/10 text-slate-400'
               }`}
@@ -161,15 +153,6 @@ export function EmailComposer({
               <FileText size={12} />
               {t.nav.templates}
             </button>
-            {openRouterKey && (
-              <button
-                onClick={() => { setShowAI((v) => !v); setShowTemplates(false) }}
-                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-brand-600/15 hover:bg-brand-600/25 text-brand-400 transition-colors"
-              >
-                <Sparkles size={12} />
-                IA
-              </button>
-            )}
             <button onClick={onClose} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
               <X size={16} />
             </button>
@@ -203,30 +186,6 @@ export function EmailComposer({
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* AI panel */}
-        {showAI && (
-          <div className="px-4 py-3 bg-brand-600/8 border-b border-brand-500/20">
-            <p className="text-xs text-brand-400 mb-2 font-medium">{t.nav.aiAssistant}</p>
-            <div className="flex gap-2">
-              <input
-                value={aiIntent}
-                onChange={(e) => setAiIntent(e.target.value)}
-                placeholder={`${t.activities.subject}...`}
-                className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-600 outline-none focus:border-brand-500/40"
-                onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateDraft() }}
-              />
-              <button
-                onClick={handleGenerateDraft}
-                disabled={generating}
-                className="px-3 py-1.5 rounded-lg btn-gradient text-xs text-white font-medium disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                {t.common.create}
-              </button>
-            </div>
           </div>
         )}
 

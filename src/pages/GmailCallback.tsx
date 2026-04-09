@@ -47,7 +47,7 @@ export function GmailCallback() {
       sessionStorage.removeItem('gmail_oauth_verifier')
 
       try {
-        const { data, error } = await supabase.functions.invoke('gmail-oauth-exchange', {
+        const { data, error } = await supabase!.functions.invoke('gmail-oauth-exchange', {
           body: { code, code_verifier: codeVerifier, redirect_uri: REDIRECT_URI },
         })
 

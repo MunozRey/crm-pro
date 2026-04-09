@@ -15,8 +15,8 @@
 - [x] **Phase 4: Security Fixes** — Remove API keys from localStorage, fix XSS, remove dangerouslyAllowBrowser, add dev warning for missing env vars (completed 2026-04-07)
 - [x] **Phase 5: Core Data Stores + Real-Time** — Migrate contacts, companies, deals, activities, notifications to Supabase with real-time subscriptions (completed 2026-04-07)
 - [x] **Phase 6: Secondary Stores & Real Users** — Migrate remaining stores; replace MOCK_USERS; remove AI features and Leaderboard; unify Lead=Contact (completed 2026-04-08)
-- [ ] **Phase 7: Gmail Integration** — Auth Code + PKCE OAuth flow; Edge Functions for token exchange and refresh; inbox, send, and contact linking
-- [ ] **Phase 8: i18n English** — English translation file and language switcher persistence
+- [x] **Phase 7: Gmail Integration** — Auth Code + PKCE OAuth flow; Edge Functions for token exchange and refresh; inbox, send, and contact linking (completed 2026-04-09)
+- [x] **Phase 8: i18n English** — English translation file and language switcher persistence (completed 2026-04-09)
 - [ ] **Phase 9: Test Suite** — Vitest setup; unit tests for stores, Zod schemas, and GitHub Actions CI
 - [ ] **Phase 10: Vercel Deployment** — vercel.json SPA rewrite, env vars, preview deployments, production deploy, custom domain
 
@@ -32,8 +32,8 @@
 | 4. Security Fixes | 4/4 | ✅ Complete | 2026-04-07 |
 | 5. Core Data Stores + Real-Time | 4/4 | ✅ Complete | 2026-04-07 |
 | 6. Secondary Stores & Real Users | 5/5 | ✅ Complete | 2026-04-08 |
-| 7. Gmail Integration | 2/5 | In Progress|  |
-| 8. i18n English | 0/3 | Not started | - |
+| 7. Gmail Integration | 5/5 | ✅ Complete | 2026-04-09 |
+| 8. i18n English | 3/3 | ✅ Complete | 2026-04-09 |
 | 9. Test Suite | 0/5 | Not started | - |
 | 10. Vercel Deployment | 0/5 | Not started | - |
 

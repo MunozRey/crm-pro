@@ -83,13 +83,15 @@ function ActionEditor({
         <select
           value={action.type}
           onChange={(e) => onChange({ type: e.target.value as AutomationActionType })}
+          aria-label={t.automations.action}
+          title={t.automations.action}
           className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
         >
           {(Object.keys(actionLabels) as AutomationActionType[]).map((k) => (
             <option key={k} value={k}>{actionLabels[k]}</option>
           ))}
         </select>
-        <button onClick={onRemove} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors">
+        <button onClick={onRemove} title={t.common.delete} aria-label={t.common.delete} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors">
           <X size={13} />
         </button>
       </div>
@@ -99,6 +101,8 @@ function ActionEditor({
           <select
             value={action.activityType ?? 'task'}
             onChange={(e) => onChange({ ...action, activityType: e.target.value as ActivityType })}
+            aria-label={t.common.type}
+            title={t.common.type}
             className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
           >
             {ACTIVITY_TYPE_OPTIONS.map((k) => (
@@ -119,6 +123,8 @@ function ActionEditor({
               max={90}
               value={action.activityDaysFromNow ?? 1}
               onChange={(e) => onChange({ ...action, activityDaysFromNow: Number(e.target.value) })}
+              aria-label={t.automations.trigger}
+              title={t.automations.trigger}
               className="w-20 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
             />
             <span className="text-xs text-slate-500">{t.automations.trigger.toLowerCase()}</span>
@@ -149,6 +155,8 @@ function ActionEditor({
         <select
           value={action.newStage ?? 'qualified'}
           onChange={(e) => onChange({ ...action, newStage: e.target.value as DealStage })}
+          aria-label={t.deals.stage}
+          title={t.deals.stage}
           className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
         >
           {STAGE_OPTIONS.map((s) => (
@@ -194,8 +202,7 @@ function RuleModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-lg border border-white/10 rounded-2xl shadow-float overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: '#0d0f1e' }}
+        className="relative w-full max-w-lg border border-white/10 rounded-2xl shadow-float overflow-hidden flex flex-col max-h-[90vh] bg-[#0d0f1e]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -203,7 +210,7 @@ function RuleModal({
           <h2 className="text-sm font-semibold text-white">
             {initial.name ? t.common.edit : t.automations.newRule}
           </h2>
-          <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-white transition-colors">
+          <button onClick={onClose} title={t.common.close} aria-label={t.common.close} className="p-1.5 text-slate-500 hover:text-white transition-colors">
             <X size={15} />
           </button>
         </div>
@@ -235,6 +242,8 @@ function RuleModal({
               <select
                 value={form.trigger.type}
                 onChange={(e) => setTrigger({ type: e.target.value as AutomationTriggerType })}
+                aria-label={t.automations.trigger}
+                title={t.automations.trigger}
                 className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
               >
                 {(Object.keys(triggerLabels) as AutomationTriggerType[]).map((k) => (
@@ -249,6 +258,8 @@ function RuleModal({
                     <select
                       value={form.trigger.fromStage ?? ''}
                       onChange={(e) => setTrigger({ ...form.trigger, fromStage: (e.target.value as DealStage) || undefined })}
+                      aria-label={t.common.from}
+                      title={t.common.from}
                       className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
                     >
                       <option value="">{t.common.all}</option>
@@ -260,6 +271,8 @@ function RuleModal({
                     <select
                       value={form.trigger.toStage ?? ''}
                       onChange={(e) => setTrigger({ ...form.trigger, toStage: (e.target.value as DealStage) || undefined })}
+                      aria-label={t.common.to}
+                      title={t.common.to}
                       className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
                     >
                       <option value="">{t.common.all}</option>
@@ -383,13 +396,15 @@ function RuleCard({ rule }: { rule: AutomationRule }) {
 
             {/* Controls */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button
+                <button
                 onClick={() => setExpanded((v) => !v)}
+                  title={expanded ? t.common.close : t.common.view}
+                  aria-label={expanded ? t.common.close : t.common.view}
                 className="p-1.5 text-slate-500 hover:text-slate-200 transition-colors"
               >
                 {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
               </button>
-              <PermissionGate permission="settings:update">
+              <PermissionGate permission="automations:update">
                 <button
                   onClick={() => setEditing(true)}
                   className="p-1.5 text-slate-500 hover:text-slate-200 transition-colors text-xs"
@@ -397,7 +412,7 @@ function RuleCard({ rule }: { rule: AutomationRule }) {
                   {t.common.edit}
                 </button>
               </PermissionGate>
-              <PermissionGate permission="settings:update">
+              <PermissionGate permission="automations:update">
                 <button
                   onClick={() => toggleRule(rule.id)}
                   className="flex-shrink-0"
@@ -409,9 +424,11 @@ function RuleCard({ rule }: { rule: AutomationRule }) {
                   }
                 </button>
               </PermissionGate>
-              <PermissionGate permission="settings:update">
+              <PermissionGate permission="automations:delete">
                 <button
                   onClick={() => { deleteRule(rule.id); toast.success(t.common.delete) }}
+                  title={t.common.delete}
+                  aria-label={t.common.delete}
                   className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
                 >
                   <Trash2 size={13} />
@@ -476,7 +493,7 @@ export function Automations() {
         <p className="text-sm text-slate-500">
           {active} {t.sequences.active.toLowerCase()} · {totalExecutions} {t.automations.executionCount.toLowerCase()}
         </p>
-        <PermissionGate permission="settings:update">
+        <PermissionGate permission="automations:create">
           <button
             onClick={() => setShowNew(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-xs text-white font-medium transition-colors"

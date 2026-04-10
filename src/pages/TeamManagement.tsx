@@ -44,10 +44,26 @@ export function TeamManagement() {
 
   const isAdmin = currentUser.role === 'admin'
   const canManageUsers = hasPermission(currentUser.role, 'users:manage_roles')
+  const canCreateUsers = hasPermission(currentUser.role, 'users:create')
+  const canInviteUsers = hasPermission(currentUser.role, 'users:invite')
 
   const activeUsers = users.filter((u) => u.isActive)
   const inactiveUsers = users.filter((u) => !u.isActive)
   const pendingInvitations = invitations.filter((i) => i.status === 'pending')
+  const maxUsers = useAuthStore.getState().organization?.maxUsers || 1
+  const usagePercent = Math.max(0, Math.min(100, Math.round((activeUsers.length / maxUsers) * 100)))
+  const usageWidthClass =
+    usagePercent >= 100 ? 'w-full'
+      : usagePercent >= 90 ? 'w-[90%]'
+        : usagePercent >= 80 ? 'w-[80%]'
+          : usagePercent >= 70 ? 'w-[70%]'
+            : usagePercent >= 60 ? 'w-[60%]'
+              : usagePercent >= 50 ? 'w-1/2'
+                : usagePercent >= 40 ? 'w-[40%]'
+                  : usagePercent >= 30 ? 'w-[30%]'
+                    : usagePercent >= 20 ? 'w-1/5'
+                      : usagePercent >= 10 ? 'w-[10%]'
+                        : 'w-[2%]'
 
   const handleAddUser = () => {
     if (!newUser.name || !newUser.email || !newUser.password) {
@@ -141,22 +157,26 @@ export function TeamManagement() {
             {activeMembersLabel}
           </p>
         </div>
-        {canManageUsers && (
+        {(canCreateUsers || canInviteUsers) && (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowInvite(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d0e1a] border border-white/10 text-slate-300 hover:text-white hover:bg-white/8 text-sm font-medium transition-all"
-            >
-              <Mail size={15} />
-              {t.team.invite}
-            </button>
-            <button
-              onClick={() => setShowAddUser(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl btn-gradient text-white text-sm font-semibold"
-            >
-              <Plus size={15} />
-              {t.team.newUser}
-            </button>
+            {canInviteUsers && (
+              <button
+                onClick={() => setShowInvite(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d0e1a] border border-white/10 text-slate-300 hover:text-white hover:bg-white/8 text-sm font-medium transition-all"
+              >
+                <Mail size={15} />
+                {t.team.invite}
+              </button>
+            )}
+            {canCreateUsers && (
+              <button
+                onClick={() => setShowAddUser(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl btn-gradient text-white text-sm font-semibold"
+              >
+                <Plus size={15} />
+                {t.team.newUser}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -180,14 +200,14 @@ export function TeamManagement() {
       </div>
 
       {/* Add user form */}
-      {showAddUser && (
+      {showAddUser && canCreateUsers && (
         <div className="glass rounded-2xl border-white/10 p-6 animate-scale-in">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-semibold text-white flex items-center gap-2">
               <UserPlus size={16} className="text-brand-400" />
               {t.team.newUser}
             </p>
-            <button onClick={() => setShowAddUser(false)} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
+            <button onClick={() => setShowAddUser(false)} title={t.common.close} aria-label={t.common.close} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -206,7 +226,7 @@ export function TeamManagement() {
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-1">{t.team.role}</label>
-              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
+              <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })} aria-label={t.team.role} title={t.team.role} className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
                 <option value="admin">{t.team.roleLabels.admin}</option>
                 <option value="manager">{t.team.roleLabels.manager}</option>
                 <option value="sales_rep">{t.team.roleLabels.sales_rep}</option>
@@ -232,20 +252,20 @@ export function TeamManagement() {
       )}
 
       {/* Invite form */}
-      {showInvite && (
+      {showInvite && canInviteUsers && (
         <div className="glass rounded-2xl border-white/10 p-6 animate-scale-in">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-semibold text-white flex items-center gap-2">
               <Mail size={16} className="text-amber-400" />
               {t.team.inviteByEmail}
             </p>
-            <button onClick={() => setShowInvite(false)} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
+            <button onClick={() => setShowInvite(false)} title={t.common.close} aria-label={t.common.close} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
               <X size={16} />
             </button>
           </div>
           <div className="flex gap-3 mb-4">
             <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder={t.team.placeholderEmail} className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 placeholder:text-slate-600" />
-            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)} className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
+            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as UserRole)} aria-label={t.team.role} title={t.team.role} className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40">
               <option value="manager">{t.team.roleLabels.manager}</option>
               <option value="sales_rep">{t.team.roleLabels.sales_rep}</option>
               <option value="viewer">{t.team.roleLabels.viewer}</option>
@@ -314,6 +334,8 @@ export function TeamManagement() {
                         toast.success(t.team.toastRoleUpdated.replace('{name}', user.name))
                       }}
                       className="bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-100 outline-none appearance-none"
+                      aria-label={t.team.changeRole}
+                      title={t.team.changeRole}
                       autoFocus
                     >
                       <option value="admin">{t.team.roleLabels.admin}</option>
@@ -321,7 +343,7 @@ export function TeamManagement() {
                       <option value="sales_rep">{t.team.roleLabels.sales_rep}</option>
                       <option value="viewer">{t.team.roleLabels.viewer}</option>
                     </select>
-                    <button onClick={() => setEditingRole(null)} className="p-1 text-slate-500 hover:text-white">
+                    <button onClick={() => setEditingRole(null)} title={t.common.close} aria-label={t.common.close} className="p-1 text-slate-500 hover:text-white">
                       <X size={12} />
                     </button>
                   </div>
@@ -345,6 +367,8 @@ export function TeamManagement() {
                   <div className="relative">
                     <button
                       onClick={() => setActiveMenu(activeMenu === user.id ? null : user.id)}
+                      title={t.common.actions}
+                      aria-label={t.common.actions}
                       className="p-1.5 rounded-lg text-slate-600 hover:text-white hover:bg-white/8 transition-colors"
                     >
                       <MoreVertical size={14} />
@@ -391,7 +415,7 @@ export function TeamManagement() {
                       autoFocus
                     />
                     <button onClick={() => handleResetPassword(user.id)} disabled={newPw.length < 6} className="px-3 py-1.5 rounded-lg btn-gradient text-xs text-white font-medium disabled:opacity-40">{t.common.save}</button>
-                    <button onClick={() => setResetPwUser(null)} className="p-1 text-slate-500 hover:text-white"><X size={14} /></button>
+                    <button onClick={() => setResetPwUser(null)} title={t.common.close} aria-label={t.common.close} className="p-1 text-slate-500 hover:text-white"><X size={14} /></button>
                   </div>
                 )}
               </div>
@@ -445,8 +469,7 @@ export function TeamManagement() {
           <div className="flex items-center gap-2">
             <div className="flex-1 h-1.5 rounded-full bg-white/6 overflow-hidden">
               <div
-                className="h-full rounded-full bg-brand-500 transition-all"
-                style={{ width: `${(activeUsers.length / (useAuthStore.getState().organization?.maxUsers || 1)) * 100}%` }}
+                className={`h-full rounded-full bg-brand-500 transition-all ${usageWidthClass}`}
               />
             </div>
             <span className="text-[10px] text-slate-500">{activeUsers.length}/{useAuthStore.getState().organization!.maxUsers}</span>

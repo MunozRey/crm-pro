@@ -210,6 +210,8 @@ export function Contacts() {
                 }}
                 className="bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-300 outline-none"
                 defaultValue=""
+                aria-label={t.common.changeStatus}
+                title={t.common.changeStatus}
               >
                 <option value="" disabled>{t.common.changeStatus}...</option>
                 <option value="prospect">{t.contacts.statusLabels.prospect}</option>
@@ -228,6 +230,8 @@ export function Contacts() {
                 }}
                 className="bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-300 outline-none"
                 defaultValue=""
+                aria-label={t.common.assignedTo}
+                title={t.common.assignedTo}
               >
                 <option value="" disabled>{t.common.assignedTo}...</option>
                 {orgUsers.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
@@ -398,6 +402,8 @@ export function Contacts() {
                     type="checkbox"
                     checked={selectedIds.size === filteredContacts.length && filteredContacts.length > 0}
                     onChange={toggleAll}
+                    aria-label={t.common.selectAll}
+                    title={t.common.selectAll}
                     className="rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500"
                   />
                 </th>
@@ -422,6 +428,8 @@ export function Contacts() {
                       type="checkbox"
                       checked={selectedIds.has(contact.id)}
                       onChange={() => toggleSelect(contact.id)}
+                      aria-label={t.common.selectAll}
+                      title={t.common.selectAll}
                       className="rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500"
                     />
                   </td>
@@ -442,21 +450,25 @@ export function Contacts() {
                   <td className="px-4 py-3 text-slate-500 text-xs">{formatRelativeDate(contact.lastContactedAt)}</td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => { setEditContact(contact); setIsFormOpen(true) }}
-                      >
-                        {t.common.edit}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => setDeleteId(contact.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        {t.common.delete}
-                      </Button>
+                      <PermissionGate permission="contacts:update">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => { setEditContact(contact); setIsFormOpen(true) }}
+                        >
+                          {t.common.edit}
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="contacts:delete">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => setDeleteId(contact.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          {t.common.delete}
+                        </Button>
+                      </PermissionGate>
                     </div>
                   </td>
                 </tr>
@@ -545,6 +557,8 @@ export function Contacts() {
               </div>
               <button
                 onClick={() => setShowDuplicates(false)}
+                title={t.common.close}
+                aria-label={t.common.close}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/6 transition-colors"
               >
                 <X size={18} />

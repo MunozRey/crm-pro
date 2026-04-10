@@ -95,6 +95,8 @@ function EnrollModal({ sequence, onClose }: EnrollModalProps) {
           </div>
           <button
             onClick={onClose}
+            title={t.common.close}
+            aria-label={t.common.close}
             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
           >
             <X size={16} />
@@ -107,6 +109,8 @@ function EnrollModal({ sequence, onClose }: EnrollModalProps) {
             <select
               value={selectedContactId}
               onChange={(e) => setSelectedContactId(e.target.value)}
+              aria-label={t.contacts.title}
+              title={t.contacts.title}
               className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand-500/50 [&>option]:bg-navy-900 [&>option]:text-white"
             >
               <option value="">— {t.common.selectAll} —</option>
@@ -166,6 +170,8 @@ function StepFormRow({ step, index, onChange, onRemove }: StepFormProps) {
           <select
             value={step.type}
             onChange={(e) => onChange({ ...step, type: e.target.value as SequenceStepType })}
+            aria-label={t.common.type}
+            title={t.common.type}
             className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500/50 [&>option]:bg-navy-900 [&>option]:text-white"
           >
             {(Object.keys(stepTypeLabels) as SequenceStepType[]).map((k) => (
@@ -182,6 +188,8 @@ function StepFormRow({ step, index, onChange, onRemove }: StepFormProps) {
             min={0}
             value={step.delayDays}
             onChange={(e) => onChange({ ...step, delayDays: parseInt(e.target.value) || 0 })}
+            aria-label={t.activities.dueDate}
+            title={t.activities.dueDate}
             className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500/50"
           />
         </div>
@@ -231,6 +239,8 @@ function StepFormRow({ step, index, onChange, onRemove }: StepFormProps) {
 
       <button
         onClick={onRemove}
+        title={t.common.delete}
+        aria-label={t.common.delete}
         className="p-1.5 text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
       >
         <X size={14} />
@@ -311,6 +321,8 @@ function NewSequenceSlideOver({ open, onClose }: NewSequenceSlideOverProps) {
           </div>
           <button
             onClick={handleClose}
+            title={t.common.close}
+            aria-label={t.common.close}
             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
           >
             <X size={16} />
@@ -452,7 +464,7 @@ function SequenceDetail({ sequence, enrollments, onEnroll }: SequenceDetailProps
               <span>{t.common.createdAt} {formatDate(sequence.createdAt)}</span>
             </div>
           </div>
-          <PermissionGate permission="templates:create">
+          <PermissionGate permission="sequences:enroll">
             <button
               onClick={onEnroll}
               className="btn-gradient text-white text-xs font-medium px-4 py-2 rounded-full flex items-center gap-1.5 flex-shrink-0"
@@ -564,7 +576,7 @@ function SequenceDetail({ sequence, enrollments, onEnroll }: SequenceDetailProps
               <div className="text-center py-12">
                 <Users size={32} className="mx-auto text-slate-600 mb-2" />
                 <p className="text-sm text-slate-500">{t.common.noResults}</p>
-                <PermissionGate permission="templates:create">
+                <PermissionGate permission="sequences:create">
                   <button
                     onClick={onEnroll}
                     className="btn-gradient text-white text-xs font-medium px-4 py-2 rounded-full mt-4 inline-flex items-center gap-1.5"
@@ -712,7 +724,7 @@ export function Sequences() {
         <div className="w-[280px] flex-shrink-0 glass rounded-2xl flex flex-col overflow-hidden">
           <div className="p-4 border-b border-white/6 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">{t.sequences.title}</h2>
-            <PermissionGate permission="templates:create">
+            <PermissionGate permission="sequences:create">
               <button
                 onClick={() => setShowNewSlideOver(true)}
                 className="btn-gradient text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1"
@@ -728,7 +740,7 @@ export function Sequences() {
               <div className="p-6 text-center">
                 <ListOrdered size={28} className="mx-auto text-slate-600 mb-2" />
                 <p className="text-xs text-slate-500">{t.common.noResults}</p>
-                <PermissionGate permission="templates:create">
+                <PermissionGate permission="sequences:create">
                   <button
                     onClick={() => setShowNewSlideOver(true)}
                     className="text-xs text-brand-400 hover:text-brand-300 mt-2 block mx-auto transition-colors"
@@ -766,9 +778,11 @@ export function Sequences() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <PermissionGate permission="templates:delete">
+                        <PermissionGate permission="sequences:delete">
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(seq.id) }}
+                            title={t.common.delete}
+                            aria-label={t.common.delete}
                             className="p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                           >
                             <Trash2 size={13} />
@@ -800,7 +814,7 @@ export function Sequences() {
                 </div>
                 <h3 className="text-white font-medium mb-1">{t.common.view} {t.sequences.title.toLowerCase()}</h3>
                 <p className="text-sm text-slate-500">{t.common.or} {t.sequences.newSequence.toLowerCase()}</p>
-                <PermissionGate permission="templates:create">
+                <PermissionGate permission="sequences:create">
                   <button
                     onClick={() => setShowNewSlideOver(true)}
                     className="btn-gradient text-white text-xs font-medium px-5 py-2.5 rounded-full mt-4 inline-flex items-center gap-1.5"

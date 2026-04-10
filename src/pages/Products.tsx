@@ -66,8 +66,7 @@ function ProductModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-md border border-white/10 rounded-2xl shadow-float overflow-hidden"
-        style={{ background: '#0d0f1e' }}
+        className="relative w-full max-w-md border border-white/10 rounded-2xl shadow-float overflow-hidden bg-[#0d0f1e]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
@@ -112,6 +111,8 @@ function ProductModal({
             <select
               value={form.currency}
               onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value as DealCurrency }))}
+              aria-label={t.settings.currency}
+              title={t.settings.currency}
               className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500/50"
             >
               {CURRENCY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -120,6 +121,8 @@ function ProductModal({
           <select
             value={form.category}
             onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ProductCategory }))}
+            aria-label={t.products.category}
+            title={t.products.category}
             className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500/50"
           >
             {(Object.keys(categoryLabels) as ProductCategory[]).map((c) => (
@@ -199,7 +202,7 @@ function ProductCard({ product }: { product: Product }) {
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <PermissionGate permission="settings:update">
+            <PermissionGate permission="products:update">
               <button
                 onClick={() => updateProduct(product.id, { isActive: !product.isActive })}
                 title={product.isActive ? t.common.disabled : t.common.enabled}
@@ -210,14 +213,21 @@ function ProductCard({ product }: { product: Product }) {
                 }
               </button>
             </PermissionGate>
-            <PermissionGate permission="settings:update">
-              <button onClick={() => setEditing(true)} className="p-1.5 text-slate-500 hover:text-slate-200 transition-colors">
+            <PermissionGate permission="products:update">
+              <button
+                onClick={() => setEditing(true)}
+                title={t.common.edit}
+                aria-label={t.common.edit}
+                className="p-1.5 text-slate-500 hover:text-slate-200 transition-colors"
+              >
                 <Edit2 size={13} />
               </button>
             </PermissionGate>
-            <PermissionGate permission="settings:update">
+            <PermissionGate permission="products:delete">
               <button
                 onClick={() => { deleteProduct(product.id); toast.success(t.common.delete) }}
+                title={t.common.delete}
+                aria-label={t.common.delete}
                 className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
               >
                 <Trash2 size={13} />
@@ -286,6 +296,8 @@ export function Products() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value as ProductCategory | '')}
+          aria-label={t.products.category}
+          title={t.products.category}
           className="bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none"
         >
           <option value="">{t.common.all} {t.products.category.toLowerCase()}</option>
@@ -293,7 +305,7 @@ export function Products() {
             <option key={c} value={c}>{categoryLabels[c]}</option>
           ))}
         </select>
-        <PermissionGate permission="settings:update">
+        <PermissionGate permission="products:create">
           <button
             onClick={() => setShowNew(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-xs text-white font-medium transition-colors"

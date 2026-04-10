@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useTranslations } from '../i18n'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -34,7 +34,7 @@ const CONTACT_SOURCE_LABELS_IMPORT = CONTACT_SOURCE_LABELS
 export function Contacts() {
   const t = useTranslations()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') ?? ''
 
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -67,6 +67,13 @@ export function Contacts() {
     [companies]
   )
 
+  const getContactScore = useCallback((contactId: string) => {
+    const activityCount = activities.filter((a) => a.contactId === contactId).length
+    const openDeals = deals.filter((d) => d.contactId === contactId && d.stage !== 'closed_won' && d.stage !== 'closed_lost').length
+    const wonDeals = deals.filter((d) => d.contactId === contactId && d.stage === 'closed_won').length
+    return Math.min(100, activityCount * 8 + openDeals * 20 + wonDeals * 30)
+  }, [activities, deals])
+
   const filtered = useMemo(() => {
     const result = contacts.map((c) => ({ contact: c })).filter(({ contact: c }) => {
       const q = search.toLowerCase()
@@ -92,11 +99,22 @@ export function Contacts() {
     result.sort((a, b) => {
       if (sortBy === 'name') return `${a.contact.firstName} ${a.contact.lastName}`.localeCompare(`${b.contact.firstName} ${b.contact.lastName}`)
       if (sortBy === 'lastContacted') return b.contact.lastContactedAt.localeCompare(a.contact.lastContactedAt)
-      return 0
+      if (sortBy === 'score') return getContactScore(b.contact.id) - getContactScore(a.contact.id)
+      return b.contact.createdAt.localeCompare(a.contact.createdAt)
     })
 
     return result
-  }, [contacts, search, statusFilter, sourceFilter, assignedFilter, myDataOnly, currentUser, sortBy, viewFilters, activities, deals])
+  }, [contacts, search, statusFilter, sourceFilter, assignedFilter, myDataOnly, currentUser, sortBy, viewFilters, getContactScore])
+
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return
+    setIsFormOpen(true)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('create')
+      return next
+    }, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const duplicates = useMemo(() => findDuplicates(contacts), [contacts])
 
@@ -444,6 +462,9 @@ export function Contacts() {
                   </td>
                   <td className="px-4 py-3 text-slate-400 text-xs">{getCompanyName(contact.companyId)}</td>
                   <td className="px-4 py-3"><ContactStatusBadge status={contact.status} /></td>
+                  <td className="px-4 py-3 text-slate-300 text-xs font-medium">
+                    {getContactScore(contact.id)}
+                  </td>
                   <td className="px-4 py-3 text-slate-400 text-xs">
                     {CONTACT_SOURCE_LABELS_IMPORT[contact.source]}
                   </td>

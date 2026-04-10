@@ -1,6 +1,6 @@
 import {
   Phone, Mail, Users, FileText, CheckSquare, Linkedin,
-  Check, Clock, X,
+  Check, Clock, X, Edit2,
 } from 'lucide-react'
 import type { Activity, ActivityType } from '../../types'
 import { formatDate, formatRelativeDate } from '../../utils/formatters'
@@ -29,11 +29,12 @@ const TYPE_COLORS: Record<ActivityType, string> = {
 interface ActivityItemProps {
   activity: Activity
   onComplete?: (id: string) => void
+  onEdit?: (id: string) => void
   onDelete?: (id: string) => void
   showActions?: boolean
 }
 
-export function ActivityItem({ activity, onComplete, onDelete, showActions = true }: ActivityItemProps) {
+export function ActivityItem({ activity, onComplete, onEdit, onDelete, showActions = true }: ActivityItemProps) {
   const t = useTranslations()
   const isOverdue = activity.status === 'pending' && activity.dueDate &&
     activity.dueDate < new Date().toISOString().split('T')[0]
@@ -91,6 +92,17 @@ export function ActivityItem({ activity, onComplete, onDelete, showActions = tru
               className="p-1 text-emerald-400 hover:text-emerald-300"
             >
               <Check size={14} />
+            </Button>
+          )}
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => onEdit(activity.id)}
+              aria-label={t.common.edit}
+              className="p-1 text-slate-400 hover:text-slate-200"
+            >
+              <Edit2 size={14} />
             </Button>
           )}
           {onDelete && (

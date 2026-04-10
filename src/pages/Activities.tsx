@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Activity as ActivityIcon, Filter, X, Clock, Calendar, LayoutList, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -23,6 +24,7 @@ import { toast } from '../store/toastStore'
 import type { Activity, ActivityType } from '../types'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { hasPermission } from '../utils/permissions'
+import { trackUxAction } from '../lib/uxMetrics'
 
 type ViewMode = 'list' | 'calendar'
 
@@ -201,6 +203,7 @@ function CalendarView({
 }
 
 export function Activities() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
   const dateLocaleByLanguage = { en: enUS, es, pt: ptBR, fr, de, it } as const
@@ -222,8 +225,19 @@ export function Activities() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const filtered = useMemo(() => {
+    const dueSortValue = (a: Activity) => {
+      if (a.status !== 'pending') return Number.MAX_SAFE_INTEGER
+      if (!a.dueDate) return Number.MAX_SAFE_INTEGER - 1
+      return new Date(a.dueDate).getTime()
+    }
+
     return [...activities]
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .sort((a, b) => {
+        const dueA = dueSortValue(a)
+        const dueB = dueSortValue(b)
+        if (dueA !== dueB) return dueA - dueB
+        return b.createdAt.localeCompare(a.createdAt)
+      })
       .filter((a) => {
         const q = search.toLowerCase()
         if (q && !a.subject.toLowerCase().includes(q) && !a.description.toLowerCase().includes(q)) return false
@@ -251,19 +265,40 @@ export function Activities() {
   const handleEdit = (data: Omit<Activity, 'id' | 'createdAt'>) => {
     if (!editActivity) return
     updateActivity(editActivity.id, data)
+    trackUxAction('activity_edit', { activityId: editActivity.id })
     setEditActivity(undefined)
+    setIsFormOpen(false)
     toast.success(t.activities.editActivity)
   }
 
   const handleComplete = (id: string) => {
     completeActivity(id)
+    trackUxAction('activity_complete', { activityId: id })
     toast.success(t.activities.completed)
   }
 
   const handleDelete = (id: string) => {
     deleteActivity(id)
+    trackUxAction('activity_delete', { activityId: id })
     toast.success(t.common.delete)
   }
+
+  const openEditActivity = (id: string) => {
+    const target = activities.find((a) => a.id === id)
+    if (!target) return
+    setEditActivity(target)
+    setIsFormOpen(true)
+  }
+
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return
+    setIsFormOpen(true)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('create')
+      return next
+    }, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const handleDaySelect = (_date: Date) => {
     // Could be extended to filter list view to this day
@@ -300,6 +335,7 @@ export function Activities() {
                 key={a.id}
                 activity={a}
                 onComplete={canUpdateActivities ? handleComplete : undefined}
+                onEdit={canUpdateActivities ? openEditActivity : undefined}
                 onDelete={canDeleteActivities ? handleDelete : undefined}
                 showActions={canUpdateActivities || canDeleteActivities}
               />
@@ -420,6 +456,7 @@ export function Activities() {
                   key={activity.id}
                   activity={activity}
                   onComplete={canUpdateActivities ? handleComplete : undefined}
+                  onEdit={canUpdateActivities ? openEditActivity : undefined}
                   onDelete={canDeleteActivities ? handleDelete : undefined}
                   showActions={canUpdateActivities || canDeleteActivities}
                 />

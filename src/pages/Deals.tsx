@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslations, useI18nStore } from '../i18n'
 import { DragDropContext } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
@@ -445,6 +446,7 @@ function QuoteBuilder({
 
 export function Deals() {
   const t = useTranslations()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { deals, addDeal, updateDeal, deleteDeal, moveDeal } = useDealsStore()
   const contacts = useContactsStore((s) => s.contacts)
   const companies = useCompaniesStore((s) => s.companies)
@@ -470,6 +472,31 @@ export function Deals() {
   const [selectedDealIds, setSelectedDealIds] = useState<Set<string>>(new Set())
   const [showBulkDelete, setShowBulkDelete] = useState(false)
   const [viewFilters, setViewFilters] = useState<SmartViewFilter[]>([])
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      setIsFormOpen(true)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('create')
+        return next
+      }, { replace: true })
+      return
+    }
+
+    const dealId = searchParams.get('deal')
+    if (!dealId) return
+    const targetDeal = deals.find((d) => d.id === dealId)
+    if (!targetDeal) return
+    setSelectedDeal(targetDeal)
+    setIsDetailOpen(true)
+    setIsEditing(false)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('deal')
+      return next
+    }, { replace: true })
+  }, [searchParams, setSearchParams, deals])
 
 
   const filtered = useMemo(() => {

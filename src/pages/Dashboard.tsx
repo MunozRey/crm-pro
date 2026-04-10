@@ -22,6 +22,7 @@ import type { DealStage, CRMNotification } from '../types'
 import { subMonths, subWeeks, format, startOfMonth, endOfMonth, parseISO, isWithinInterval, differenceInDays, getDay, startOfWeek, endOfWeek, isAfter, isBefore } from 'date-fns'
 import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
 import { useTranslations, useI18nStore } from '../i18n'
+import { trackUxAction } from '../lib/uxMetrics'
 
 const STAGE_BADGE_MAP: Record<DealStage, 'blue' | 'yellow' | 'purple' | 'orange' | 'emerald' | 'rose'> = {
   lead: 'blue',
@@ -188,17 +189,40 @@ export function Dashboard() {
       {/* ── Row 1: Quick actions ──────────────────────────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">
         <PermissionGate permission="contacts:create">
-          <Button size="sm" leftIcon={<Plus size={14} />} onClick={() => navigate('/contacts')}>
+          <Button
+            size="sm"
+            leftIcon={<Plus size={14} />}
+            onClick={() => {
+              trackUxAction('quick_create_contact')
+              navigate('/contacts?create=1')
+            }}
+          >
             {t.dashboard.newContact}
           </Button>
         </PermissionGate>
         <PermissionGate permission="deals:create">
-          <Button size="sm" variant="secondary" leftIcon={<Plus size={14} />} onClick={() => navigate('/deals')}>
+          <Button
+            size="sm"
+            variant="secondary"
+            leftIcon={<Plus size={14} />}
+            onClick={() => {
+              trackUxAction('quick_create_deal')
+              navigate('/deals?create=1')
+            }}
+          >
             {t.dashboard.newDeal}
           </Button>
         </PermissionGate>
         <PermissionGate permission="activities:create">
-          <Button size="sm" variant="secondary" leftIcon={<Plus size={14} />} onClick={() => navigate('/activities')}>
+          <Button
+            size="sm"
+            variant="secondary"
+            leftIcon={<Plus size={14} />}
+            onClick={() => {
+              trackUxAction('quick_create_activity')
+              navigate('/activities?create=1')
+            }}
+          >
             {t.dashboard.newActivity}
           </Button>
         </PermissionGate>
@@ -316,7 +340,7 @@ export function Dashboard() {
             <p className="text-2xl font-bold text-white">
               <AnimatedCounter value={conversionRate} suffix="%" />
             </p>
-            <p className="text-xs text-slate-500 mt-1">Won / (Won + Lost)</p>
+            <p className="text-xs text-slate-500 mt-1">{t.reports.conversionRate}</p>
           </div>
         </div>
       </div>
@@ -378,7 +402,7 @@ export function Dashboard() {
                 <div
                   key={deal.id}
                   className="flex items-center gap-3 pb-3 border-b border-white/6 last:border-0 last:pb-0 cursor-pointer hover:bg-white/[0.03] -mx-2 px-2 rounded-lg transition-colors"
-                  onClick={() => navigate('/deals')}
+                  onClick={() => navigate(`/deals?deal=${deal.id}`)}
                 >
                   {contact && <Avatar name={`${contact.firstName} ${contact.lastName}`} size="xs" />}
                   <div className="flex-1 min-w-0">

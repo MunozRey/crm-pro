@@ -4,6 +4,11 @@ import { useProductsStore } from '../store/productsStore'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { toast } from '../store/toastStore'
 import { useTranslations } from '../i18n'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
+import { Modal } from '../components/ui/Modal'
+import { SearchBar } from '../components/shared/SearchBar'
 import type { Product, ProductCategory, DealCurrency } from '../types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -31,7 +36,7 @@ const CATEGORY_COLORS: Record<ProductCategory, string> = {
 const CURRENCY_OPTIONS: DealCurrency[] = ['EUR', 'USD', 'GBP']
 
 function formatPrice(price: number, currency: DealCurrency) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency }).format(price)
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(price)
 }
 
 // ─── Blank product ─────────────────────────────────────────────────────────────
@@ -63,99 +68,67 @@ function ProductModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative w-full max-w-md border border-white/10 rounded-2xl shadow-float overflow-hidden bg-[#0d0f1e]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
-          <h2 className="text-sm font-semibold text-white">
-            {initial.name ? `${t.common.edit} ${t.products.title.toLowerCase()}` : t.products.newProduct}
-          </h2>
-          <button onClick={onClose} className="p-1 text-slate-500 hover:text-white transition-colors text-lg leading-none">×</button>
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={initial.name ? `${t.common.edit} ${t.products.title.toLowerCase()}` : t.products.newProduct}
+      size="md"
+    >
+      <div className="space-y-3">
+        <Input
+          label={t.common.name}
+          required
+          value={form.name}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+        />
+        <Input
+          label={t.products.sku}
+          required
+          value={form.sku}
+          onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
+        />
+        <Input
+          label={t.common.description}
+          value={form.description}
+          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            type="number"
+            label={t.products.price}
+            min={0}
+            step={0.01}
+            value={form.price}
+            onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
+          />
+          <Select
+            label={t.settings.currency}
+            options={CURRENCY_OPTIONS.map((c) => ({ value: c, label: c }))}
+            value={form.currency}
+            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value as DealCurrency }))}
+          />
         </div>
-
-        <div className="p-5 space-y-3">
+        <Select
+          label={t.products.category}
+          options={(Object.keys(categoryLabels) as ProductCategory[]).map((c) => ({ value: c, label: categoryLabels[c] }))}
+          value={form.category}
+          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ProductCategory }))}
+        />
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
-            type="text"
-            placeholder={`${t.common.name} *`}
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500/50"
+            type="checkbox"
+            checked={form.isActive}
+            onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+            className="w-4 h-4 rounded border-white/20 bg-white/4 text-brand-500 focus:ring-brand-500/30"
           />
-          <input
-            type="text"
-            placeholder={`${t.products.sku} *`}
-            value={form.sku}
-            onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-            className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500/50"
-          />
-          <textarea
-            placeholder={t.common.description}
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            rows={2}
-            className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500/50 resize-none"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="number"
-              placeholder={t.products.price}
-              min={0}
-              step={0.01}
-              value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
-              className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500/50"
-            />
-            <select
-              value={form.currency}
-              onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value as DealCurrency }))}
-              aria-label={t.settings.currency}
-              title={t.settings.currency}
-              className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500/50"
-            >
-              {CURRENCY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <select
-            value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ProductCategory }))}
-            aria-label={t.products.category}
-            title={t.products.category}
-            className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500/50"
-          >
-            {(Object.keys(categoryLabels) as ProductCategory[]).map((c) => (
-              <option key={c} value={c}>{categoryLabels[c]}</option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
-              className="w-4 h-4 rounded border-white/20 bg-white/4 text-brand-500 focus:ring-brand-500/30"
-            />
-            <span className="text-sm text-slate-300">{t.common.active} {t.products.title.toLowerCase()}</span>
-          </label>
-        </div>
-
-        <div className="flex gap-2 px-5 pb-5">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-xs text-slate-400 hover:text-white hover:bg-white/4 transition-colors"
-          >
-            {t.common.cancel}
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-xs text-white font-medium transition-colors"
-          >
-            {t.common.save}
-          </button>
+          <span className="text-sm text-slate-300">{t.common.active} {t.products.title.toLowerCase()}</span>
+        </label>
+        <div className="flex gap-2 justify-end pt-2">
+          <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
+          <Button onClick={handleSave}>{t.common.save}</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -283,36 +256,28 @@ export function Products() {
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 relative min-w-48">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder={`${t.common.search} ${t.common.name.toLowerCase()} / ${t.products.sku}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-500/50"
-          />
-        </div>
-        <select
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          className="flex-1 min-w-48"
+          placeholder={`${t.common.search} ${t.common.name.toLowerCase()} / ${t.products.sku}...`}
+        />
+        <Select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value as ProductCategory | '')}
-          aria-label={t.products.category}
-          title={t.products.category}
-          className="bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none"
-        >
-          <option value="">{t.common.all} {t.products.category.toLowerCase()}</option>
-          {(Object.keys(categoryLabels) as ProductCategory[]).map((c) => (
-            <option key={c} value={c}>{categoryLabels[c]}</option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: `${t.common.all} ${t.products.category.toLowerCase()}` },
+            ...(Object.keys(categoryLabels) as ProductCategory[]).map((c) => ({ value: c, label: categoryLabels[c] })),
+          ]}
+        />
         <PermissionGate permission="products:create">
-          <button
+          <Button
             onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-xs text-white font-medium transition-colors"
+            size="sm"
+            leftIcon={<Plus size={13} />}
           >
-            <Plus size={13} />
             {t.products.newProduct}
-          </button>
+          </Button>
         </PermissionGate>
       </div>
 
@@ -329,7 +294,7 @@ export function Products() {
         <div className="glass rounded-xl p-4 border border-white/6">
           <p className="text-xs text-slate-500 mb-1">{t.products.price}</p>
           <p className="text-lg font-bold text-brand-400">
-            {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalValue)}
+            {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(totalValue)}
           </p>
         </div>
       </div>

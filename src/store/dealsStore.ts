@@ -6,10 +6,17 @@ import { useAuditStore } from './auditStore'
 import { useNotificationsStore } from './notificationsStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getOrgId, sbDelete } from '../lib/supabaseHelpers'
+import { useAuthStore } from './authStore'
 
 // ── Snake ↔ Camel mappers ───────────────────────────────────────────────────
 
 function rowToDeal(row: Record<string, unknown>): Deal {
+  const assignedTo = row.assigned_to as string | null
+  const users = useAuthStore.getState().users
+  const assignedToName = assignedTo
+    ? (users.find((u) => u.id === assignedTo)?.name ?? assignedTo)
+    : ''
+
   return {
     id: row.id as string,
     title: (row.title as string) ?? '',
@@ -20,7 +27,7 @@ function rowToDeal(row: Record<string, unknown>): Deal {
     expectedCloseDate: (row.expected_close_date as string) ?? '',
     contactId: (row.contact_id as string) ?? '',
     companyId: (row.company_id as string) ?? '',
-    assignedTo: (row.assigned_to as string) ?? '',
+    assignedTo: assignedToName,
     priority: (row.priority as Deal['priority']) ?? 'medium',
     source: (row.source as string) ?? '',
     notes: (row.notes as string) ?? '',
@@ -41,13 +48,19 @@ function dealToRow(d: Partial<Deal>): Record<string, unknown> {
   if (d.expectedCloseDate !== undefined) row.expected_close_date = d.expectedCloseDate
   if (d.contactId !== undefined) row.contact_id = d.contactId
   if (d.companyId !== undefined) row.company_id = d.companyId
-  if (d.assignedTo !== undefined) row.assigned_to = d.assignedTo
+  // `assigned_to` is UUID in DB. UI currently keeps display names.
+  // Only send value when it's already a UUID.
+  if (d.assignedTo !== undefined && isUuid(d.assignedTo)) row.assigned_to = d.assignedTo
   if (d.priority !== undefined) row.priority = d.priority
   if (d.source !== undefined) row.source = d.source
   if (d.notes !== undefined) row.notes = d.notes
   if (d.activities !== undefined) row.activities = d.activities
   if (d.quoteItems !== undefined) row.quote_items = d.quoteItems
   return row
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ── State interface ─────────────────────────────────────────────────────────
@@ -123,7 +136,9 @@ export const useDealsStore = create<DealsState>()(
 
       if (isSupabaseConfigured && supabase) {
         const row = dealToRow(dealData)
-        ;((supabase as any).from('deals').insert({ ...row, organization_id: getOrgId() }).select().single()
+        const currentUserId = useAuthStore.getState().currentUser?.id
+        const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
+        ;((supabase as any).from('deals').insert({ ...row, created_by: createdBy, organization_id: getOrgId() }).select().single()
         ).then(({ data, error }: any) => {
             if (error) {
               set((s: any) => ({ deals: s.deals.filter((d: any) => d.id !== id), error: error.message }))

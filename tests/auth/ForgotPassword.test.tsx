@@ -24,10 +24,10 @@ describe('ForgotPassword', () => {
   it('AUTH-03: calls resetPasswordForEmail with email and redirectTo', async () => {
     mockResetPassword.mockResolvedValue({ error: null })
     renderForgotPassword()
-    fireEvent.change(screen.getByPlaceholderText('tu@empresa.com'), {
+    fireEvent.change(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), {
       target: { value: 'user@test.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /enviar enlace/i }))
+    fireEvent.click(screen.getByRole('button', { name: /send link|enviar enlace/i }))
     await waitFor(() => {
       expect(mockResetPassword).toHaveBeenCalledWith(
         'user@test.com',
@@ -39,12 +39,12 @@ describe('ForgotPassword', () => {
   it('AUTH-03: shows confirmation message after successful submission', async () => {
     mockResetPassword.mockResolvedValue({ error: null })
     renderForgotPassword()
-    fireEvent.change(screen.getByPlaceholderText('tu@empresa.com'), {
+    fireEvent.change(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), {
       target: { value: 'user@test.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /enviar enlace/i }))
+    fireEvent.click(screen.getByRole('button', { name: /send link|enviar enlace/i }))
     await waitFor(() => {
-      expect(screen.getByText(/revisa tu correo/i)).toBeInTheDocument()
+      expect(screen.getByText(/check your email|revisa tu correo/i)).toBeInTheDocument()
     })
   })
 })

@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { addMonths, subMonths, format, startOfMonth, endOfMonth, differenceInDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
-import { es, enUS, ptBR } from 'date-fns/locale'
+import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Calendar, DollarSign, Filter, X } from 'lucide-react'
 import { useDealsStore } from '../store/dealsStore'
 import { useContactsStore } from '../store/contactsStore'
@@ -26,7 +26,8 @@ const MONTHS_VISIBLE = 3
 export function PipelineTimeline() {
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
-  const dateLocale = language === 'pt' ? ptBR : language === 'en' ? enUS : es
+  const dateLocaleByLanguage = { en: enUS, es, pt: ptBR, fr, de, it } as const
+  const dateLocale = dateLocaleByLanguage[language]
 
   const navigate = useNavigate()
   const [currentMonth, setCurrentMonth] = useState(() => new Date())

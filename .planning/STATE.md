@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase 10 Ready
-last_updated: "2026-04-10T09:15:00.000Z"
+last_updated: "2026-04-10T12:30:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 9
@@ -66,6 +66,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | create-org Edge Function bypasses RLS (09) | Supabase project uses ECC P-256 JWT signing — PostgREST can't verify with legacy anon key; service role in Edge Function is the correct pattern | 2026-04-10 |
 | Zod schemas extracted to src/lib/schemas/ (09-3) | Unexported schemas inside .tsx files are untestable; extraction enables isolated unit tests | 2026-04-10 |
 | Per-file vi.mock() without vi.hoisted() for store tests (09-2) | Mock data defined inside factory body avoids hoisting issues with top-level variable references | 2026-04-10 |
+| Supabase mode must never rehydrate demo users (post-Phase 09 fix) | `persist.merge` was re-injecting `SEED_USERS` and leaked demo users into real org sessions | 2026-04-10 |
+| Org creation validates session via `supabase.auth.getUser()` in page flow | Avoids false "not authenticated" errors caused by stale local Zustand user during org bootstrap | 2026-04-10 |
+| Deal/activity creation must map UUID fields correctly | Sending display names to UUID columns (`assigned_to`, `created_by`) caused inserts to fail and optimistic records to roll back | 2026-04-10 |
 
 ## Blockers
 
@@ -79,7 +82,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 - Google OAuth verification (restricted scopes) takes 4-6 weeks — start application process before Phase 10 deploy
 - Supabase service role key must NEVER get a VITE_ prefix
 - Phase 10 (Vercel Deployment) requires the repo to be pushed to GitHub first
+- Post-Phase 09 hardening: `authStore` Supabase branch starts with empty users/passwords and keeps runtime users org-scoped.
+- Post-Phase 09 hardening: calendar week labels no longer hardcoded in Spanish (`hour`/`all day` now language-aware).
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-04-10 — Completed Phase 09 (Test Suite: 101 tests passing, GitHub Actions CI, complete i18n coverage for es/en/pt). 9 of 10 phases complete.*
+*Last session: 2026-04-10 — Post-Phase 09 production fixes applied: organization creation flow stabilized, demo users removed from Supabase sessions, and UUID mapping bugs fixed for deals/activities creation. Test suite remains green (101/101).*

@@ -28,7 +28,7 @@ import { CustomFieldsDisplay } from '../components/shared/CustomFieldRenderer'
 import { useTranslations, useI18nStore } from '../i18n'
 import { format } from 'date-fns'
 import type { Locale } from 'date-fns'
-import { es, enUS, ptBR } from 'date-fns/locale'
+import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
 
 type BadgeColor = 'blue' | 'yellow' | 'purple' | 'orange' | 'emerald' | 'rose'
 const STAGE_BADGE: Record<DealStage, BadgeColor> = {
@@ -56,7 +56,8 @@ function getMonthLabel(dateStr: string, locale: Locale): string {
 export function ContactDetail() {
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
-  const dateLocale = language === 'pt' ? ptBR : language === 'en' ? enUS : es
+  const dateLocaleByLanguage = { en: enUS, es, pt: ptBR, fr, de, it } as const
+  const dateLocale = dateLocaleByLanguage[language]
 
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()

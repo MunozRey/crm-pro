@@ -8,7 +8,7 @@ import { useTranslations } from '../i18n'
 export function OrgSetup() {
   const navigate = useNavigate()
   const t = useTranslations()
-  const currentUser = useAuthStore((s) => s.currentUser)
+  const setCurrentUser = useAuthStore((s) => s.setCurrentUser)
 
   const [orgName, setOrgName] = useState('')
   const [slug, setSlug] = useState('')
@@ -26,7 +26,8 @@ export function OrgSetup() {
     if (!orgName.trim()) { setError(t.orgSetup.errorNameRequired); return }
     if (!slug.trim()) { setError(t.orgSetup.errorSlugRequired); return }
     if (!supabase) { setError(t.orgSetup.errorNotConfigured); return }
-    if (!currentUser) { setError(t.orgSetup.errorNotAuthenticated); return }
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    if (authError || !authData.user) { setError(t.orgSetup.errorNotAuthenticated); return }
 
     setIsLoading(true)
     setError(null)
@@ -42,6 +43,25 @@ export function OrgSetup() {
       // Refresh session so JWT carries new organization_id claim
       const { error: refreshErr } = await supabase.auth.refreshSession()
       if (refreshErr) throw new Error(refreshErr.message)
+
+      // Sync current user in Zustand immediately with refreshed JWT claims
+      const { data: refreshedUserData, error: refreshedUserError } = await supabase.auth.getUser()
+      if (refreshedUserError || !refreshedUserData.user) {
+        throw new Error(refreshedUserError?.message ?? t.orgSetup.errorNotAuthenticated)
+      }
+
+      const u = refreshedUserData.user
+      setCurrentUser({
+        id: u.id,
+        name: u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? 'User',
+        email: u.email ?? '',
+        role: (u.app_metadata?.user_role as 'admin' | 'manager' | 'sales_rep' | 'viewer') ?? 'admin',
+        jobTitle: u.user_metadata?.job_title ?? '',
+        organizationId: (u.app_metadata?.organization_id as string | undefined) ?? u.user_metadata?.org_id,
+        isActive: true,
+        createdAt: u.created_at,
+        updatedAt: u.updated_at ?? u.created_at,
+      })
 
       // onAuthStateChange will fire and update currentUser.organizationId.
       navigate('/', { replace: true })

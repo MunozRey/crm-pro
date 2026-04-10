@@ -27,16 +27,12 @@ function renderRegister() {
 }
 
 async function fillAndSubmit() {
-  // Get all inputs with /empresa/i — first one is company name ("Empresas"), second contains "tu@empresa.com"
-  const empresaInputs = screen.getAllByPlaceholderText(/empresa/i)
-  fireEvent.change(empresaInputs[0], { target: { value: 'Test Corp' } })
-  // Nombre field
-  fireEvent.change(screen.getByPlaceholderText(/^nombre$/i), { target: { value: 'Test User' } })
-  // Email field
-  fireEvent.change(screen.getByPlaceholderText('tu@empresa.com'), { target: { value: 'test@example.com' } })
-  // Password field (placeholder is "Contraseña" in Spanish)
-  fireEvent.change(screen.getByPlaceholderText(/contraseña/i), { target: { value: 'password123' } })
-  fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }))
+  const companyInput = screen.getByPlaceholderText(/companies|empresa/i)
+  fireEvent.change(companyInput, { target: { value: 'Test Corp' } })
+  fireEvent.change(screen.getByPlaceholderText(/name|nombre/i), { target: { value: 'Test User' } })
+  fireEvent.change(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), { target: { value: 'test@example.com' } })
+  fireEvent.change(screen.getByPlaceholderText(/password|contraseña/i), { target: { value: 'password123' } })
+  fireEvent.click(screen.getByRole('button', { name: /create account|crear cuenta/i }))
 }
 
 describe('Register', () => {

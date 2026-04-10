@@ -4,21 +4,30 @@ import type { Language, Translations } from './types'
 import { es } from './es'
 import { en } from './en'
 import { pt } from './pt'
+import { fr } from './fr'
+import { de } from './de'
+import { it } from './it'
 
 export type { Language, Translations }
 
-const translations: Record<Language, Translations> = { es, en, pt }
+const translations: Record<Language, Translations> = { en, es, pt, fr, de, it }
 
 export const LANGUAGE_LABELS: Record<Language, string> = {
-  es: 'Español',
   en: 'English',
+  es: 'Español',
   pt: 'Português',
+  fr: 'Français',
+  de: 'Deutsch',
+  it: 'Italiano',
 }
 
 export const LANGUAGE_FLAGS: Record<Language, string> = {
-  es: '🇪🇸',
   en: '🇬🇧',
+  es: '🇪🇸',
   pt: '🇧🇷',
+  fr: '🇫🇷',
+  de: '🇩🇪',
+  it: '🇮🇹',
 }
 
 interface I18nState {
@@ -29,7 +38,7 @@ interface I18nState {
 export const useI18nStore = create<I18nState>()(
   persist(
     (set) => ({
-      language: 'es',
+      language: 'en',
       setLanguage: (language) => set({ language }),
     }),
     { name: 'crm_language' }

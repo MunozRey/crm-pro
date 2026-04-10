@@ -34,7 +34,7 @@ describe('ResetPassword', () => {
     const inputs = screen.getAllByPlaceholderText('••••••••')
     fireEvent.change(inputs[0], { target: { value: 'newpassword123' } })
     fireEvent.change(inputs[1], { target: { value: 'newpassword123' } })
-    fireEvent.click(screen.getByRole('button', { name: /guardar contraseña/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save password|guardar contraseña/i }))
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'newpassword123' })
     })
@@ -45,9 +45,9 @@ describe('ResetPassword', () => {
     const inputs = screen.getAllByPlaceholderText('••••••••')
     fireEvent.change(inputs[0], { target: { value: 'password1' } })
     fireEvent.change(inputs[1], { target: { value: 'password2' } })
-    fireEvent.click(screen.getByRole('button', { name: /guardar contraseña/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save password|guardar contraseña/i }))
     await waitFor(() => {
-      expect(screen.getByText(/contraseñas no coinciden/i)).toBeInTheDocument()
+      expect(screen.getByText(/passwords do not match|contraseñas no coinciden/i)).toBeInTheDocument()
     })
     expect(mockUpdateUser).not.toHaveBeenCalled()
   })

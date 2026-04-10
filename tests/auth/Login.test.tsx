@@ -31,7 +31,7 @@ describe('Login', () => {
   it('AUTH-01: calls signInWithPassword with email and password on submit', async () => {
     mockSignIn.mockResolvedValue({ error: null })
     renderLogin()
-    fireEvent.change(screen.getByPlaceholderText('tu@empresa.com'), { target: { value: 'user@test.com' } })
+    fireEvent.change(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), { target: { value: 'user@test.com' } })
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'secret123' } })
     // Button text is 'Ingresar' (Spanish default locale)
     fireEvent.click(screen.getByRole('button', { name: /ingresar|log in|entrar/i }))
@@ -43,7 +43,7 @@ describe('Login', () => {
   it('AUTH-01: shows error message when signIn returns an error', async () => {
     mockSignIn.mockResolvedValue({ error: { message: 'Invalid login credentials' } })
     renderLogin()
-    fireEvent.change(screen.getByPlaceholderText('tu@empresa.com'), { target: { value: 'bad@test.com' } })
+    fireEvent.change(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), { target: { value: 'bad@test.com' } })
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'wrongpass' } })
     fireEvent.click(screen.getByRole('button', { name: /ingresar|log in|entrar/i }))
     await waitFor(() => {

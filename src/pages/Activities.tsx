@@ -6,9 +6,7 @@ import {
   format, isToday,
 } from 'date-fns'
 import type { Locale } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { enUS } from 'date-fns/locale'
-import { ptBR } from 'date-fns/locale'
+import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
 import { useTranslations, useI18nStore } from '../i18n'
 import { useActivitiesStore } from '../store/activitiesStore'
 import { useContactsStore } from '../store/contactsStore'
@@ -198,7 +196,8 @@ function CalendarView({
 export function Activities() {
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
-  const dateLocale = language === 'pt' ? ptBR : language === 'en' ? enUS : es
+  const dateLocaleByLanguage = { en: enUS, es, pt: ptBR, fr, de, it } as const
+  const dateLocale = dateLocaleByLanguage[language]
 
   const { activities, addActivity, updateActivity, deleteActivity, completeActivity } = useActivitiesStore()
   const contacts = useContactsStore((s) => s.contacts)

@@ -20,7 +20,7 @@ import { useNotificationsStore } from '../store/notificationsStore'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import type { DealStage, CRMNotification } from '../types'
 import { subMonths, subWeeks, format, startOfMonth, endOfMonth, parseISO, isWithinInterval, differenceInDays, getDay, startOfWeek, endOfWeek, isAfter, isBefore } from 'date-fns'
-import { es, enUS, ptBR } from 'date-fns/locale'
+import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
 import { useTranslations, useI18nStore } from '../i18n'
 
 const STAGE_BADGE_MAP: Record<DealStage, 'blue' | 'yellow' | 'purple' | 'orange' | 'emerald' | 'rose'> = {
@@ -45,7 +45,8 @@ export function Dashboard() {
   const navigate = useNavigate()
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
-  const dateLocale = language === 'pt' ? ptBR : language === 'en' ? enUS : es
+  const dateLocaleByLanguage = { en: enUS, es, pt: ptBR, fr, de, it } as const
+  const dateLocale = dateLocaleByLanguage[language]
   const DAY_LABELS = t.dashboard.dayLabels
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)

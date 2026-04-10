@@ -274,7 +274,7 @@ export function Settings() {
         </div>
 
         <div className="flex gap-2">
-          {(['es', 'en', 'pt'] as Language[]).map((lang) => (
+          {(['en', 'es', 'pt', 'fr', 'de', 'it'] as Language[]).map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}

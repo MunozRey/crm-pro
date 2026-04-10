@@ -13,7 +13,10 @@ A production-grade, full-featured CRM single-page application built with React 1
 | **Deals** | Kanban drag & drop + list view, deal detail panel, mark Won/Lost |
 | **Activities** | Unified feed, overdue highlighting, quick complete/delete |
 | **Reports** | Revenue forecast, Won/Lost donut, activities by type, contacts by source, conversion funnel |
-| **Settings** | Tags management, pipeline stages, mock users, JSON export/import, data reset |
+| **Settings** | Tags management, pipeline stages, language (es/en/pt), JSON export/import, data reset |
+| **Authentication** | Supabase Auth (register/login/reset), protected routes, org bootstrap (`/org-setup`) |
+| **Multi-tenancy** | Organization-scoped data via `organization_id` + RLS policies |
+| **Realtime + Integrations** | Supabase Realtime sync, Gmail integration flow, notifications/audit |
 
 ## Quick Start
 
@@ -28,7 +31,7 @@ npm run dev
 npm run build
 ```
 
-The app runs at `http://localhost:5173` and auto-seeds with 25 contacts, 10 companies, 18 deals, and 30 activities on first load.
+The app runs at `http://localhost:5173`. In mock mode it auto-seeds demo data; in Supabase mode data is fetched from your project.
 
 ## Tech Stack
 
@@ -38,7 +41,7 @@ The app runs at `http://localhost:5173` and auto-seeds with 25 contacts, 10 comp
 | Build | Vite 8 |
 | Styling | Tailwind CSS 3 (dark theme) |
 | Routing | React Router v6 |
-| State | Zustand 5 with `persist` middleware |
+| State | Zustand 5 (Supabase-backed stores + selective local persist) |
 | Forms | React Hook Form + Zod validation |
 | Charts | Recharts |
 | Drag & Drop | @hello-pangea/dnd |
@@ -68,10 +71,10 @@ src/
 ## Architecture Decisions
 
 ### State Management (Zustand)
-Each domain (contacts, companies, deals, activities) has its own Zustand store with `persist` middleware that auto-saves to `localStorage`. Stores hydrate from seed data on first load (empty localStorage).
+Each domain uses Zustand with Supabase fetch/insert/update/delete and optional optimistic UI. In Supabase mode, auth state avoids rehydrating demo users.
 
 ### Persistence Strategy
-All data persists in `localStorage` under namespaced keys (`crm_contacts`, `crm_companies`, etc.). The `useLocalStorage` hook provides a raw key-value interface for simple values.
+Primary persistence is Supabase (tables + RLS). Local persistence is used only for safe client state (for example language preference and selected UI preferences).
 
 ### Form Validation
 React Hook Form + Zod schemas validate all forms client-side before submission. Each schema uses strict types (no `.default()` to avoid Zod v4 type inference issues with optional fields).
@@ -82,48 +85,22 @@ React Router v6 with nested layouts. Each page is wrapped in an `ErrorBoundary` 
 ### Component Size
 All components are kept under 200 lines. Large pages (Contacts, Deals) delegate form logic to dedicated `*Form` components.
 
-## Supabase Migration Roadmap
+## Current Status
 
-The app is architected for a clean swap from localStorage to Supabase:
-
-### Step 1: Schema
-Create Supabase tables matching the TypeScript interfaces in `src/types/index.ts`. Enable Row Level Security (RLS) with user-based policies.
-
-### Step 2: Replace localStorage stores
-Each Zustand store has a `// TODO: Replace localStorage persistence with Supabase` comment. Replace the `persist` middleware with direct Supabase client calls:
-
-```ts
-// Before (localStorage via Zustand persist)
-set((state) => ({ contacts: [contact, ...state.contacts] }))
-
-// After (Supabase)
-const { data } = await supabase.from('contacts').insert(contact).select().single()
-set((state) => ({ contacts: [data, ...state.contacts] }))
-```
-
-### Step 3: Real-time subscriptions
-Add Supabase real-time listeners to sync across browser tabs:
-
-```ts
-supabase
-  .channel('contacts')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' },
-    (payload) => { /* update store */ })
-  .subscribe()
-```
-
-### Step 4: Auth
-Use Supabase Auth (`@supabase/auth-ui-react`) to replace the mock user system. The `assignedTo` string fields become foreign keys to `auth.users`.
-
-### Step 5: Replace `useLocalStorage` hook
-The `src/hooks/useLocalStorage.ts` hook has a `// TODO: Swap for Supabase real-time subscriptions` comment. Update the hook to use `supabase.from(...).select()` for reads and `.upsert()` for writes.
+- Supabase Auth, org onboarding, and RLS multi-tenancy are implemented.
+- Core CRM stores are wired to Supabase and realtime subscriptions are active.
+- i18n coverage exists for Spanish, English, and Portuguese.
+- Test suite is passing (`101` tests).
+- Next major milestone: deployment/release hardening (Phase 10).
 
 ## Seed Data
-The app ships with realistic Spanish/European B2B seed data:
+In mock mode, the app ships with realistic Spanish/European B2B seed data:
 - **25 contacts** across companies in fintech, SaaS, insurance, banking, retail
 - **10 companies** including Bankia, Factorial, Mapfre, Inditex, Cabify, Deloitte
 - **18 deals** across all pipeline stages (€500–€50,000)
 - **30 activities** (calls, emails, meetings, tasks, LinkedIn, notes)
 - **3 mock users**: David Muñoz (Sales Manager), Sara López (AE), Carlos Vega (SDR)
 
-To reset seed data: **Settings → Restaurar datos demo**.
+To reset demo data: **Settings → Restaurar datos demo**.
+
+In Supabase mode, demo users are not rehydrated into organization sessions.

@@ -4,7 +4,7 @@
 
 CRM Pro is a full-featured B2B SaaS CRM for Spanish and European sales teams, built to compete with HubSpot and Pipedrive. It covers the full sales lifecycle — contacts, companies, deals pipeline, activities, sequences, forecasting, AI-assisted selling, and Gmail integration — with multi-tenant organization isolation so any business can sign up and use it independently.
 
-The product is functionally complete as a frontend SPA (React 18 + TypeScript + Tailwind). The next milestone converts it into a real SaaS: replacing localStorage with Supabase, adding real authentication, multi-tenant RLS, Gmail OAuth, production AI features, and deploying to Vercel.
+The product is now operating as a Supabase-backed SaaS app (auth, multi-tenant RLS, real-time stores, Gmail OAuth flow, and i18n coverage). The next milestone is deployment hardening and production release on Vercel.
 
 ## Core Value
 
@@ -41,20 +41,10 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 ### Active
 
-- [ ] Supabase Auth — real registration, login, password reset, session management (replace mock djb2 hash auth)
-- [ ] Multi-tenant organization isolation — every entity (contacts, companies, deals, etc.) scoped to an `organization_id` via Supabase RLS
-- [ ] Supabase persistence — all Zustand stores migrated from localStorage to Supabase (contacts, companies, deals, activities, goals, sequences, automations, templates, products, notifications, audit log)
-- [ ] Real-time sync — Supabase Realtime subscriptions so multiple users see changes instantly
-- [ ] Replace MOCK_USERS — all "assigned to" dropdowns and analytics driven by real org members from Supabase
-- [ ] Gmail OAuth flow — complete OAuth2 PKCE, store refresh token server-side, send/receive emails linked to contacts and deals
-- [ ] AI lead scoring — automatic score recalculation based on activity, engagement, deal stage
-- [ ] AI email drafting — context-aware email drafts from contact + deal history via Anthropic Claude
-- [ ] AI call summary — paste call transcript, get structured summary + next steps
-- [ ] Secure API key storage — Anthropic key proxied server-side, never in localStorage
-- [ ] Fix XSS in AIAgent — sanitize AI markdown output (replace dangerouslySetInnerHTML)
-- [ ] Vercel deploy — production build, env vars, custom domain
-- [ ] i18n English translations — add en.json alongside existing es.json
-- [ ] Vitest test suite — unit tests for stores, utils, and scoring logic
+- [ ] Phase 10 Vercel deployment and release checklist
+- [ ] Production environment validation (Supabase vars, Edge Functions, redirects)
+- [ ] End-to-end UAT for organization bootstrap, team invitations, and Gmail flows
+- [ ] Optional: load org members from `organization_members` table into Team Management (currently uses session-scoped users in Zustand)
 
 ### Out of Scope
 
@@ -66,14 +56,11 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 ## Context
 
-**Current state:** The app is a fully functional frontend SPA persisting all data in `localStorage` via Zustand `persist` middleware. It has realistic seed data (25 contacts, 10 companies, 18 deals, 30 activities) for development. The Supabase schema, TypeScript database types (`src/lib/database.types.ts`), and Supabase client stub (`src/lib/supabase.ts`) are already written and waiting for env vars.
+**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (101/101). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, and fixed UUID field mapping for deals/activities inserts.
 
-**Known critical issues (from codebase map):**
-- Auth uses a homegrown djb2 hash stored in localStorage — completely insecure, must be replaced by Supabase Auth
-- API keys (Anthropic, Gmail tokens) stored in localStorage — XSS risk
-- `dangerouslySetInnerHTML` in AIAgent.tsx with unsanitized AI markdown — XSS vector
-- MOCK_USERS hardcoded in 9 files — analytics and assignment dropdowns won't reflect real users until replaced
-- Supabase client returns `null` silently when env vars absent — debugging is invisible
+**Known critical issues (current):**
+- Team list is still partially driven by local auth-state user list and not fully hydrated from `organization_members`
+- Deployment and environment validation for production are still pending (Phase 10)
 
 **Tech stack:** React 18, TypeScript (strict), Vite 8, Tailwind CSS 3, Zustand 5, React Router v6, React Hook Form + Zod v4, Recharts, @hello-pangea/dnd, @supabase/supabase-js, @anthropic-ai/sdk, date-fns, lucide-react
 
@@ -91,12 +78,11 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Supabase for backend | Schema already written, SDK installed, RLS built-in for multi-tenancy | — Pending |
-| Supabase Edge Functions for API key proxying | Anthropic keys must never touch the browser | — Pending |
-| Vercel for frontend deploy | Zero-config Vite support, free tier, global CDN | — Pending |
-| Organizations via RLS (not application layer) | Security-first multi-tenancy; scales to thousands of orgs | — Pending |
-| Free beta (no Stripe in v1.0) | Validate product before adding billing complexity | — Pending |
-| i18n: Spanish + English in v1.0 | Infrastructure already exists; adding English is low cost | — Pending |
+| Supabase for backend | Schema and RLS model aligned with org isolation requirements | Adopted |
+| Supabase Edge Functions for sensitive operations | Keeps service role and external API credentials out of browser | Adopted |
+| Organizations via RLS + JWT claims | O(1) tenant resolution and strict row isolation | Adopted |
+| i18n tri-language baseline (es/en/pt) | Reduces UX fragmentation for target markets | Adopted |
+| Supabase mode must not rehydrate demo users | Prevents cross-org confusion and invalid team state | Adopted |
 
 ## Evolution
 
@@ -116,4 +102,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after initialization*
+*Last updated: 2026-04-10 after post-Phase 09 hardening updates*

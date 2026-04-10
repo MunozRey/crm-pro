@@ -142,11 +142,24 @@ export const useAuthStore = create<AuthState>()(
       supabaseSession: null,
       isLoadingAuth: true,
       organizationId: null,
-      users: SEED_USERS,
-      passwords: SEED_PASSWORDS,
+      users: isSupabaseConfigured ? [] : SEED_USERS,
+      passwords: isSupabaseConfigured ? {} : SEED_PASSWORDS,
       invitations: [],
 
       setCurrentUser: (user) => {
+        // In Supabase mode we do not use demo users.
+        // Keep only org-scoped runtime users and upsert current user.
+        if (isSupabaseConfigured) {
+          set((state) => {
+            if (!user) {
+              return { currentUser: null, organizationId: null, users: [] }
+            }
+            const nextUsers = state.users.filter((u) => u.id !== user.id)
+            nextUsers.unshift(user)
+            return { currentUser: user, organizationId: user.organizationId ?? null, users: nextUsers }
+          })
+          return
+        }
         set({ currentUser: user, organizationId: user?.organizationId ?? null })
       },
 
@@ -427,7 +440,16 @@ export const useAuthStore = create<AuthState>()(
       merge: (persisted, current) => {
         const p = persisted as Partial<AuthState> | undefined
         if (!p) return current
-        // Ensure SEED_USERS are always present (stale localStorage may have empty users)
+        // In Supabase mode, never re-inject demo users/passwords from fallback.
+        if (isSupabaseConfigured) {
+          return {
+            ...current,
+            ...p,
+            users: p.users ?? [],
+            passwords: p.passwords ?? {},
+          }
+        }
+        // Mock mode fallback: ensure demo users exist if persisted storage is stale/empty.
         const users = (p.users && p.users.length > 0) ? p.users : SEED_USERS
         const passwords = (p.passwords && Object.keys(p.passwords).length > 0) ? p.passwords : SEED_PASSWORDS
         return { ...current, ...p, users, passwords }

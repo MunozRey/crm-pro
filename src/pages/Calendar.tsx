@@ -206,6 +206,8 @@ function DayPanel({ date, activities, deals, contacts, onClose, onNewActivity, t
         </div>
         <button
           onClick={onClose}
+          aria-label={t.common.close}
+          title={t.common.close}
           className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/6 transition-colors"
         >
           <X className="w-4 h-4" />
@@ -466,9 +468,11 @@ interface WeekViewProps {
   activeTypes: Set<ActivityType>
   onDayClick: (date: Date) => void
   locale: string
+  hourLabel: string
+  allDayLabel: string
 }
 
-function WeekView({ currentDate, activities, deals, activeTypes, onDayClick, locale }: WeekViewProps) {
+function WeekView({ currentDate, activities, deals, activeTypes, onDayClick, locale, hourLabel, allDayLabel }: WeekViewProps) {
   const today = new Date()
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate])
 
@@ -511,8 +515,8 @@ function WeekView({ currentDate, activities, deals, activeTypes, onDayClick, loc
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Header row */}
-      <div className="grid grid-cols-8 border-b border-white/6 pb-2 mb-1 shrink-0">
-        <div className="text-xs text-slate-600 text-right pr-3 pt-1">hora</div>
+        <div className="grid grid-cols-8 border-b border-white/6 pb-2 mb-1 shrink-0">
+          <div className="text-xs text-slate-600 text-right pr-3 pt-1">{hourLabel}</div>
         {weekDays.map((day) => {
           const isToday = isSameDay(day, today)
           const isWeekend = day.getDay() === 0 || day.getDay() === 6
@@ -540,7 +544,7 @@ function WeekView({ currentDate, activities, deals, activeTypes, onDayClick, loc
       <div className="flex-1 overflow-y-auto">
         {/* All-day / no-time row */}
         <div className="grid grid-cols-8 border-b border-white/4 min-h-[40px]">
-          <div className="text-[10px] text-slate-600 text-right pr-3 pt-1">todo el día</div>
+          <div className="text-[10px] text-slate-600 text-right pr-3 pt-1">{allDayLabel}</div>
           {weekDays.map((day) => {
             const key = dayKey(day)
             const topActivities = grid.get(key)?.get('top') ?? []
@@ -619,7 +623,33 @@ export function Calendar() {
 
   // Derive locale string from i18n language for Intl APIs
   const language = useI18nStore((s) => s.language)
-  const locale = language === 'es' ? 'es-ES' : language === 'pt' ? 'pt-BR' : 'en-US'
+  const localeByLanguage: Record<typeof language, string> = {
+    en: 'en-US',
+    es: 'es-ES',
+    pt: 'pt-BR',
+    fr: 'fr-FR',
+    de: 'de-DE',
+    it: 'it-IT',
+  }
+  const hourLabelByLanguage: Record<typeof language, string> = {
+    en: 'hour',
+    es: 'hora',
+    pt: 'hora',
+    fr: 'heure',
+    de: 'Stunde',
+    it: 'ora',
+  }
+  const allDayLabelByLanguage: Record<typeof language, string> = {
+    en: 'all day',
+    es: 'todo el dia',
+    pt: 'todo o dia',
+    fr: 'toute la journee',
+    de: 'ganztagig',
+    it: 'tutto il giorno',
+  }
+  const locale = localeByLanguage[language]
+  const hourLabel = hourLabelByLanguage[language]
+  const allDayLabel = allDayLabelByLanguage[language]
 
   // Dynamic labels from translations
   const typeLabels: Record<ActivityType, string> = t.activities.typeLabels
@@ -760,6 +790,8 @@ export function Calendar() {
         <div className="flex items-center gap-1">
           <button
             onClick={goBack}
+            aria-label="Previous period"
+            title="Previous period"
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/6 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -777,6 +809,8 @@ export function Calendar() {
           </button>
           <button
             onClick={goForward}
+            aria-label="Next period"
+            title="Next period"
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/6 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
@@ -839,6 +873,8 @@ export function Calendar() {
               activeTypes={activeTypes}
               onDayClick={handleDayClick}
               locale={locale}
+              hourLabel={hourLabel}
+              allDayLabel={allDayLabel}
             />
           )}
         </div>

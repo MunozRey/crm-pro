@@ -5,10 +5,17 @@ import { seedActivities } from '../utils/seedData'
 import { useAuditStore } from './auditStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getOrgId, sbDelete } from '../lib/supabaseHelpers'
+import { useAuthStore } from './authStore'
 
 // ── Snake ↔ Camel mappers ───────────────────────────────────────────────────
 
 function rowToActivity(row: Record<string, unknown>): Activity {
+  const createdBy = row.created_by as string | null
+  const users = useAuthStore.getState().users
+  const createdByName = createdBy
+    ? (users.find((u) => u.id === createdBy)?.name ?? createdBy)
+    : ''
+
   return {
     id: row.id as string,
     type: (row.type as Activity['type']) ?? 'task',
@@ -21,7 +28,7 @@ function rowToActivity(row: Record<string, unknown>): Activity {
     contactId: (row.contact_id as string) ?? undefined,
     companyId: (row.company_id as string) ?? undefined,
     dealId: (row.deal_id as string) ?? undefined,
-    createdBy: (row.created_by as string) ?? '',
+    createdBy: createdByName,
     createdAt: (row.created_at as string) ?? '',
   }
 }
@@ -38,8 +45,14 @@ function activityToRow(a: Partial<Activity>): Record<string, unknown> {
   if (a.contactId !== undefined) row.contact_id = a.contactId
   if (a.companyId !== undefined) row.company_id = a.companyId
   if (a.dealId !== undefined) row.deal_id = a.dealId
-  if (a.createdBy !== undefined) row.created_by = a.createdBy
+  // `created_by` is UUID in DB. UI currently keeps display names.
+  // Only send value when it's already a UUID.
+  if (a.createdBy !== undefined && isUuid(a.createdBy)) row.created_by = a.createdBy
   return row
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ── State interface ─────────────────────────────────────────────────────────
@@ -111,7 +124,9 @@ export const useActivitiesStore = create<ActivitiesState>()(
 
       if (isSupabaseConfigured && supabase) {
         const row = activityToRow(activityData)
-        ;((supabase as any).from('activities').insert({ ...row, organization_id: getOrgId() }).select().single()
+        const currentUserId = useAuthStore.getState().currentUser?.id
+        const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
+        ;((supabase as any).from('activities').insert({ ...row, created_by: createdBy, organization_id: getOrgId() }).select().single()
         ).then(({ data, error }: any) => {
             if (error) {
               set((s: any) => ({ activities: s.activities.filter((a: any) => a.id !== id), error: error.message }))

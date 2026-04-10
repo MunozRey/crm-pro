@@ -1,9 +1,9 @@
 # CRM Pro — Roadmap
 
 **Milestone:** v1.0 — Full SaaS Upgrade
-**Status:** In Progress
+**Status:** Phase 10 Ready
 **Phases:** 10
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-10
 
 ---
 
@@ -17,7 +17,7 @@
 - [x] **Phase 6: Secondary Stores & Real Users** — Migrate remaining stores; replace MOCK_USERS; remove AI features and Leaderboard; unify Lead=Contact (completed 2026-04-08)
 - [x] **Phase 7: Gmail Integration** — Auth Code + PKCE OAuth flow; Edge Functions for token exchange and refresh; inbox, send, and contact linking (completed 2026-04-09)
 - [x] **Phase 8: i18n English** — English translation file and language switcher persistence (completed 2026-04-09)
-- [ ] **Phase 9: Test Suite** — Vitest setup; unit tests for stores, Zod schemas, and GitHub Actions CI
+- [x] **Phase 9: Test Suite** — Vitest setup; unit tests for stores, Zod schemas, and GitHub Actions CI (completed 2026-04-10)
 - [ ] **Phase 10: Vercel Deployment** — vercel.json SPA rewrite, env vars, preview deployments, production deploy, custom domain
 
 ---
@@ -34,7 +34,7 @@
 | 6. Secondary Stores & Real Users | 5/5 | ✅ Complete | 2026-04-08 |
 | 7. Gmail Integration | 5/5 | ✅ Complete | 2026-04-09 |
 | 8. i18n English | 3/3 | ✅ Complete | 2026-04-09 |
-| 9. Test Suite | 0/5 | Not started | - |
+| 9. Test Suite | 6/6 | ✅ Complete | 2026-04-10 |
 | 10. Vercel Deployment | 0/5 | Not started | - |
 
 ---
@@ -208,14 +208,15 @@ DATA-09, DATA-10, DATA-11, DATA-12, DATA-13, DATA-14, DATA-15, USERS-01, USERS-0
 **Goal:** Users can connect Gmail via Auth Code + PKCE, and the CRM can read their inbox, send emails from contact/deal pages, and link incoming emails to contacts automatically.
 **Dependencies:** Phase 5 (contacts in Supabase for email linking)
 
-**Plans:** 1/5 plans executed
+**Plans:** 5/5 plans executed
 
 Plans:
 - [x] 07-1-PLAN.md — PKCE OAuth initiation + GmailTokenContext + emailStore cleanup (Wave 1)
-- [ ] 07-2-PLAN.md — gmail_tokens schema + gmail-oauth-exchange + gmail-refresh-token Edge Functions (Wave 1)
-- [ ] 07-3-PLAN.md — GmailCallback page + App.tsx route + useDataInit silent refresh (Wave 2)
-- [ ] 07-4-PLAN.md — Inbox wired to real Gmail threads + contact email matching chips (Wave 3)
-- [ ] 07-5-PLAN.md — Send email from ContactDetail/Deals + activity logging on send (Wave 4)
+- [x] 07-2-PLAN.md — gmail_tokens schema + gmail-oauth-exchange + gmail-refresh-token Edge Functions (Wave 1)
+- [x] 07-3-PLAN.md — GmailCallback page + App.tsx route + useDataInit silent refresh (Wave 2)
+- [x] 07-4-PLAN.md — Inbox wired to real Gmail threads + contact email matching chips (Wave 3)
+- [x] 07-5-PLAN.md — Send email from ContactDetail/Deals + activity logging on send (Wave 4)
+- [x] 07-HARDENING — Dynamic redirect URI, refresh/retry in Inbox+Composer, persisted `gmail_thread_links`, pin/unpin links, demo linked emails
 
 ### Requirements Covered
 
@@ -226,9 +227,10 @@ GMAIL-01, GMAIL-02, GMAIL-03, GMAIL-04, GMAIL-05, GMAIL-06, SEC-05
 - [ ] Clicking "Connect Gmail" initiates a redirect to Google's consent screen (not a popup)
 - [ ] After granting consent, the callback page exchanges the code via Edge Function and the user's inbox loads
 - [ ] Closing and reopening the app silently refreshes the Gmail token without re-prompting the user
-- [ ] `localStorage.getItem('crm_emails')` contains no `accessToken` field
-- [ ] Receiving an email from a known contact's email address shows a contact chip in the inbox thread list
-- [ ] Sending an email from a deal detail page logs it as an activity on that deal
+- [x] `localStorage.getItem('crm_emails*')` contains no persisted Gmail access token field
+- [x] Receiving an email from a known contact's email address shows a contact chip in the inbox thread list
+- [x] Sending an email from a deal detail page logs it as an activity on that deal
+- [x] User can pin/unpin thread-to-CRM linkage and keep it stable across sessions
 
 ---
 
@@ -355,27 +357,27 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 | USERS-01 | Phase 6 | ✅ Complete |
 | USERS-02 | Phase 6 | ✅ Complete |
 | USERS-03 | Phase 6 | ✅ Complete |
-| GMAIL-01 | Phase 7 | Pending |
-| GMAIL-02 | Phase 7 | Pending |
-| GMAIL-03 | Phase 7 | Pending |
-| GMAIL-04 | Phase 7 | Pending |
-| GMAIL-05 | Phase 7 | Pending |
-| GMAIL-06 | Phase 7 | Pending |
-| SEC-05 | Phase 7 | Pending |
-| I18N-01 | Phase 8 | Pending |
-| I18N-02 | Phase 8 | Pending |
-| TEST-01 | Phase 9 | Pending |
-| TEST-02 | Phase 9 | Pending |
-| TEST-03 | Phase 9 | Pending |
-| TEST-04 | Phase 9 | Pending |
-| TEST-05 | Phase 9 | Pending |
+| GMAIL-01 | Phase 7 | ✅ Complete |
+| GMAIL-02 | Phase 7 | ✅ Complete |
+| GMAIL-03 | Phase 7 | ✅ Complete |
+| GMAIL-04 | Phase 7 | ✅ Complete |
+| GMAIL-05 | Phase 7 | ✅ Complete |
+| GMAIL-06 | Phase 7 | ✅ Complete |
+| SEC-05 | Phase 7 | ✅ Complete |
+| I18N-01 | Phase 8 | ✅ Complete |
+| I18N-02 | Phase 8 | ✅ Complete |
+| TEST-01 | Phase 9 | ✅ Complete |
+| TEST-02 | Phase 9 | ✅ Complete |
+| TEST-03 | Phase 9 | ✅ Complete |
+| TEST-04 | Phase 9 | ✅ Complete |
+| TEST-05 | Phase 9 | ✅ Complete |
 | DEPLOY-01 | Phase 10 | Pending |
 | DEPLOY-02 | Phase 10 | Pending |
 | DEPLOY-03 | Phase 10 | Pending |
 | DEPLOY-04 | Phase 10 | Pending |
 | DEPLOY-05 | Phase 10 | Pending |
 
-**Requirements mapped: 52 total — 42 complete, 15 pending** *(5 AI requirements removed from scope)*
+**Requirements mapped: 52 total — 49 complete, 5 pending** *(5 AI requirements removed from scope)*
 
 ---
 

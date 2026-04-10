@@ -1,16 +1,13 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-10
 
 ## APIs & External Services
 
 **AI — Anthropic Claude:**
-- Used for: contact enrichment, deal enrichment, sales assistant chat, email draft generation, daily brief, meeting prep, and natural language command parsing
-- SDK: `@anthropic-ai/sdk` 0.80 (`src/services/aiService.ts`)
-- Auth: API key entered by user in the Settings UI, persisted to `localStorage` via `useAIStore` (`src/store/aiStore.ts`)
-- Endpoint: Anthropic Messages API (`client.messages.create`, `client.messages.stream`)
-- Default model: `claude-opus-4-6`; fast model for command parsing: `claude-haiku-4-5-20251001`
-- SDK is called directly from the browser (`dangerouslyAllowBrowser: true`)
+- Status: browser-side Anthropic SDK usage is disabled by policy
+- Rationale: `dangerouslyAllowBrowser` was removed as a security hardening measure
+- Current pattern: AI calls should go through server-side proxy/edge paths only
 
 **AI — OpenRouter:**
 - Used for: same AI features as Anthropic, as a selectable alternative provider
@@ -27,16 +24,18 @@
 **Email — Gmail:**
 - Used for: reading inbox threads and sending emails from within the CRM
 - SDK/Client: Raw `fetch` to `https://gmail.googleapis.com/gmail/v1/users/me` (`src/services/gmailService.ts`)
-- Auth: Google Identity Services (GIS) OAuth 2.0 implicit/token flow via `window.google.accounts.oauth2`
-  - Client ID entered by user in Settings, stored at runtime
-  - GIS loaded via external `<script>` tag (Google Identity Services JS library)
-  - Access token stored in `gmailTokens` inside `useEmailStore` (`src/store/emailStore.ts`), persisted to `localStorage`
-  - Token expiry tracked client-side via `expiresAt` timestamp
+- Auth: OAuth 2.0 Authorization Code + PKCE
+  - Browser initiates PKCE flow and callback (`/auth/gmail/callback`)
+  - Edge Function `gmail-oauth-exchange` performs code exchange securely
+  - Refresh token is stored server-side in `gmail_tokens`
+  - Short-lived access token is stored in-memory via `GmailTokenContext` (not persisted)
+  - Edge Function `gmail-refresh-token` is used for token renewal
 - Scopes requested:
   - `https://www.googleapis.com/auth/gmail.send`
   - `https://www.googleapis.com/auth/gmail.readonly`
   - `https://www.googleapis.com/auth/gmail.compose`
 - Operations: `GET /threads`, `GET /threads/{id}`, `POST /messages/send`, `GET /profile`
+- Additional integration: `gmail_thread_links` table stores pinned thread-to-CRM links (contact/company/deal)
 
 ## Data Storage
 
@@ -46,7 +45,7 @@
   - Client: `@supabase/supabase-js` 2.100, initialized in `src/lib/supabase.ts`
   - The client is `null` when env vars are absent; all stores check `isSupabaseConfigured` before using it
   - Schema defined in `supabase/schema.sql`
-  - Tables: `contacts`, `companies`, `deals`, `activities`, `notifications`
+  - Tables: core CRM tables + org/auth support + secondary modules (products, templates, sequences, automations, goals, audit, custom fields, `gmail_tokens`, `gmail_thread_links`)
   - Row Level Security (RLS) enabled on all tables
     - All authenticated users can read/write all CRM tables (team-wide access)
     - Notifications are restricted to owner (`auth.uid() = user_id`)
@@ -68,19 +67,13 @@
 ## Authentication & Identity
 
 **Primary Auth Provider:**
-- Custom localStorage-based auth (`src/store/authStore.ts`)
-  - Users, sessions, and hashed passwords stored in Zustand `persist` store
-  - Password hashing: simple non-cryptographic hash (explicitly noted as demo only in source)
-  - Session tokens: UUID v4, 24-hour expiry
-  - Roles: `admin`, `manager`, `sales_rep`, `viewer`
-  - Seed demo users pre-loaded (admin: `david@crmpro.es`, password: `demo123`)
-
-**Optional Auth Provider:**
 - Supabase Auth (when `isSupabaseConfigured` is true)
   - Initialized via `initSupabaseAuth()` in `src/store/authStore.ts`
   - Listens to `supabase.auth.onAuthStateChange` and maps Supabase user to `AuthUser` type
-  - Role and jobTitle read from `user_metadata`
-  - When active, `supabaseSession` is stored alongside the custom session
+  - Role and organization context resolved from JWT/app metadata + org membership
+
+**Fallback Auth Provider (demo mode only):**
+- Local/demo auth state is used only when Supabase env vars are absent
 
 **Gmail OAuth:**
 - Handled separately via Google Identity Services (see Gmail section above)
@@ -104,7 +97,7 @@
 - Application builds to a static bundle (`npm run build`) suitable for any static host
 
 **CI Pipeline:**
-- Not detected — no `.github/workflows/`, `.gitlab-ci.yml`, or similar
+- GitHub Actions CI is present and aligned with Vitest + TypeScript checks
 
 ## Environment Configuration
 
@@ -112,10 +105,9 @@
 - `VITE_SUPABASE_URL` — Supabase project REST/Auth URL
 - `VITE_SUPABASE_ANON_KEY` — Supabase anon (public) key
 
-**Runtime-configured secrets (entered by user in Settings UI, stored in localStorage):**
-- Anthropic API key — stored in `useAIStore.apiKey`
+**Runtime-configured secrets (entered by user in Settings UI, stored locally as applicable):**
 - OpenRouter API key — stored in `useAIStore.openRouterKey`
-- Google OAuth Client ID — used transiently for GIS token requests
+- Google OAuth Client ID — used to initiate OAuth; token exchange and refresh handled by Supabase Edge Functions
 
 **Secrets location:**
 - `.env` file (gitignored) for Supabase URL/key
@@ -131,4 +123,4 @@
 
 ---
 
-*Integration audit: 2026-03-31*
+*Integration audit: 2026-04-10*

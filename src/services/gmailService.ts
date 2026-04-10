@@ -17,12 +17,14 @@ function base64urlEncode(bytes: Uint8Array): string {
 
 // ─── Auth Code + PKCE initiation ─────────────────────────────────────────────
 
-const REDIRECT_URI =
-  import.meta.env.DEV
-    ? 'http://localhost:5173/auth/gmail/callback'
-    : `${window.location.origin}/auth/gmail/callback`
+export function getGmailRedirectUri(): string {
+  // Always honor current origin (works with localhost:5173, :5174, preview, prod, etc.)
+  return `${window.location.origin}/auth/gmail/callback`
+}
 
 export async function initiateGmailOAuth(clientId: string): Promise<void> {
+  const redirectUri = getGmailRedirectUri()
+
   // 1. Generate code_verifier: 64 random bytes → base64url
   const verifierBytes = new Uint8Array(64)
   crypto.getRandomValues(verifierBytes)
@@ -45,7 +47,7 @@ export async function initiateGmailOAuth(clientId: string): Promise<void> {
   // 5. Build authorization URL manually (GIS initCodeClient does not support PKCE in redirect mode)
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: SCOPES,
     access_type: 'offline',
@@ -68,6 +70,18 @@ export function revokeGmailAccess(accessToken: string, callback: () => void): vo
 
 const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
 
+export class GmailApiError extends Error {
+  status: number
+  code?: string
+
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'GmailApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 async function gmailFetch<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${GMAIL_BASE}${path}`, {
     ...options,
@@ -79,8 +93,10 @@ async function gmailFetch<T>(path: string, token: string, options: RequestInit =
   })
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: { message: res.statusText } }))
-    throw new Error(err?.error?.message ?? `Gmail API error ${res.status}`)
+    const err = await res.json().catch(() => ({ error: { message: res.statusText, status: String(res.status) } }))
+    const message = err?.error?.message ?? `Gmail API error ${res.status}`
+    const code = err?.error?.status ?? err?.error?.code
+    throw new GmailApiError(message, res.status, typeof code === 'string' ? code : undefined)
   }
 
   return res.json() as Promise<T>

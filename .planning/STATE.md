@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase 10 Ready
-last_updated: "2026-04-10T12:30:00.000Z"
+last_updated: "2026-04-10T13:35:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 9
@@ -15,7 +15,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-31)
+See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time with data persisted in Supabase and real-time sync across tabs.
 **Current focus:** Phase 10 — Vercel Deployment (next up)
@@ -39,6 +39,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | 07 | Gmail Integration | 2026-04-09 |
 | 08 | i18n English | 2026-04-09 |
 | 09 | Test Suite + i18n completo | 2026-04-10 |
+| 09b | Post-Phase hardening (Gmail + UX + Quotes) | 2026-04-10 |
 
 ## Key Decisions
 
@@ -69,6 +70,11 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | Supabase mode must never rehydrate demo users (post-Phase 09 fix) | `persist.merge` was re-injecting `SEED_USERS` and leaked demo users into real org sessions | 2026-04-10 |
 | Org creation validates session via `supabase.auth.getUser()` in page flow | Avoids false "not authenticated" errors caused by stale local Zustand user during org bootstrap | 2026-04-10 |
 | Deal/activity creation must map UUID fields correctly | Sending display names to UUID columns (`assigned_to`, `created_by`) caused inserts to fail and optimistic records to roll back | 2026-04-10 |
+| Gmail redirect URI uses dynamic origin | Prevents OAuth callback failures when running on non-5173 local ports and preview URLs | 2026-04-10 |
+| Gmail token refresh is on-demand in Inbox + composer | Avoids false disconnected states when in-memory token expires but server refresh token is valid | 2026-04-10 |
+| Gmail thread links persisted (`gmail_thread_links`) | Enables pin/unpin of thread-to-CRM relationships and stable context across sessions | 2026-04-10 |
+| Demo email seeds linked to deals/contacts | Improves first-run demo quality for Inbox, follow-ups, and quote-email scenarios | 2026-04-10 |
+| Quote builder supports export/email actions | Reduces workflow friction by enabling immediate sharing from deal detail | 2026-04-10 |
 
 ## Blockers
 
@@ -84,7 +90,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 - Phase 10 (Vercel Deployment) requires the repo to be pushed to GitHub first
 - Post-Phase 09 hardening: `authStore` Supabase branch starts with empty users/passwords and keeps runtime users org-scoped.
 - Post-Phase 09 hardening: calendar week labels no longer hardcoded in Spanish (`hour`/`all day` now language-aware).
+- Supabase remote already includes migration `20260410160000_gmail_thread_links.sql`.
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-04-10 — Post-Phase 09 production fixes applied: organization creation flow stabilized, demo users removed from Supabase sessions, and UUID mapping bugs fixed for deals/activities creation. Test suite remains green (101/101).*
+*Last session: 2026-04-10 — Gmail hardening shipped (dynamic redirect URI, refresh+retry, persisted thread links + migration + function deploy), Quote Builder extended with export/email actions, and demo inbox seeded with linked deal emails. Test/build remain green.*

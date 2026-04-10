@@ -3,7 +3,10 @@ import { Mail, Send, Inbox as InboxIcon, Loader2, RefreshCw, Wifi, WifiOff, User
 import { Link } from 'react-router-dom'
 import { useEmailStore } from '../store/emailStore'
 import { useContactsStore } from '../store/contactsStore'
-import { initiateGmailOAuth } from '../services/gmailService'
+import { useDealsStore } from '../store/dealsStore'
+import { useCompaniesStore } from '../store/companiesStore'
+import { useActivitiesStore } from '../store/activitiesStore'
+import { initiateGmailOAuth, GmailApiError } from '../services/gmailService'
 import { useGmailToken } from '../contexts/GmailTokenContext'
 import { supabase } from '../lib/supabase'
 import { useSettingsStore } from '../store/settingsStore'
@@ -18,6 +21,19 @@ import { formatRelativeDate } from '../utils/formatters'
 function extractEmail(from: string): string {
   const match = from.match(/<([^>]+)>/)
   return (match ? match[1] : from).toLowerCase().trim()
+}
+
+function emailDomain(email: string): string {
+  const atIdx = email.indexOf('@')
+  return atIdx >= 0 ? email.slice(atIdx + 1).toLowerCase() : ''
+}
+
+interface ThreadMatch {
+  contact?: Contact
+  companyId?: string
+  companyName?: string
+  dealId?: string
+  dealTitle?: string
 }
 
 function ThreadItem({
@@ -170,11 +186,24 @@ function LocalEmailItem({
 // ─── Thread view ──────────────────────────────────────────────────────────────
 function ThreadView({
   thread,
+  match,
+  linkSource,
+  hasPersistedLink,
+  linkedEmails,
   onReply,
+  onCreateFollowUp,
+  onPinLink,
+  onUnpinLink,
 }: {
   thread: GmailThread | null
-  localEmail: CRMEmail | null
+  match: ThreadMatch | null
+  linkSource: 'auto' | 'manual' | null
+  hasPersistedLink: boolean
+  linkedEmails: CRMEmail[]
   onReply: (to: string, subject: string) => void
+  onCreateFollowUp: (thread: GmailThread, match: ThreadMatch | null) => void
+  onPinLink: (thread: GmailThread, match: ThreadMatch | null) => void
+  onUnpinLink: (thread: GmailThread) => void
 }) {
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
@@ -189,6 +218,68 @@ function ThreadView({
       <div className="px-6 py-4 border-b border-white/6 flex-shrink-0">
         <h2 className="text-base font-semibold text-white">{thread.messages[0]?.subject ?? ''}</h2>
         <p className="text-xs text-slate-500 mt-0.5">{thread.messages.length} {t.common.notes.toLowerCase()}</p>
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {match?.contact && (
+            <Link
+              to={`/contacts/${match.contact.id}`}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-brand-600/20 text-brand-300 border border-brand-500/30 hover:bg-brand-600/30 transition-colors"
+            >
+              <User size={9} />
+              {match.contact.firstName} {match.contact.lastName}
+            </Link>
+          )}
+          {match?.dealId && (
+            <Link
+              to="/deals"
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors"
+            >
+              Deal: {match.dealTitle}
+            </Link>
+          )}
+          {match?.companyName && (
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-slate-400 border border-white/10">
+              {match.companyName}
+            </span>
+          )}
+          {linkSource && (
+            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${
+              linkSource === 'manual'
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
+                : 'bg-white/8 text-slate-500 border-white/10'
+            }`}>
+              {linkSource === 'manual' ? 'Pinned link' : 'Auto link'}
+            </span>
+          )}
+          {!hasPersistedLink && match && (
+            <button
+              onClick={() => onPinLink(thread, match)}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition-colors"
+              title="Pin CRM link"
+              aria-label="Pin CRM link"
+            >
+              Pin link
+            </button>
+          )}
+          {hasPersistedLink && (
+            <button
+              onClick={() => onUnpinLink(thread)}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-slate-400 border border-white/10 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/20 transition-colors"
+              title="Remove pinned link"
+              aria-label="Remove pinned link"
+            >
+              Unpin
+            </button>
+          )}
+          <button
+            onClick={() => onCreateFollowUp(thread, match)}
+            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25 transition-colors"
+            title="Create follow-up task"
+            aria-label="Create follow-up task"
+          >
+            <Plus size={10} />
+            Follow-up
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {thread.messages.map((msg, i) => (
@@ -220,6 +311,18 @@ function ThreadView({
             </div>
           </div>
         ))}
+        {linkedEmails.length > 0 && (
+          <div className="glass rounded-2xl p-4">
+            <p className="text-xs text-slate-500 mb-2">CRM sent emails in this thread</p>
+            <div className="space-y-1.5">
+              {linkedEmails.map((email) => (
+                <p key={email.id} className="text-xs text-slate-300 truncate">
+                  {formatRelativeDate(email.sentAt ?? email.createdAt)} - {email.subject}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -262,6 +365,8 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
           </button>
           <button
             onClick={() => onDelete(email.id)}
+            title={t.common.delete}
+            aria-label={t.common.delete}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/6 hover:bg-red-500/15 hover:text-red-400 text-slate-500 transition-colors"
           >
             <Trash2 size={12} />
@@ -316,11 +421,14 @@ export function Inbox() {
   const t = useTranslations()
   const {
     emails, threads, threadsLoading, isGmailConnected,
-    gmailAddress, loadThreads, deleteEmail, disconnectGmail,
+    gmailAddress, threadLinks, loadThreads, fetchThreadLinks, setThreadLink, clearThreadLink, deleteEmail, disconnectGmail,
     trackEmailOpen, trackEmailClick,
   } = useEmailStore()
   const { accessToken, setGmailToken, clearGmailToken, isTokenValid } = useGmailToken()
   const contacts = useContactsStore((s) => s.contacts)
+  const deals = useDealsStore((s) => s.deals)
+  const companies = useCompaniesStore((s) => s.companies)
+  const addActivity = useActivitiesStore((s) => s.addActivity)
   const { settings } = useSettingsStore()
 
   const [folder, setFolder] = useState<'inbox' | 'sent'>('inbox')
@@ -330,7 +438,7 @@ export function Inbox() {
   const [replyTo, setReplyTo] = useState<{ to: string; subject: string } | null>(null)
   const [connecting, setConnecting] = useState(false)
 
-  const connected = !!gmailAddress && isTokenValid()
+  const connected = !!gmailAddress
 
   // Build contact email lookup map for thread chip matching
   const contactByEmail = useMemo(() => {
@@ -341,32 +449,33 @@ export function Inbox() {
     return map
   }, [contacts])
 
+  async function refreshAccessToken(): Promise<string> {
+    const { data, error } = await supabase!.functions.invoke('gmail-refresh-token')
+    if (error || !data?.access_token) {
+      throw new Error('Token refresh failed — please reconnect Gmail')
+    }
+    const newExpiry = Date.now() + (data.expires_in ?? 3600) * 1000
+    setGmailToken(data.access_token, newExpiry)
+    return data.access_token as string
+  }
+
   // 401 refresh+retry wrapper
-  async function refreshAndRetry<T>(
-    fn: (token: string) => Promise<T>,
-    token: string,
-  ): Promise<T> {
+  async function refreshAndRetry<T>(fn: (token: string) => Promise<T>): Promise<T> {
+    const activeToken = accessToken ?? await refreshAccessToken()
     try {
-      return await fn(token)
+      return await fn(activeToken)
     } catch (err) {
-      if (err instanceof Error && err.message.includes('401')) {
-        const { data, error } = await supabase!.functions.invoke('gmail-refresh-token')
-        if (error || !data?.access_token) throw new Error('Token refresh failed — please reconnect Gmail')
-        const newExpiry = Date.now() + (data.expires_in ?? 3600) * 1000
-        setGmailToken(data.access_token, newExpiry)
-        return await fn(data.access_token)
+      if (err instanceof GmailApiError && err.status === 401) {
+        const refreshedToken = await refreshAccessToken()
+        return await fn(refreshedToken)
       }
       throw err
     }
   }
 
   const handleLoadThreads = async (query = '') => {
-    if (!accessToken) return
     try {
-      await refreshAndRetry(
-        (token) => useEmailStore.getState().loadThreads(token, query),
-        accessToken,
-      )
+      await refreshAndRetry((token) => useEmailStore.getState().loadThreads(token, query))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error loading threads')
     }
@@ -378,12 +487,18 @@ export function Inbox() {
     { id: 'sent', label: t.inbox.sent, icon: <Send size={15} /> },
   ]
 
-  // Load gmail threads when connected and token is valid
+  // Load Gmail threads when connected (token can be refreshed on-demand)
   useEffect(() => {
-    if (connected && folder === 'inbox' && accessToken) {
+    if (connected && folder === 'inbox') {
       handleLoadThreads()
     }
-  }, [connected, folder, accessToken])
+  }, [connected, folder])
+
+  useEffect(() => {
+    if (connected) {
+      fetchThreadLinks()
+    }
+  }, [connected, fetchThreadLinks])
 
   const handleConnectGmail = async () => {
     const clientId = (settings as { googleClientId?: string }).googleClientId
@@ -405,9 +520,104 @@ export function Inbox() {
   const selectedThread = threads.find((th) => th.id === selectedThreadId) ?? null
   const selectedEmail = emails.find((e) => e.id === selectedEmailId) ?? null
 
+  const threadMatchById = useMemo(() => {
+    const byId = new Map<string, ThreadMatch>()
+    const contactsByEmail = new Map(contacts.filter((c) => !!c.email).map((c) => [c.email.toLowerCase(), c] as const))
+    const companyById = new Map(companies.map((c) => [c.id, c] as const))
+
+    for (const thread of threads) {
+      const addresses = thread.messages.flatMap((msg) => [extractEmail(msg.from), ...msg.to.split(',').map((p) => extractEmail(p))]).filter(Boolean)
+      const uniqueAddresses = [...new Set(addresses)]
+      const matchedContact = uniqueAddresses.map((addr) => contactsByEmail.get(addr)).find(Boolean)
+
+      let companyId = matchedContact?.companyId
+      if (!companyId) {
+        const domainMatchedCompany = uniqueAddresses
+          .map((addr) => emailDomain(addr))
+          .map((domain) => companies.find((c) => c.domain.toLowerCase() === domain))
+          .find(Boolean)
+        companyId = domainMatchedCompany?.id
+      }
+
+      const relatedDeal = deals.find((d) =>
+        (matchedContact && d.contactId === matchedContact.id) ||
+        (companyId && d.companyId === companyId),
+      )
+
+      byId.set(thread.id, {
+        contact: matchedContact,
+        companyId,
+        companyName: companyId ? companyById.get(companyId)?.name : undefined,
+        dealId: relatedDeal?.id,
+        dealTitle: relatedDeal?.title,
+      })
+    }
+    return byId
+  }, [threads, contacts, companies, deals])
+
+  const persistedThreadMatchById = useMemo(() => {
+    const byId = new Map<string, ThreadMatch>()
+    for (const [threadId, link] of Object.entries(threadLinks)) {
+      const contact = link.contactId ? contacts.find((c) => c.id === link.contactId) : undefined
+      const companyId = link.companyId ?? contact?.companyId
+      byId.set(threadId, {
+        contact,
+        companyId: companyId ?? undefined,
+        companyName: companyId ? companies.find((c) => c.id === companyId)?.name : undefined,
+        dealId: link.dealId ?? undefined,
+        dealTitle: link.dealId ? deals.find((d) => d.id === link.dealId)?.title : undefined,
+      })
+    }
+    return byId
+  }, [threadLinks, contacts, companies, deals])
+
+  const selectedThreadMatch = selectedThread
+    ? (persistedThreadMatchById.get(selectedThread.id) ?? threadMatchById.get(selectedThread.id) ?? null)
+    : null
+  const selectedThreadLink = selectedThread ? (threadLinks[selectedThread.id] ?? null) : null
+  const selectedThreadLinkedEmails = selectedThread
+    ? emails.filter((e) => e.gmailThreadId === selectedThread.id)
+    : []
+
   const openReply = (to: string, subject: string) => {
     setReplyTo({ to, subject })
     setComposerOpen(true)
+  }
+
+  const createFollowUpFromThread = (thread: GmailThread, match: ThreadMatch | null) => {
+    const lastSubject = thread.messages[thread.messages.length - 1]?.subject ?? thread.messages[0]?.subject ?? 'Email follow-up'
+    addActivity({
+      type: 'task',
+      subject: `Follow-up: ${lastSubject}`,
+      description: `Auto-created from Gmail thread ${thread.id}`,
+      status: 'pending',
+      contactId: match?.contact?.id,
+      companyId: match?.companyId,
+      dealId: match?.dealId,
+      createdBy: '',
+    })
+    toast.success('Follow-up task created')
+  }
+
+  const pinThreadLink = (thread: GmailThread, match: ThreadMatch | null) => {
+    if (!match || (!match.contact?.id && !match.companyId && !match.dealId)) {
+      toast.error('No CRM entity to pin from this thread')
+      return
+    }
+
+    setThreadLink({
+      threadId: thread.id,
+      contactId: match.contact?.id,
+      companyId: match.companyId,
+      dealId: match.dealId,
+      source: 'manual',
+    })
+    toast.success('Thread link pinned')
+  }
+
+  const unpinThreadLink = (thread: GmailThread) => {
+    clearThreadLink(thread.id)
+    toast.success('Pinned link removed')
   }
 
   return (
@@ -438,6 +648,7 @@ export function Inbox() {
                 onClick={() => { clearGmailToken(); disconnectGmail() }}
                 className="text-slate-600 hover:text-red-400 transition-colors"
                 title={t.settings.disconnect}
+                aria-label={t.settings.disconnect}
               >
                 <WifiOff size={10} />
               </button>
@@ -481,6 +692,8 @@ export function Inbox() {
               onClick={() => handleLoadThreads()}
               disabled={threadsLoading}
               className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/6 transition-colors"
+              title="Refresh inbox"
+              aria-label="Refresh inbox"
             >
               <RefreshCw size={13} className={threadsLoading ? 'animate-spin' : ''} />
             </button>
@@ -548,8 +761,14 @@ export function Inbox() {
         {folder === 'inbox' ? (
           <ThreadView
             thread={selectedThread}
-            localEmail={null}
+            match={selectedThreadMatch}
+            linkSource={selectedThreadLink?.source ?? (selectedThreadMatch ? 'auto' : null)}
+            hasPersistedLink={!!selectedThreadLink}
+            linkedEmails={selectedThreadLinkedEmails}
             onReply={openReply}
+            onCreateFollowUp={createFollowUpFromThread}
+            onPinLink={pinThreadLink}
+            onUnpinLink={unpinThreadLink}
           />
         ) : (
           <LocalEmailView

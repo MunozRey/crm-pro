@@ -3,6 +3,15 @@
 **Defined:** 2026-03-31
 **Core Value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time — with AI that drafts emails, scores leads, and surfaces insights automatically.
 
+## Current Snapshot (2026-04-10)
+
+- Execution source of truth: `.planning/STATE.md` and `.planning/ROADMAP.md`.
+- Phases 1–9 are completed; Phase 10 (deployment hardening) is pending.
+- Gmail integration is fully operational with PKCE OAuth, server-side refresh token storage, access-token refresh flow, and persisted thread links (`gmail_thread_links`).
+- i18n is expanded to 6 languages (`en`, `es`, `pt`, `fr`, `de`, `it`).
+- Quote workflow includes builder save + export-to-PDF (print layout) + send-by-email from deal detail.
+- Test suite remains green (`101` tests) and build is passing.
+
 ## v1 Requirements
 
 ### Authentication & Organizations

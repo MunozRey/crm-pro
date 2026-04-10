@@ -10,13 +10,13 @@ A production-grade, full-featured CRM single-page application built with React 1
 | **Contacts** | Table/grid view, search, filters, bulk delete, CSV export, slide-over form |
 | **Contact Detail** | Overview, Activities, Deals, Notes tabs |
 | **Companies** | Table view, industry/status/size filters, company detail page |
-| **Deals** | Kanban drag & drop + list view, deal detail panel, mark Won/Lost |
+| **Deals** | Kanban drag & drop + list view, deal detail panel, mark Won/Lost, quote builder (save/export/send) |
 | **Activities** | Unified feed, overdue highlighting, quick complete/delete |
 | **Reports** | Revenue forecast, Won/Lost donut, activities by type, contacts by source, conversion funnel |
-| **Settings** | Tags management, pipeline stages, language (es/en/pt), JSON export/import, data reset |
+| **Settings** | Tags management, pipeline stages, language (en/es/pt/fr/de/it), JSON export/import, data reset |
 | **Authentication** | Supabase Auth (register/login/reset), protected routes, org bootstrap (`/org-setup`) |
 | **Multi-tenancy** | Organization-scoped data via `organization_id` + RLS policies |
-| **Realtime + Integrations** | Supabase Realtime sync, Gmail integration flow, notifications/audit |
+| **Realtime + Integrations** | Supabase Realtime sync, Gmail PKCE OAuth + refresh, pinned Gmail thread links, notifications/audit |
 
 ## Quick Start
 
@@ -89,8 +89,10 @@ All components are kept under 200 lines. Large pages (Contacts, Deals) delegate 
 
 - Supabase Auth, org onboarding, and RLS multi-tenancy are implemented.
 - Core CRM stores are wired to Supabase and realtime subscriptions are active.
-- i18n coverage exists for Spanish, English, and Portuguese.
+- i18n coverage exists for English, Spanish, Portuguese, French, German, and Italian.
 - Test suite is passing (`101` tests).
+- Gmail integration is hardened (PKCE + server refresh + resilient inbox load + persisted thread links).
+- Quote workflow now supports save, print-to-PDF export, and email send from deal detail.
 - Next major milestone: deployment/release hardening (Phase 10).
 
 ## Seed Data
@@ -99,6 +101,7 @@ In mock mode, the app ships with realistic Spanish/European B2B seed data:
 - **10 companies** including Bankia, Factorial, Mapfre, Inditex, Cabify, Deloitte
 - **18 deals** across all pipeline stages (€500–€50,000)
 - **30 activities** (calls, emails, meetings, tasks, LinkedIn, notes)
+- **4 demo emails** linked to real contacts/companies/deals for Inbox and quote demo flows
 - **3 mock users**: David Muñoz (Sales Manager), Sara López (AE), Carlos Vega (SDR)
 
 To reset demo data: **Settings → Restaurar datos demo**.

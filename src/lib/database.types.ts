@@ -203,6 +203,25 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['gmail_tokens']['Insert']>
       }
+      gmail_thread_links: {
+        Row: {
+          id: string
+          thread_id: string
+          user_id: string
+          organization_id: string
+          contact_id: string | null
+          company_id: string | null
+          deal_id: string | null
+          source: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['gmail_thread_links']['Row'], 'created_at' | 'updated_at'> & {
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['gmail_thread_links']['Insert']>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

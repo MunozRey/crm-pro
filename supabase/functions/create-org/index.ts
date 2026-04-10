@@ -31,21 +31,36 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // 1. Create organization
+    // 1. Prevent duplicate slug/domain
+    const normalizedSlug = slug.trim().toLowerCase()
+    const { data: existingOrg, error: existsErr } = await adminClient
+      .from('organizations')
+      .select('id')
+      .ilike('domain', normalizedSlug)
+      .maybeSingle()
+    if (existsErr) throw new Error(existsErr.message)
+    if (existingOrg) {
+      return new Response(
+        JSON.stringify({ error: 'This organization slug is already in use' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // 2. Create organization
     const { data: org, error: orgErr } = await adminClient
       .from('organizations')
-      .insert({ name: orgName.trim(), domain: slug.trim() })
+      .insert({ name: orgName.trim(), domain: normalizedSlug })
       .select()
       .single()
     if (orgErr) throw new Error(orgErr.message)
 
-    // 2. Add user as admin member
+    // 3. Add user as admin member
     const { error: memberErr } = await adminClient
       .from('organization_members')
       .insert({ organization_id: org.id, user_id: user.id, role: 'admin' })
     if (memberErr) throw new Error(memberErr.message)
 
-    // 3. Set JWT claims
+    // 4. Set JWT claims
     await adminClient.rpc('set_claim', { uid: user.id, claim: 'organization_id', value: `"${org.id}"` })
     await adminClient.rpc('set_claim', { uid: user.id, claim: 'user_role', value: '"admin"' })
 

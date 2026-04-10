@@ -47,6 +47,7 @@ export interface AuthState {
   setCurrentUser: (user: AuthUser | null) => void
   setSupabaseSession: (session: unknown | null) => void
   setIsLoadingAuth: (v: boolean) => void
+  fetchOrgUsers: (organizationId: string) => Promise<void>
 
   // User management
   addUser: (data: {
@@ -169,6 +170,46 @@ export const useAuthStore = create<AuthState>()(
 
       setIsLoadingAuth: (v) => {
         set({ isLoadingAuth: v })
+      },
+
+      fetchOrgUsers: async (organizationId) => {
+        if (!isSupabaseConfigured || !supabase || !organizationId) return
+
+        const { data, error } = await (supabase as any)
+          .from('organization_members')
+          .select('user_id, role, job_title, phone, avatar_url, is_active, created_at')
+          .eq('organization_id', organizationId)
+
+        if (error) return
+
+        const current = get().currentUser
+        const byId = new Map(get().users.map((u) => [u.id, u]))
+
+        const users: AuthUser[] = (data ?? []).map((m: any) => {
+          const existing = byId.get(m.user_id)
+          const isCurrent = current?.id === m.user_id
+          return {
+            id: m.user_id,
+            email: existing?.email ?? (isCurrent ? (current?.email ?? '') : ''),
+            name: existing?.name ?? (isCurrent ? (current?.name ?? 'User') : `Member ${String(m.user_id).slice(0, 6)}`),
+            role: normalizeRole(m.role),
+            avatar: existing?.avatar ?? m.avatar_url ?? (isCurrent ? current?.avatar : undefined),
+            jobTitle: existing?.jobTitle ?? m.job_title ?? (isCurrent ? (current?.jobTitle ?? '') : ''),
+            phone: existing?.phone ?? m.phone ?? (isCurrent ? current?.phone : undefined),
+            organizationId,
+            isActive: m.is_active ?? true,
+            lastLoginAt: existing?.lastLoginAt ?? (isCurrent ? current?.lastLoginAt : undefined),
+            createdAt: existing?.createdAt ?? m.created_at ?? (isCurrent ? (current?.createdAt ?? new Date().toISOString()) : new Date().toISOString()),
+            updatedAt: existing?.updatedAt ?? (isCurrent ? (current?.updatedAt ?? new Date().toISOString()) : new Date().toISOString()),
+          }
+        })
+
+        // Ensure current user is always present, even if membership query is stale.
+        if (current && !users.some((u) => u.id === current.id)) {
+          users.unshift({ ...current, organizationId })
+        }
+
+        set({ users })
       },
 
       login: (email, password) => {
@@ -494,17 +535,23 @@ export function initSupabaseAuth(): (() => void) | undefined {
 
     if (session?.user) {
       const sbUser = session.user
+      const organizationId = (sbUser.app_metadata?.organization_id as string | undefined) ?? sbUser.user_metadata?.org_id
       useAuthStore.getState().setCurrentUser({
         id: sbUser.id,
         name: sbUser.user_metadata?.full_name ?? sbUser.email?.split('@')[0] ?? 'User',
         email: sbUser.email ?? '',
         role: normalizeRole(sbUser.app_metadata?.user_role ?? sbUser.user_metadata?.role),
         jobTitle: sbUser.user_metadata?.job_title ?? '',
-        organizationId: (sbUser.app_metadata?.organization_id as string | undefined) ?? sbUser.user_metadata?.org_id,
+        organizationId,
         isActive: true,
         createdAt: sbUser.created_at,
         updatedAt: sbUser.updated_at ?? sbUser.created_at,
       })
+      if (organizationId) {
+        useAuthStore.getState().fetchOrgUsers(organizationId).catch(() => {
+          /* non-critical */
+        })
+      }
     } else {
       useAuthStore.getState().setCurrentUser(null)
     }

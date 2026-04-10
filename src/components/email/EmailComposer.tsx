@@ -10,6 +10,7 @@ import { useTemplateStore } from '../../store/templateStore'
 import { formatCurrency } from '../../utils/formatters'
 import { toast } from '../../store/toastStore'
 import { useTranslations } from '../../i18n'
+import { supabase } from '../../lib/supabase'
 
 interface EmailComposerProps {
   isOpen: boolean
@@ -95,7 +96,16 @@ export function EmailComposer({
     }
     setSending(true)
     try {
+      const getFreshAccessToken = async (): Promise<string | undefined> => {
+        if (accessToken) return accessToken
+        if (!supabase) return undefined
+        const { data, error } = await supabase.functions.invoke('gmail-refresh-token')
+        if (error || !data?.access_token) return undefined
+        return data.access_token as string
+      }
+
       const toList = to.split(',').map((e) => e.trim()).filter(Boolean)
+      const tokenForSend = connected ? await getFreshAccessToken() : undefined
       const sent = await sendEmail({
         to: toList,
         cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
@@ -104,7 +114,7 @@ export function EmailComposer({
         contactId,
         dealId,
         companyId,
-        accessToken: accessToken ?? undefined,
+        accessToken: tokenForSend,
       })
       if (trackingEnabled) {
         enableTracking(sent.id)
@@ -153,7 +163,8 @@ export function EmailComposer({
               <FileText size={12} />
               {t.nav.templates}
             </button>
-            <button onClick={onClose} className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
+            <button onClick={onClose} title="Close composer" aria-label="Close composer" className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/8 transition-colors">
+              <span className="sr-only">Close composer</span>
               <X size={16} />
             </button>
           </div>

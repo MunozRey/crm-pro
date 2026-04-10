@@ -77,13 +77,28 @@ function calcTotal(q: number, u: number, d: number) {
   return Math.round(q * u * (1 - d / 100) * 100) / 100
 }
 
-function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: QuoteItem[] }) {
+function QuoteBuilder({
+  dealId,
+  dealTitle,
+  initialItems,
+  contactEmail,
+  contactId,
+  companyId,
+}: {
+  dealId: string
+  dealTitle: string
+  initialItems: QuoteItem[]
+  contactEmail?: string
+  contactId?: string
+  companyId?: string
+}) {
   const t = useTranslations()
   const [allProducts, setAllProducts] = useState(() => useProductsStore.getState().products)
   useEffect(() => useProductsStore.subscribe((s) => setAllProducts(s.products)), [])
   const products = useMemo(() => allProducts.filter((p) => p.isActive), [allProducts])
   const [items, setItems] = useState<QuoteItem[]>(initialItems)
   const [saved, setSaved] = useState(false)
+  const [sendingQuote, setSendingQuote] = useState(false)
 
   const updateItem = (id: string, patch: Partial<QuoteItem>) => {
     setItems((prev) =>
@@ -119,6 +134,99 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
     toast.success(t.deals.quoteBuilder)
   }
 
+  const exportPdf = () => {
+    const lines = items.map((item) => {
+      const rowTotal = fmt(item.total)
+      return `
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #ddd">${item.name || '-'}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${item.quantity}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${fmt(item.unitPrice)}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${item.discount}%</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${rowTotal}</td>
+        </tr>
+      `
+    }).join('')
+
+    const html = `
+      <html>
+        <head>
+          <title>Quote - ${dealTitle}</title>
+        </head>
+        <body style="font-family:Arial,sans-serif;padding:24px">
+          <h2 style="margin:0 0 6px">Quote</h2>
+          <p style="margin:0 0 18px;color:#555">${dealTitle}</p>
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #111">Item</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Qty</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Unit</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Disc.</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Total</th>
+              </tr>
+            </thead>
+            <tbody>${lines}</tbody>
+          </table>
+          <div style="margin-top:16px;text-align:right">
+            <div>Subtotal: ${fmt(subtotal)}</div>
+            <div>Discount: -${fmt(totalDiscount)}</div>
+            <div style="font-weight:700;margin-top:4px">Total: ${fmt(total)}</div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const w = window.open('', '_blank', 'noopener,noreferrer')
+    if (!w) {
+      toast.error('Unable to open print window')
+      return
+    }
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    w.print()
+  }
+
+  const sendQuoteByEmail = async () => {
+    if (!contactEmail) {
+      toast.error('No contact email in this deal')
+      return
+    }
+
+    const body = [
+      `Hi,`,
+      '',
+      `Please find below the quote summary for "${dealTitle}":`,
+      '',
+      ...items.map((item) => `- ${item.name || 'Item'}: ${item.quantity} x ${fmt(item.unitPrice)} (${item.discount}% off) = ${fmt(item.total)}`),
+      '',
+      `Subtotal: ${fmt(subtotal)}`,
+      `Discount: -${fmt(totalDiscount)}`,
+      `Total: ${fmt(total)}`,
+      '',
+      'Best regards,',
+    ].join('\n')
+
+    setSendingQuote(true)
+    try {
+      await useEmailStore.getState().sendEmail({
+        to: [contactEmail],
+        subject: `Quote - ${dealTitle}`,
+        body,
+        contactId,
+        dealId,
+        companyId,
+      })
+      toast.success('Quote sent to contact')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to send quote')
+    } finally {
+      setSendingQuote(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
       {/* Add controls */}
@@ -126,6 +234,8 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
         <select
           defaultValue=""
           onChange={(e) => { if (e.target.value) { addFromProduct(e.target.value); e.target.value = '' } }}
+          aria-label="Add product to quote"
+          title="Add product to quote"
           className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
         >
           <option value="" disabled>+ {t.deals.addItem}...</option>
@@ -164,6 +274,8 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
                       value={item.name}
                       onChange={(e) => updateItem(item.id, { name: e.target.value })}
                       placeholder={t.common.name}
+                      aria-label="Quote item name"
+                      title="Quote item name"
                       className="w-full bg-transparent border-b border-white/10 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -173,6 +285,8 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
                       min={1}
                       value={item.quantity}
                       onChange={(e) => updateItem(item.id, { quantity: Math.max(1, Number(e.target.value)) })}
+                      aria-label="Quote item quantity"
+                      title="Quote item quantity"
                       className="w-12 text-right bg-transparent border-b border-white/10 text-slate-200 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -183,6 +297,8 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
                       step={0.01}
                       value={item.unitPrice}
                       onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                      aria-label="Quote item unit price"
+                      title="Quote item unit price"
                       className="w-20 text-right bg-transparent border-b border-white/10 text-slate-200 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -193,6 +309,8 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
                       max={100}
                       value={item.discount}
                       onChange={(e) => updateItem(item.id, { discount: Math.min(100, Math.max(0, Number(e.target.value))) })}
+                      aria-label="Quote item discount percentage"
+                      title="Quote item discount percentage"
                       className="w-14 text-right bg-transparent border-b border-white/10 text-slate-200 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -224,8 +342,22 @@ function QuoteBuilder({ dealId, initialItems }: { dealId: string; initialItems: 
         </div>
       )}
 
-      {/* Save */}
-      <div className="flex justify-end">
+      {/* Save / Actions */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={exportPdf}
+          disabled={items.length === 0}
+          className="px-4 py-1.5 rounded-lg border border-white/10 hover:bg-white/4 disabled:opacity-40 text-xs text-slate-300 font-medium transition-colors"
+        >
+          {t.common.export} PDF
+        </button>
+        <button
+          onClick={sendQuoteByEmail}
+          disabled={items.length === 0 || sendingQuote}
+          className="px-4 py-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 disabled:opacity-40 text-xs text-brand-300 font-medium transition-colors"
+        >
+          {sendingQuote ? `${t.inbox.compose}...` : 'Send by Email'}
+        </button>
         <button
           onClick={handleSave}
           disabled={saved}
@@ -548,6 +680,8 @@ export function Deals() {
                         type="checkbox"
                         checked={selectedDealIds.size === filtered.length && filtered.length > 0}
                         onChange={toggleAllDeals}
+                        aria-label="Select all deals"
+                        title="Select all deals"
                         className="rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500"
                       />
                     </th>
@@ -581,6 +715,8 @@ export function Deals() {
                             type="checkbox"
                             checked={selectedDealIds.has(deal.id)}
                             onChange={() => toggleDealSelect(deal.id)}
+                            aria-label={`Select deal ${deal.title}`}
+                            title={`Select deal ${deal.title}`}
                             className="rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500"
                           />
                         </td>
@@ -727,7 +863,14 @@ export function Deals() {
             {/* Quote Builder */}
             <div className="bg-white/4 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-slate-300">{t.deals.quoteBuilder}</h3>
-              <QuoteBuilder dealId={selectedDeal.id} initialItems={selectedDeal.quoteItems ?? []} />
+              <QuoteBuilder
+                dealId={selectedDeal.id}
+                dealTitle={selectedDeal.title}
+                initialItems={selectedDeal.quoteItems ?? []}
+                contactEmail={getContact(selectedDeal.contactId)?.email}
+                contactId={selectedDeal.contactId}
+                companyId={selectedDeal.companyId}
+              />
             </div>
 
           </div>

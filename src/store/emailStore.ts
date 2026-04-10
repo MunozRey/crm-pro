@@ -4,11 +4,25 @@ import { v4 as uuid } from 'uuid'
 import type { CRMEmail, GmailThread } from '../types'
 import { sendGmailEmail, getGmailProfile, listGmailThreads } from '../services/gmailService'
 import { useAuditStore } from './auditStore'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { getOrgId } from '../lib/supabaseHelpers'
+import { useAuthStore } from './authStore'
+import { seedEmails } from '../utils/seedData'
+
+export interface GmailThreadLink {
+  threadId: string
+  contactId?: string
+  companyId?: string
+  dealId?: string
+  source: 'auto' | 'manual'
+  updatedAt: string
+}
 
 export interface EmailStore {
   emails: CRMEmail[]
   gmailAddress: string | null
   threads: GmailThread[]
+  threadLinks: Record<string, GmailThreadLink>
   threadsLoading: boolean
   threadsError: string | null
 
@@ -41,6 +55,9 @@ export interface EmailStore {
 
   // Load Gmail threads
   loadThreads: (accessToken: string, query?: string) => Promise<void>
+  fetchThreadLinks: () => Promise<void>
+  setThreadLink: (link: Omit<GmailThreadLink, 'updatedAt'>) => void
+  clearThreadLink: (threadId: string) => void
 
   // Helpers
   getEmailsByContact: (contactId: string) => CRMEmail[]
@@ -50,9 +67,10 @@ export interface EmailStore {
 export const useEmailStore = create<EmailStore>()(
   persist(
     (set, get) => ({
-      emails: [],
+      emails: isSupabaseConfigured ? [] : seedEmails,
       gmailAddress: null,
       threads: [],
+      threadLinks: {},
       threadsLoading: false,
       threadsError: null,
 
@@ -162,23 +180,97 @@ export const useEmailStore = create<EmailStore>()(
         }
       },
 
+      fetchThreadLinks: async () => {
+        if (!isSupabaseConfigured || !supabase) return
+        try {
+          const { data, error } = await (supabase as any)
+            .from('gmail_thread_links')
+            .select('thread_id, contact_id, company_id, deal_id, source, updated_at')
+
+          if (error) return
+
+          const links: Record<string, GmailThreadLink> = {}
+          for (const row of data ?? []) {
+            links[row.thread_id] = {
+              threadId: row.thread_id,
+              contactId: row.contact_id ?? undefined,
+              companyId: row.company_id ?? undefined,
+              dealId: row.deal_id ?? undefined,
+              source: row.source === 'manual' ? 'manual' : 'auto',
+              updatedAt: row.updated_at ?? new Date().toISOString(),
+            }
+          }
+          set({ threadLinks: links })
+        } catch {
+          // Non-critical: link hydration can silently fail without blocking Inbox
+        }
+      },
+
+      setThreadLink: (link) => {
+        const next: GmailThreadLink = {
+          ...link,
+          updatedAt: new Date().toISOString(),
+        }
+        set((s) => ({
+          threadLinks: { ...s.threadLinks, [link.threadId]: next },
+        }))
+
+        if (isSupabaseConfigured && supabase) {
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          if (!currentUserId) return
+          ;(supabase as any)
+            .from('gmail_thread_links')
+            .upsert({
+              thread_id: link.threadId,
+              user_id: currentUserId,
+              contact_id: link.contactId ?? null,
+              company_id: link.companyId ?? null,
+              deal_id: link.dealId ?? null,
+              source: link.source,
+              organization_id: getOrgId(),
+            }, { onConflict: 'thread_id,user_id,organization_id' })
+        }
+      },
+
+      clearThreadLink: (threadId) => {
+        set((s) => {
+          const next = { ...s.threadLinks }
+          delete next[threadId]
+          return { threadLinks: next }
+        })
+
+        if (isSupabaseConfigured && supabase) {
+          ;(supabase as any).from('gmail_thread_links').delete().eq('thread_id', threadId)
+        }
+      },
+
       getEmailsByContact: (contactId) => get().emails.filter((e) => e.contactId === contactId),
       getEmailsByDeal: (dealId) => get().emails.filter((e) => e.dealId === dealId),
     }),
     {
-      name: 'crm_emails',
-      version: 2,
+      name: 'crm_emails_v2',
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
         if (version < 2) {
           const s = persistedState as Record<string, unknown>
           delete s.gmailTokens
+          if (!isSupabaseConfigured && (!Array.isArray(s.emails) || s.emails.length === 0)) {
+            s.emails = seedEmails
+          }
           return s
         }
-        return persistedState as EmailStore
+        const s = persistedState as Record<string, unknown>
+        if (version < 3) {
+          if (!isSupabaseConfigured && (!Array.isArray(s.emails) || s.emails.length === 0)) {
+            s.emails = seedEmails
+          }
+        }
+        return s as unknown as EmailStore
       },
       partialize: (s) => ({
         emails: s.emails,
         gmailAddress: s.gmailAddress,
+        threadLinks: s.threadLinks,
       }),
     },
   ),

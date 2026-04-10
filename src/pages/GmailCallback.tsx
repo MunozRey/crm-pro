@@ -5,11 +5,7 @@ import { useGmailToken } from '../contexts/GmailTokenContext'
 import { useEmailStore } from '../store/emailStore'
 import { supabase } from '../lib/supabase'
 import { toast } from '../store/toastStore'
-
-const REDIRECT_URI =
-  import.meta.env.DEV
-    ? 'http://localhost:5173/auth/gmail/callback'
-    : `${window.location.origin}/auth/gmail/callback`
+import { getGmailRedirectUri } from '../services/gmailService'
 
 export function GmailCallback() {
   const navigate = useNavigate()
@@ -48,7 +44,7 @@ export function GmailCallback() {
 
       try {
         const { data, error } = await supabase!.functions.invoke('gmail-oauth-exchange', {
-          body: { code, code_verifier: codeVerifier, redirect_uri: REDIRECT_URI },
+          body: { code, code_verifier: codeVerifier, redirect_uri: getGmailRedirectUri() },
         })
 
         if (error || !data?.access_token) {

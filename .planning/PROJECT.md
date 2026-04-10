@@ -4,7 +4,7 @@
 
 CRM Pro is a full-featured B2B SaaS CRM for Spanish and European sales teams, built to compete with HubSpot and Pipedrive. It covers the full sales lifecycle — contacts, companies, deals pipeline, activities, sequences, forecasting, AI-assisted selling, and Gmail integration — with multi-tenant organization isolation so any business can sign up and use it independently.
 
-The product is now operating as a Supabase-backed SaaS app (auth, multi-tenant RLS, real-time stores, Gmail OAuth flow, and i18n coverage). The next milestone is deployment hardening and production release on Vercel.
+The product is now operating as a Supabase-backed SaaS app (auth, multi-tenant RLS, real-time stores, hardened Gmail OAuth/token flow, and 6-language i18n coverage). The next milestone is deployment hardening and production release on Vercel.
 
 ## Core Value
 
@@ -43,7 +43,7 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 - [ ] Phase 10 Vercel deployment and release checklist
 - [ ] Production environment validation (Supabase vars, Edge Functions, redirects)
-- [ ] End-to-end UAT for organization bootstrap, team invitations, and Gmail flows
+- [ ] End-to-end UAT for organization bootstrap, team invitations, Gmail flows, and quote export/email flows
 - [ ] Optional: load org members from `organization_members` table into Team Management (currently uses session-scoped users in Zustand)
 
 ### Out of Scope
@@ -56,7 +56,7 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 ## Context
 
-**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (101/101). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, and fixed UUID field mapping for deals/activities inserts.
+**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (101/101). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, fixed UUID field mapping for deals/activities inserts, and added Gmail thread-link persistence with remote migration/deploy.
 
 **Known critical issues (current):**
 - Team list is still partially driven by local auth-state user list and not fully hydrated from `organization_members`
@@ -81,8 +81,10 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 | Supabase for backend | Schema and RLS model aligned with org isolation requirements | Adopted |
 | Supabase Edge Functions for sensitive operations | Keeps service role and external API credentials out of browser | Adopted |
 | Organizations via RLS + JWT claims | O(1) tenant resolution and strict row isolation | Adopted |
-| i18n tri-language baseline (es/en/pt) | Reduces UX fragmentation for target markets | Adopted |
+| i18n 6-language baseline (en/es/pt/fr/de/it) | Reduces UX fragmentation for international teams and demos | Adopted |
 | Supabase mode must not rehydrate demo users | Prevents cross-org confusion and invalid team state | Adopted |
+| Persisted Gmail thread links (`gmail_thread_links`) | Enables explicit CRM linkage and avoids re-matching drift across sessions | Adopted |
+| Quote actions inside deal detail (export/email) | Keeps quoting workflow inside one screen with fewer context switches | Adopted |
 
 ## Evolution
 
@@ -102,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after post-Phase 09 hardening updates*
+*Last updated: 2026-04-10 after Gmail hardening + quote workflow updates*

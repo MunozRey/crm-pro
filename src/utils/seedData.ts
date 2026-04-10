@@ -1,4 +1,4 @@
-import type { Contact, Company, Deal, Activity, AppSettings } from '../types'
+import type { Contact, Company, Deal, Activity, AppSettings, CRMEmail } from '../types'
 
 // ─── Mock Users ──────────────────────────────────────────────────────────────
 
@@ -1441,5 +1441,81 @@ export const seedActivities: Activity[] = [
     dealId: 'd18',
     createdBy: 'Sara López',
     createdAt: '2026-03-11T09:00:00Z',
+  },
+]
+
+// ─── Emails (demo) ───────────────────────────────────────────────────────────
+
+export const seedEmails: CRMEmail[] = [
+  {
+    id: 'em1',
+    gmailMessageId: 'gmail-msg-001',
+    gmailThreadId: 'gmail-thread-bankia-compliance',
+    from: 'david@crmpro.es',
+    to: ['alejandro.fernandez@bankia.es'],
+    subject: 'Bankia - propuesta módulo Compliance',
+    body: 'Te comparto la propuesta con alcance, timeline y pricing del módulo de Compliance. Si te parece, lo revisamos mañana 11:00.',
+    status: 'sent',
+    contactId: 'ct1',
+    dealId: 'd2',
+    companyId: 'c1',
+    trackingEnabled: true,
+    openCount: 2,
+    clickCount: 1,
+    openedAt: '2026-03-12T10:15:00Z',
+    lastOpenedAt: '2026-03-13T08:05:00Z',
+    lastClickedAt: '2026-03-13T08:06:00Z',
+    createdAt: '2026-03-12T09:30:00Z',
+    sentAt: '2026-03-12T09:30:00Z',
+  },
+  {
+    id: 'em2',
+    gmailMessageId: 'gmail-msg-002',
+    gmailThreadId: 'gmail-thread-bankia-compliance',
+    from: 'alejandro.fernandez@bankia.es',
+    to: ['david@crmpro.es'],
+    subject: 'Re: Bankia - propuesta módulo Compliance',
+    body: 'Gracias David. Lo vemos con legal hoy y te confirmo comentarios. En principio nos encaja.',
+    status: 'received',
+    contactId: 'ct1',
+    dealId: 'd2',
+    companyId: 'c1',
+    createdAt: '2026-03-13T08:10:00Z',
+  },
+  {
+    id: 'em3',
+    gmailMessageId: 'gmail-msg-003',
+    gmailThreadId: 'gmail-thread-inditex-renewal',
+    from: 'david@crmpro.es',
+    to: ['sergio.diaz@retail.es'],
+    cc: ['elena.torres@inditex.com'],
+    subject: 'Renovación Enterprise 2026 - propuesta final',
+    body: 'Adjunto propuesta final de renovación con mejora de SLA y roadmap Q3/Q4. Quedo atento para cierre esta semana.',
+    status: 'sent',
+    contactId: 'ct25',
+    dealId: 'd8',
+    companyId: 'c5',
+    trackingEnabled: true,
+    openCount: 1,
+    clickCount: 0,
+    openedAt: '2026-03-18T11:00:00Z',
+    lastOpenedAt: '2026-03-18T11:00:00Z',
+    createdAt: '2026-03-18T10:30:00Z',
+    sentAt: '2026-03-18T10:30:00Z',
+  },
+  {
+    id: 'em4',
+    gmailMessageId: 'gmail-msg-004',
+    gmailThreadId: 'gmail-thread-flywire-payments',
+    from: 'sara@crmpro.es',
+    to: ['cristina.valls@flywire.com'],
+    subject: 'Siguientes pasos contrato pagos internacionales',
+    body: 'Perfecto Cristina. Te propongo revisar cláusulas legales el jueves y dejar el cierre para la próxima semana.',
+    status: 'sent',
+    contactId: 'ct14',
+    dealId: 'd11',
+    companyId: 'c8',
+    createdAt: '2026-03-15T12:00:00Z',
+    sentAt: '2026-03-15T12:00:00Z',
   },
 ]

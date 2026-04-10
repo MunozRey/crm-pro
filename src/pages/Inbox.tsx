@@ -572,13 +572,14 @@ export function Inbox() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const {
     emails, threads, threadsLoading, isGmailConnected,
-    gmailAddress, threadLinks, threadsError, threadsLastSyncedAt, loadThreads, fetchThreadLinks, setThreadLink, clearThreadLink, deleteEmail, disconnectGmail,
+    gmailAddress, threadLinks, threadWorkspace, threadsError, threadsLastSyncedAt, threadsNextPageToken, threadsHistoryId, loadThreads, fetchThreadLinks, setThreadLink, clearThreadLink, setThreadOwner, setThreadNote, deleteEmail, disconnectGmail,
     trackEmailOpen, trackEmailClick, processScheduledEmails,
   } = useEmailStore()
   const { accessToken, setGmailToken, clearGmailToken, isTokenValid } = useGmailToken()
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)
   const companies = useCompaniesStore((s) => s.companies)
+  const orgUsers = useAuthStore((s) => s.users)
   const addActivity = useActivitiesStore((s) => s.addActivity)
   const { settings } = useSettingsStore()
 
@@ -635,7 +636,21 @@ export function Inbox() {
     try {
       await refreshAndRetry((token) => useEmailStore.getState().loadThreads(token, query))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error loading threads')
+      toast.error(err instanceof Error ? err.message : t.errors.generic)
+    }
+  }
+
+  const handleLoadMoreThreads = async () => {
+    if (!threadsNextPageToken) return
+    try {
+      await refreshAndRetry((token) =>
+        useEmailStore.getState().loadThreads(token, listQuery, {
+          append: true,
+          pageToken: threadsNextPageToken,
+        }),
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t.errors.generic)
     }
   }
 
@@ -660,7 +675,7 @@ export function Inbox() {
   }, [connected, fetchThreadLinks])
 
   const handleConnectGmail = async () => {
-    const clientId = (settings as { googleClientId?: string }).googleClientId
+    const clientId = settings.googleClientId
     if (!clientId) {
       toast.error(`${t.settings.gmailIntegration} ${t.settings.apiKey}`)
       return
@@ -689,8 +704,8 @@ export function Inbox() {
     return () => window.clearInterval(id)
   }, [connected, processScheduledEmails, accessToken])
 
-  const sentEmails = emails.filter((e) => e.status === 'sent')
-  const scheduledEmails = emails.filter((e) => e.status === 'scheduled')
+  const sentEmails = useMemo(() => emails.filter((e) => e.status === 'sent'), [emails])
+  const scheduledEmails = useMemo(() => emails.filter((e) => e.status === 'scheduled'), [emails])
   const filteredThreads = threads.filter((thread) => {
     const q = listQuery.trim().toLowerCase()
     if (!q) return true
@@ -726,6 +741,9 @@ export function Inbox() {
     const byId = new Map<string, ThreadMatch>()
     const contactsByEmail = new Map(contacts.filter((c) => !!c.email).map((c) => [c.email.toLowerCase(), c] as const))
     const companyById = new Map(companies.map((c) => [c.id, c] as const))
+    const companyByDomain = new Map(
+      companies.filter((c) => !!c.domain).map((c) => [c.domain.toLowerCase(), c] as const),
+    )
 
     for (const thread of threads) {
       const addresses = thread.messages.flatMap((msg) => [extractEmail(msg.from), ...msg.to.split(',').map((p) => extractEmail(p))]).filter(Boolean)
@@ -736,7 +754,7 @@ export function Inbox() {
       if (!companyId) {
         const domainMatchedCompany = uniqueAddresses
           .map((addr) => emailDomain(addr))
-          .map((domain) => companies.find((c) => c.domain.toLowerCase() === domain))
+          .map((domain) => companyByDomain.get(domain))
           .find(Boolean)
         companyId = domainMatchedCompany?.id
       }
@@ -777,6 +795,7 @@ export function Inbox() {
     ? (persistedThreadMatchById.get(selectedThread.id) ?? threadMatchById.get(selectedThread.id) ?? null)
     : null
   const selectedThreadLink = selectedThread ? (threadLinks[selectedThread.id] ?? null) : null
+  const selectedWorkspace = selectedThread ? (threadWorkspace[selectedThread.id] ?? null) : null
   const selectedThreadLinkedEmails = selectedThread
     ? emails.filter((e) => e.gmailThreadId === selectedThread.id)
     : []
@@ -1023,7 +1042,10 @@ export function Inbox() {
           <div>
             <span className="text-sm font-semibold text-white capitalize">{FOLDERS.find((f) => f.id === folder)?.label}</span>
             {folder === 'inbox' && threadsLastSyncedAt && (
-              <p className="text-[10px] text-slate-600 mt-0.5">{t.common.updatedAt}: {new Date(threadsLastSyncedAt).toLocaleTimeString()}</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">
+                {t.common.updatedAt}: {new Date(threadsLastSyncedAt).toLocaleTimeString()}
+                {threadsHistoryId ? ` · h:${threadsHistoryId}` : ''}
+              </p>
             )}
           </div>
           {connected && folder === 'inbox' && (
@@ -1114,6 +1136,16 @@ export function Inbox() {
                   contactByEmail={contactByEmail}
                 />
               ))}
+              {connected && !threadsLoading && !!threadsNextPageToken && (
+                <div className="p-3 border-t border-white/6">
+                  <button
+                    onClick={handleLoadMoreThreads}
+                    className="w-full px-3 py-2 rounded-lg text-xs bg-white/6 hover:bg-white/10 text-slate-300 transition-colors"
+                  >
+                    {t.common.view} +
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -1165,6 +1197,27 @@ export function Inbox() {
 
       {/* ── Right: Email/Thread view ─────────────────────────────────────── */}
       <div className="flex-1 min-w-0 overflow-hidden border border-white/8 rounded-2xl bg-navy-900/25">
+        {folder === 'inbox' && selectedThread && (
+          <div className="px-3 py-2 border-b border-white/6 flex items-center gap-2 flex-wrap">
+            <select
+                      aria-label={t.common.assignedTo}
+              value={selectedWorkspace?.ownerUserId ?? ''}
+              onChange={(e) => setThreadOwner(selectedThread.id, e.target.value || undefined)}
+              className="bg-[#0d0e1a] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"
+            >
+              <option value="">{t.common.assignedTo}</option>
+              {orgUsers.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+            <input
+              value={selectedWorkspace?.internalNote ?? ''}
+              onChange={(e) => setThreadNote(selectedThread.id, e.target.value)}
+              placeholder={t.common.notes}
+              className="flex-1 min-w-[220px] bg-[#0d0e1a] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 placeholder-slate-600"
+            />
+          </div>
+        )}
         {folder === 'inbox' ? (
           <ThreadView
             thread={selectedThread}

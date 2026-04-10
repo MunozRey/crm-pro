@@ -18,43 +18,56 @@ import { useCustomFieldsStore } from '../store/customFieldsStore'
 export function initRealtimeSubscriptions(): () => void {
   if (!isSupabaseConfigured || !supabase) return () => {}
 
+  const throttledByTable = new Map<string, number>()
+  const scheduleFetch = (table: string, fn: () => void) => {
+    const existing = throttledByTable.get(table)
+    if (existing) window.clearTimeout(existing)
+    const timer = window.setTimeout(() => {
+      fn()
+      throttledByTable.delete(table)
+    }, 180)
+    throttledByTable.set(table, timer)
+  }
+
   const channel = supabase!.channel('db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'contacts' }, () => {
-      useContactsStore.getState().fetchContacts()
+      scheduleFetch('contacts', () => useContactsStore.getState().fetchContacts())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => {
-      useCompaniesStore.getState().fetchCompanies()
+      scheduleFetch('companies', () => useCompaniesStore.getState().fetchCompanies())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, () => {
-      useDealsStore.getState().fetchDeals()
+      scheduleFetch('deals', () => useDealsStore.getState().fetchDeals())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, () => {
-      useActivitiesStore.getState().fetchActivities()
+      scheduleFetch('activities', () => useActivitiesStore.getState().fetchActivities())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-      useNotificationsStore.getState().fetchNotifications()
+      scheduleFetch('notifications', () => useNotificationsStore.getState().fetchNotifications())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_goals' }, () => {
-      useGoalsStore.getState().fetchGoals()
+      scheduleFetch('sales_goals', () => useGoalsStore.getState().fetchGoals())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'email_sequences' }, () => {
-      useSequencesStore.getState().fetchSequences()
+      scheduleFetch('email_sequences', () => useSequencesStore.getState().fetchSequences())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'automation_rules' }, () => {
-      useAutomationsStore.getState().fetchRules()
+      scheduleFetch('automation_rules', () => useAutomationsStore.getState().fetchRules())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'email_templates' }, () => {
-      useTemplateStore.getState().fetchTemplates()
+      scheduleFetch('email_templates', () => useTemplateStore.getState().fetchTemplates())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-      useProductsStore.getState().fetchProducts()
+      scheduleFetch('products', () => useProductsStore.getState().fetchProducts())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_field_definitions' }, () => {
-      useCustomFieldsStore.getState().fetchCustomFields()
+      scheduleFetch('custom_field_definitions', () => useCustomFieldsStore.getState().fetchCustomFields())
     })
     .subscribe()
 
   return () => {
+    throttledByTable.forEach((timer) => window.clearTimeout(timer))
+    throttledByTable.clear()
     supabase!.removeChannel(channel)
   }
 }

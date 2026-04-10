@@ -215,6 +215,8 @@ export async function sendGmailEmail(
 
 interface RawThreadList {
   threads?: Array<{ id: string; snippet: string; historyId: string }>
+  nextPageToken?: string
+  historyId?: string
 }
 
 interface RawMessage {
@@ -319,12 +321,20 @@ export async function listGmailThreads(
   accessToken: string,
   query = '',
   maxResults = 30,
-): Promise<GmailThread[]> {
+  pageToken?: string,
+): Promise<{ threads: GmailThread[]; nextPageToken: string | null; historyId: string | null }> {
   const params = new URLSearchParams({ maxResults: String(maxResults) })
   if (query) params.set('q', query)
+  if (pageToken) params.set('pageToken', pageToken)
 
   const list = await gmailFetch<RawThreadList>(`/threads?${params}`, accessToken)
-  if (!list.threads?.length) return []
+  if (!list.threads?.length) {
+    return {
+      threads: [],
+      nextPageToken: list.nextPageToken ?? null,
+      historyId: list.historyId ?? null,
+    }
+  }
 
   // Fetch first 10 threads in full
   const threads = await Promise.all(
@@ -341,7 +351,11 @@ export async function listGmailThreads(
     ),
   )
 
-  return threads
+  return {
+    threads,
+    nextPageToken: list.nextPageToken ?? null,
+    historyId: list.historyId ?? null,
+  }
 }
 
 export async function getGmailThread(threadId: string, accessToken: string): Promise<GmailThread> {

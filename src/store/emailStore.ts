@@ -19,6 +19,13 @@ export interface GmailThreadLink {
   updatedAt: string
 }
 
+export interface GmailThreadWorkspaceMeta {
+  threadId: string
+  ownerUserId?: string
+  internalNote?: string
+  updatedAt: string
+}
+
 interface ScheduledEmailJob {
   id: string
   emailId: string
@@ -50,7 +57,10 @@ export interface EmailStore {
   threadsLoading: boolean
   threadsError: string | null
   threadsLastSyncedAt: string | null
+  threadsNextPageToken: string | null
+  threadsHistoryId: string | null
   scheduledQueue: ScheduledEmailJob[]
+  threadWorkspace: Record<string, GmailThreadWorkspaceMeta>
 
   // Local email actions
   addEmail: (email: Omit<CRMEmail, 'id' | 'createdAt'>) => CRMEmail
@@ -107,10 +117,12 @@ export interface EmailStore {
   processScheduledEmails: (accessToken?: string) => Promise<void>
 
   // Load Gmail threads
-  loadThreads: (accessToken: string, query?: string) => Promise<void>
+  loadThreads: (accessToken: string, query?: string, opts?: { append?: boolean; pageToken?: string }) => Promise<void>
   fetchThreadLinks: () => Promise<void>
   setThreadLink: (link: Omit<GmailThreadLink, 'updatedAt'>) => void
   clearThreadLink: (threadId: string) => void
+  setThreadOwner: (threadId: string, ownerUserId?: string) => void
+  setThreadNote: (threadId: string, internalNote?: string) => void
 
   // Helpers
   getEmailsByContact: (contactId: string) => CRMEmail[]
@@ -129,7 +141,10 @@ export const useEmailStore = create<EmailStore>()(
       threadsLoading: false,
       threadsError: null,
       threadsLastSyncedAt: null,
+      threadsNextPageToken: null,
+      threadsHistoryId: null,
       scheduledQueue: [],
+      threadWorkspace: {},
 
       addEmail: (data) => {
         const email: CRMEmail = { ...data, id: uuid(), createdAt: new Date().toISOString() }
@@ -346,15 +361,24 @@ export const useEmailStore = create<EmailStore>()(
         }
       },
 
-      loadThreads: async (accessToken: string, query = '') => {
+      loadThreads: async (accessToken: string, query = '', opts = {}) => {
         set({ threadsLoading: true, threadsError: null })
         try {
           if (!get().gmailAddress) {
             const profile = await getGmailProfile(accessToken)
             set({ gmailAddress: profile.emailAddress })
           }
-          const threads = await listGmailThreads(accessToken, query)
-          set({ threads, threadsLoading: false, threadsLastSyncedAt: new Date().toISOString() })
+          const result = await listGmailThreads(accessToken, query, 30, opts.pageToken)
+          const threads = opts.append
+            ? [...get().threads, ...result.threads.filter((th) => !get().threads.some((existing) => existing.id === th.id))]
+            : result.threads
+          set({
+            threads,
+            threadsLoading: false,
+            threadsLastSyncedAt: new Date().toISOString(),
+            threadsNextPageToken: result.nextPageToken,
+            threadsHistoryId: result.historyId,
+          })
         } catch (err) {
           set({
             threadsLoading: false,
@@ -432,12 +456,42 @@ export const useEmailStore = create<EmailStore>()(
         }
       },
 
+      setThreadOwner: (threadId, ownerUserId) => {
+        const current = get().threadWorkspace[threadId]
+        set((s) => ({
+          threadWorkspace: {
+            ...s.threadWorkspace,
+            [threadId]: {
+              threadId,
+              ownerUserId,
+              internalNote: current?.internalNote,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        }))
+      },
+
+      setThreadNote: (threadId, internalNote) => {
+        const current = get().threadWorkspace[threadId]
+        set((s) => ({
+          threadWorkspace: {
+            ...s.threadWorkspace,
+            [threadId]: {
+              threadId,
+              ownerUserId: current?.ownerUserId,
+              internalNote: internalNote?.trim() || undefined,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        }))
+      },
+
       getEmailsByContact: (contactId) => get().emails.filter((e) => e.contactId === contactId),
       getEmailsByDeal: (dealId) => get().emails.filter((e) => e.dealId === dealId),
     }),
     {
       name: 'crm_emails_v2',
-      version: 4,
+      version: 5,
       migrate: (persistedState: unknown, version: number) => {
         if (version < 2) {
           const s = persistedState as Record<string, unknown>
@@ -456,13 +510,21 @@ export const useEmailStore = create<EmailStore>()(
         if (version < 4) {
           s.scheduledQueue = []
         }
+        if (version < 5) {
+          s.threadWorkspace = {}
+          s.threadsNextPageToken = null
+          s.threadsHistoryId = null
+        }
         return s as unknown as EmailStore
       },
       partialize: (s) => ({
         emails: s.emails,
         gmailAddress: s.gmailAddress,
         threadLinks: s.threadLinks,
+        threadWorkspace: s.threadWorkspace,
         threadsLastSyncedAt: s.threadsLastSyncedAt,
+        threadsNextPageToken: s.threadsNextPageToken,
+        threadsHistoryId: s.threadsHistoryId,
         scheduledQueue: s.scheduledQueue,
       }),
     },

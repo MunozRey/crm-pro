@@ -36,7 +36,7 @@ const FIELD_TYPES: CustomFieldType[] = [
 export function Settings() {
   const t = useTranslations()
   const { language, setLanguage } = useI18nStore()
-  const { settings, updateCurrency, addTag, removeTag, resetToDefaults } = useSettingsStore()
+  const { settings, updateCurrency, updateGoogleClientId, addTag, removeTag, resetToDefaults } = useSettingsStore()
   const { disabledTypes, toggleType } = useNotificationsStore()
   const contactsStore = useContactsStore()
   const companiesStore = useCompaniesStore()
@@ -150,9 +150,7 @@ export function Settings() {
 
   const [newTag, setNewTag] = useState('')
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  const [googleClientId, setGoogleClientId] = useState(
-    () => (settings as { googleClientId?: string }).googleClientId ?? ''
-  )
+  const [googleClientId, setGoogleClientId] = useState(() => settings.googleClientId ?? '')
   const [connectingGmail, setConnectingGmail] = useState(false)
   const [disconnectingGmail, setDisconnectingGmail] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
@@ -234,8 +232,8 @@ export function Settings() {
 
   const handleConnectGmail = async () => {
     if (!googleClientId.trim()) { toast.error(t.settings.gmailEnterClientId); return }
-    // Save client ID to settings
-    ;(settings as { googleClientId?: string }).googleClientId = googleClientId.trim()
+    // Persist client ID via typed settings action.
+    updateGoogleClientId(googleClientId)
     setConnectingGmail(true)
     try {
       await initiateGmailOAuth(googleClientId.trim())

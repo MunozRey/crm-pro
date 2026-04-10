@@ -8,6 +8,7 @@ interface SettingsState {
   settings: AppSettings
 
   updateCurrency: (currency: DealCurrency) => void
+  updateGoogleClientId: (clientId: string) => void
   addTag: (tag: string) => void
   removeTag: (tag: string) => void
   reorderStages: (stages: AppSettings['pipelineStages']) => void
@@ -21,6 +22,10 @@ export const useSettingsStore = create<SettingsState>()(
 
       updateCurrency: (currency) => {
         set((state) => ({ settings: { ...state.settings, currency } }))
+      },
+
+      updateGoogleClientId: (clientId) => {
+        set((state) => ({ settings: { ...state.settings, googleClientId: clientId.trim() || undefined } }))
       },
 
       addTag: (tag) => {

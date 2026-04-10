@@ -133,6 +133,7 @@ export interface AppSettings {
   pipelineStages: PipelineStage[]
   tags: string[]
   users: User[]
+  googleClientId?: string
 }
 
 // ─── Filters ─────────────────────────────────────────────────────────────────

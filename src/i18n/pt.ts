@@ -409,6 +409,7 @@ export const pt: Translations = {
     salesOverview: 'Visão Geral de Vendas',
     performance: 'Desempenho',
     pipeline: 'Pipeline',
+    conversionRate: 'Taxa de Conversão',
     activityReport: 'Relatório de Atividades',
     periodLabel: 'Período',
     thisMonth: 'Este Mês',
@@ -681,6 +682,7 @@ export const pt: Translations = {
     checkEmailConfirmation: 'Enviamos um link de confirmação para',
     passwordsDoNotMatch: 'As senhas não coincidem',
     passwordMinLength: 'A senha deve ter pelo menos 6 caracteres',
+    savePassword: 'Salvar senha',
   },
 
   // ─── Org Setup ───────────────────────────────────────────────────────────────
@@ -739,6 +741,8 @@ export const pt: Translations = {
     gmailConnectionError: 'Erro ao conectar Gmail',
     invitationSendError: 'Erro ao enviar o convite',
     duplicateTag: 'Tag duplicada',
+    noPermissionTitle: 'Sem permissão',
+    noPermissionDescription: 'Você não tem acesso a esta seção. Fale com seu administrador.',
   },
 
   // ─── Email ───────────────────────────────────────────────────────────────────

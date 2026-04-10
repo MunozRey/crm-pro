@@ -409,6 +409,7 @@ export const en: Translations = {
     salesOverview: 'Sales Overview',
     performance: 'Performance',
     pipeline: 'Pipeline',
+    conversionRate: 'Conversion Rate',
     activityReport: 'Activity Report',
     periodLabel: 'Period',
     thisMonth: 'This Month',
@@ -671,6 +672,7 @@ export const en: Translations = {
     checkEmailConfirmation: 'We sent a confirmation link to',
     passwordsDoNotMatch: 'Passwords do not match',
     passwordMinLength: 'Password must be at least 6 characters',
+    savePassword: 'Save Password',
   },
 
   // ─── Org Setup ───────────────────────────────────────────────────────────────
@@ -729,6 +731,8 @@ export const en: Translations = {
     gmailConnectionError: 'Error connecting Gmail',
     invitationSendError: 'Error sending invitation',
     duplicateTag: 'Duplicate tag',
+    noPermissionTitle: 'No permission',
+    noPermissionDescription: "You don't have access to this section. Contact your administrator.",
   },
 
   // ─── Email ───────────────────────────────────────────────────────────────────

@@ -410,6 +410,7 @@ export interface Translations {
     salesOverview: string
     performance: string
     pipeline: string
+    conversionRate: string
     activityReport: string
     periodLabel: string
     thisMonth: string
@@ -679,6 +680,7 @@ export interface Translations {
     checkEmailConfirmation: string
     passwordsDoNotMatch: string
     passwordMinLength: string
+    savePassword: string
   }
 
   // ─── Org Setup ───────────────────────────────────────────────────────────────
@@ -740,6 +742,8 @@ export interface Translations {
     gmailConnectionError: string
     invitationSendError: string
     duplicateTag: string
+    noPermissionTitle: string
+    noPermissionDescription: string
   }
 
   // ─── Email ───────────────────────────────────────────────────────────────────

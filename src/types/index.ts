@@ -264,6 +264,14 @@ export interface GmailMessage {
   body: string
   date: string
   labelIds: string[]
+  attachments?: GmailAttachment[]
+}
+
+export interface GmailAttachment {
+  attachmentId: string
+  filename: string
+  mimeType: string
+  size: number
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────

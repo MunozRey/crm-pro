@@ -14,17 +14,25 @@ export type Permission =
   // Activities
   | 'activities:read' | 'activities:create' | 'activities:update' | 'activities:delete'
   // Email
-  | 'email:read' | 'email:send'
+  | 'email:read' | 'email:send' | 'email:update' | 'email:link'
   // Reports
   | 'reports:read' | 'reports:export'
   // Templates
   | 'templates:read' | 'templates:create' | 'templates:update' | 'templates:delete'
+  // Products
+  | 'products:read' | 'products:create' | 'products:update' | 'products:delete'
+  // Automations
+  | 'automations:read' | 'automations:create' | 'automations:update' | 'automations:delete'
+  // Sequences
+  | 'sequences:read' | 'sequences:create' | 'sequences:update' | 'sequences:delete' | 'sequences:enroll'
+  // Custom fields
+  | 'custom_fields:read' | 'custom_fields:update'
   // AI
   | 'ai:use'
   // Settings
   | 'settings:read' | 'settings:update'
   // Users & Team
-  | 'users:read' | 'users:create' | 'users:update' | 'users:delete' | 'users:manage_roles'
+  | 'users:read' | 'users:create' | 'users:update' | 'users:delete' | 'users:manage_roles' | 'users:invite'
   // Audit
   | 'audit:read'
   // Goals

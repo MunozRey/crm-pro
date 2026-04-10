@@ -20,6 +20,15 @@ describe('hasPermission', () => {
     expect(hasPermission('sales_rep', 'users:delete')).toBe(false)
   })
 
+  it('manager has users:invite but not users:manage_roles', () => {
+    expect(hasPermission('manager', 'users:invite')).toBe(true)
+    expect(hasPermission('manager', 'users:manage_roles')).toBe(false)
+  })
+
+  it('sales_rep can link inbox emails', () => {
+    expect(hasPermission('sales_rep', 'email:link')).toBe(true)
+  })
+
   it('viewer has contacts:read', () => {
     expect(hasPermission('viewer', 'contacts:read')).toBe(true)
   })
@@ -73,6 +82,14 @@ describe('canAccessRoute', () => {
 
   it('viewer cannot access /team (requires users:read, viewer lacks it)', () => {
     expect(canAccessRoute('viewer', '/team')).toBe(false)
+  })
+
+  it('viewer can access /products in read-only mode', () => {
+    expect(canAccessRoute('viewer', '/products')).toBe(true)
+  })
+
+  it('viewer can access /sequences in read-only mode', () => {
+    expect(canAccessRoute('viewer', '/sequences')).toBe(true)
   })
 
   it('admin can access /audit (requires audit:read)', () => {

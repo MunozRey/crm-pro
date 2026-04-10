@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useTranslations } from '../i18n'
+import { useTranslations, useI18nStore } from '../i18n'
 import { DragDropContext } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
 import {
@@ -84,6 +84,8 @@ function QuoteBuilder({
   contactEmail,
   contactId,
   companyId,
+  companyName,
+  currency,
 }: {
   dealId: string
   dealTitle: string
@@ -91,14 +93,20 @@ function QuoteBuilder({
   contactEmail?: string
   contactId?: string
   companyId?: string
+  companyName?: string
+  currency: Deal['currency']
 }) {
   const t = useTranslations()
+  const language = useI18nStore((s) => s.language)
   const [allProducts, setAllProducts] = useState(() => useProductsStore.getState().products)
   useEffect(() => useProductsStore.subscribe((s) => setAllProducts(s.products)), [])
   const products = useMemo(() => allProducts.filter((p) => p.isActive), [allProducts])
   const [items, setItems] = useState<QuoteItem[]>(initialItems)
   const [saved, setSaved] = useState(false)
   const [sendingQuote, setSendingQuote] = useState(false)
+  const [vatPercent, setVatPercent] = useState(21)
+  const [validityDays, setValidityDays] = useState(15)
+  const [quoteNumber, setQuoteNumber] = useState(`Q-${dealId.toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`)
 
   const updateItem = (id: string, patch: Partial<QuoteItem>) => {
     setItems((prev) =>
@@ -125,8 +133,18 @@ function QuoteBuilder({
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
   const totalDiscount = items.reduce((s, i) => s + i.quantity * i.unitPrice * (i.discount / 100), 0)
   const total = items.reduce((s, i) => s + i.total, 0)
+  const vatAmount = Math.round(total * (vatPercent / 100) * 100) / 100
+  const grandTotal = total + vatAmount
 
-  const fmt = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
+  const localeByLanguage: Record<typeof language, string> = {
+    en: 'en-US',
+    es: 'es-ES',
+    pt: 'pt-PT',
+    fr: 'fr-FR',
+    de: 'de-DE',
+    it: 'it-IT',
+  }
+  const fmt = (n: number) => new Intl.NumberFormat(localeByLanguage[language], { style: 'currency', currency }).format(n)
 
   const handleSave = () => {
     useDealsStore.getState().updateQuote(dealId, items)
@@ -151,10 +169,20 @@ function QuoteBuilder({
     const html = `
       <html>
         <head>
-          <title>Quote - ${dealTitle}</title>
+          <title>${quoteNumber} - ${dealTitle}</title>
         </head>
         <body style="font-family:Arial,sans-serif;padding:24px">
-          <h2 style="margin:0 0 6px">Quote</h2>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+            <div>
+              <h2 style="margin:0 0 6px">CRM Pro Quote</h2>
+              <p style="margin:0;color:#555">${companyName || 'Company'}</p>
+            </div>
+            <div style="text-align:right;color:#444;font-size:12px">
+              <div><strong>${quoteNumber}</strong></div>
+              <div>Date: ${new Date().toLocaleDateString()}</div>
+              <div>Valid until: ${new Date(Date.now() + validityDays * 86400000).toLocaleDateString()}</div>
+            </div>
+          </div>
           <p style="margin:0 0 18px;color:#555">${dealTitle}</p>
           <table style="width:100%;border-collapse:collapse">
             <thead>
@@ -171,7 +199,8 @@ function QuoteBuilder({
           <div style="margin-top:16px;text-align:right">
             <div>Subtotal: ${fmt(subtotal)}</div>
             <div>Discount: -${fmt(totalDiscount)}</div>
-            <div style="font-weight:700;margin-top:4px">Total: ${fmt(total)}</div>
+            <div>VAT (${vatPercent}%): ${fmt(vatAmount)}</div>
+            <div style="font-weight:700;margin-top:4px">Grand Total: ${fmt(grandTotal)}</div>
           </div>
         </body>
       </html>
@@ -200,11 +229,15 @@ function QuoteBuilder({
       '',
       `Please find below the quote summary for "${dealTitle}":`,
       '',
+      `Quote number: ${quoteNumber}`,
+      `Valid until: ${new Date(Date.now() + validityDays * 86400000).toLocaleDateString()}`,
+      '',
       ...items.map((item) => `- ${item.name || 'Item'}: ${item.quantity} x ${fmt(item.unitPrice)} (${item.discount}% off) = ${fmt(item.total)}`),
       '',
       `Subtotal: ${fmt(subtotal)}`,
       `Discount: -${fmt(totalDiscount)}`,
-      `Total: ${fmt(total)}`,
+      `VAT (${vatPercent}%): ${fmt(vatAmount)}`,
+      `Grand Total: ${fmt(grandTotal)}`,
       '',
       'Best regards,',
     ].join('\n')
@@ -339,8 +372,48 @@ function QuoteBuilder({
           <div className="flex justify-between text-white font-bold text-sm pt-1 border-t border-white/6">
             <span>{t.common.total}</span><span>{fmt(total)}</span>
           </div>
+          <div className="flex justify-between text-slate-400">
+            <span>VAT ({vatPercent}%)</span><span>{fmt(vatAmount)}</span>
+          </div>
+          <div className="flex justify-between text-emerald-400 font-semibold text-sm">
+            <span>Grand Total</span><span>{fmt(grandTotal)}</span>
+          </div>
         </div>
       )}
+
+      {/* Commercial metadata */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <input
+          type="text"
+          value={quoteNumber}
+          onChange={(e) => setQuoteNumber(e.target.value)}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+          aria-label="Quote number"
+          title="Quote number"
+          placeholder="Quote number"
+        />
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={vatPercent}
+          onChange={(e) => setVatPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+          aria-label="VAT percentage"
+          title="VAT percentage"
+          placeholder="VAT %"
+        />
+        <input
+          type="number"
+          min={1}
+          value={validityDays}
+          onChange={(e) => setValidityDays(Math.max(1, Number(e.target.value)))}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+          aria-label="Quote validity in days"
+          title="Quote validity in days"
+          placeholder="Validity (days)"
+        />
+      </div>
 
       {/* Save / Actions */}
       <div className="flex justify-end gap-2">
@@ -870,6 +943,8 @@ export function Deals() {
                 contactEmail={getContact(selectedDeal.contactId)?.email}
                 contactId={selectedDeal.contactId}
                 companyId={selectedDeal.companyId}
+                companyName={getCompany(selectedDeal.companyId)?.name}
+                currency={selectedDeal.currency}
               />
             </div>
 

@@ -273,12 +273,12 @@ export function Settings() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 md:gap-3">
           {(['en', 'es', 'pt', 'fr', 'de', 'it'] as Language[]).map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+              className={`inline-flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium whitespace-nowrap transition-all ${
                 language === lang
                   ? 'bg-brand-500/15 border-brand-500/40 text-white shadow-brand-sm'
                   : 'bg-white/4 border-white/8 text-slate-400 hover:text-slate-200 hover:border-white/15'
@@ -359,7 +359,7 @@ export function Settings() {
               <p className="text-xs text-slate-500">{t.settings.entityLabels.contact}, {t.settings.entityLabels.company}, {t.settings.entityLabels.deal}</p>
             </div>
           </div>
-          <PermissionGate permission="settings:update">
+          <PermissionGate permission="custom_fields:update">
             <Button size="sm" leftIcon={<Plus size={13} />} onClick={cfOpenNew}>
               {t.common.add}
             </Button>
@@ -407,6 +407,8 @@ export function Settings() {
                 <select
                   value={cfFieldType}
                   onChange={(e) => setCfFieldType(e.target.value as CustomFieldType)}
+                  aria-label={t.settings.fieldType}
+                  title={t.settings.fieldType}
                   className="w-full bg-[#0d0e1a] border border-white/8 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-brand-500/40 appearance-none cursor-pointer"
                 >
                   {FIELD_TYPES.map((ft) => (
@@ -535,7 +537,7 @@ export function Settings() {
                 </button>
 
                 {/* Edit / Delete — gated */}
-                <PermissionGate permission="settings:update">
+                <PermissionGate permission="custom_fields:update">
                   <button
                     onClick={() => cfOpenEdit(def.id)}
                     title={t.settings.editField}

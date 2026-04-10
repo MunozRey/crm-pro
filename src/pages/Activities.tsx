@@ -11,6 +11,7 @@ import { useTranslations, useI18nStore } from '../i18n'
 import { useActivitiesStore } from '../store/activitiesStore'
 import { useContactsStore } from '../store/contactsStore'
 import { useDealsStore } from '../store/dealsStore'
+import { useAuthStore } from '../store/authStore'
 import { Button } from '../components/ui/Button'
 import { SearchBar } from '../components/shared/SearchBar'
 import { SlideOver } from '../components/ui/Modal'
@@ -21,6 +22,7 @@ import { Select } from '../components/ui/Select'
 import { toast } from '../store/toastStore'
 import type { Activity, ActivityType } from '../types'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { hasPermission } from '../utils/permissions'
 
 type ViewMode = 'list' | 'calendar'
 
@@ -95,6 +97,8 @@ function CalendarView({
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
+            title="Previous month"
+            aria-label="Previous month"
             className="hover:bg-white/6 rounded-lg p-1.5 text-slate-400 hover:text-white transition-colors"
           >
             <ChevronLeft size={16} />
@@ -104,6 +108,8 @@ function CalendarView({
           </h3>
           <button
             onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
+            title="Next month"
+            aria-label="Next month"
             className="hover:bg-white/6 rounded-lg p-1.5 text-slate-400 hover:text-white transition-colors"
           >
             <ChevronRight size={16} />
@@ -168,7 +174,7 @@ function CalendarView({
       {selectedDay && (
         <div className="glass rounded-2xl p-4">
           <h4 className="text-sm font-semibold text-white mb-3 capitalize">
-            {format(selectedDay, "EEEE d 'de' MMMM", { locale: dateLocale })}
+            {format(selectedDay, 'PPPP', { locale: dateLocale })}
           </h4>
           {selectedDayActivities.length === 0 ? (
             <p className="text-xs text-slate-500">{noActivitiesLabel}</p>
@@ -202,6 +208,9 @@ export function Activities() {
   const { activities, addActivity, updateActivity, deleteActivity, completeActivity } = useActivitiesStore()
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const canUpdateActivities = !!currentUser && hasPermission(currentUser.role, 'activities:update')
+  const canDeleteActivities = !!currentUser && hasPermission(currentUser.role, 'activities:delete')
 
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -286,7 +295,13 @@ export function Activities() {
           </div>
           <div className="space-y-2">
             {overdue.slice(0, 3).map((a) => (
-              <ActivityItem key={a.id} activity={a} onComplete={handleComplete} onDelete={handleDelete} />
+              <ActivityItem
+                key={a.id}
+                activity={a}
+                onComplete={canUpdateActivities ? handleComplete : undefined}
+                onDelete={canDeleteActivities ? handleDelete : undefined}
+                showActions={canUpdateActivities || canDeleteActivities}
+              />
             ))}
           </div>
         </div>
@@ -395,7 +410,7 @@ export function Activities() {
               icon={<ActivityIcon size={28} />}
               title={t.activities.emptyTitle}
               description={t.activities.emptyDescription}
-              action={{ label: t.activities.newActivity, onClick: () => setIsFormOpen(true) }}
+              action={canUpdateActivities ? { label: t.activities.newActivity, onClick: () => setIsFormOpen(true) } : undefined}
             />
           ) : (
             <div className="glass p-4 space-y-1">
@@ -403,8 +418,9 @@ export function Activities() {
                 <ActivityItem
                   key={activity.id}
                   activity={activity}
-                  onComplete={handleComplete}
-                  onDelete={handleDelete}
+                  onComplete={canUpdateActivities ? handleComplete : undefined}
+                  onDelete={canDeleteActivities ? handleDelete : undefined}
+                  showActions={canUpdateActivities || canDeleteActivities}
                 />
               ))}
             </div>

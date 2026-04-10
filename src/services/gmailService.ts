@@ -1,4 +1,4 @@
-import type { GmailThread, GmailMessage } from '../types'
+import type { GmailThread, GmailMessage, GmailAttachment } from '../types'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
@@ -155,7 +155,16 @@ interface RawMessage {
   payload: {
     headers: Array<{ name: string; value: string }>
     body?: { data?: string }
-    parts?: Array<{ mimeType: string; body?: { data?: string } }>
+    parts?: Array<{
+      mimeType: string
+      filename?: string
+      body?: { data?: string; attachmentId?: string; size?: number }
+      parts?: Array<{
+        mimeType: string
+        filename?: string
+        body?: { data?: string; attachmentId?: string; size?: number }
+      }>
+    }>
   }
   internalDate: string
 }
@@ -176,6 +185,38 @@ function extractBody(msg: RawMessage): string {
   return msg.snippet
 }
 
+function extractAttachments(msg: RawMessage): GmailAttachment[] {
+  const attachments: GmailAttachment[] = []
+
+  const walkParts = (
+    parts: Array<{
+      mimeType: string
+      filename?: string
+      body?: { data?: string; attachmentId?: string; size?: number }
+      parts?: Array<{
+        mimeType: string
+        filename?: string
+        body?: { data?: string; attachmentId?: string; size?: number }
+      }>
+    }> = [],
+  ) => {
+    for (const part of parts) {
+      if (part.filename && part.body?.attachmentId) {
+        attachments.push({
+          attachmentId: part.body.attachmentId,
+          filename: part.filename,
+          mimeType: part.mimeType,
+          size: part.body.size ?? 0,
+        })
+      }
+      if (part.parts?.length) walkParts(part.parts)
+    }
+  }
+
+  walkParts(msg.payload.parts ?? [])
+  return attachments
+}
+
 function parseMessage(raw: RawMessage): GmailMessage {
   const headers = raw.payload.headers
   const get = (name: string) => headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? ''
@@ -189,7 +230,16 @@ function parseMessage(raw: RawMessage): GmailMessage {
     body: extractBody(raw),
     date: new Date(Number(raw.internalDate)).toISOString(),
     labelIds: raw.labelIds ?? [],
+    attachments: extractAttachments(raw),
   }
+}
+
+export async function downloadGmailAttachment(
+  accessToken: string,
+  messageId: string,
+  attachmentId: string,
+): Promise<{ data: string }> {
+  return gmailFetch<{ data: string }>(`/messages/${messageId}/attachments/${attachmentId}`, accessToken)
 }
 
 export async function listGmailThreads(

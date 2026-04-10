@@ -1,18 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Mail, Send, Inbox as InboxIcon, Loader2, RefreshCw, Wifi, WifiOff, User, Clock, Reply, Trash2, Plus, Eye, MousePointerClick } from 'lucide-react'
+import { Mail, Send, Inbox as InboxIcon, Loader2, RefreshCw, Wifi, WifiOff, User, Clock, Reply, Trash2, Plus, Eye, MousePointerClick, Paperclip, Download } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useEmailStore } from '../store/emailStore'
 import { useContactsStore } from '../store/contactsStore'
 import { useDealsStore } from '../store/dealsStore'
 import { useCompaniesStore } from '../store/companiesStore'
 import { useActivitiesStore } from '../store/activitiesStore'
-import { initiateGmailOAuth, GmailApiError } from '../services/gmailService'
+import { useAuthStore } from '../store/authStore'
+import { initiateGmailOAuth, GmailApiError, downloadGmailAttachment } from '../services/gmailService'
 import { useGmailToken } from '../contexts/GmailTokenContext'
 import { supabase } from '../lib/supabase'
 import { useSettingsStore } from '../store/settingsStore'
 import { EmailComposer } from '../components/email/EmailComposer'
 import { toast } from '../store/toastStore'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { hasPermission } from '../utils/permissions'
 import { useTranslations, useI18nStore } from '../i18n'
 import type { GmailThread, CRMEmail, Contact } from '../types'
 import { formatRelativeDate } from '../utils/formatters'
@@ -194,6 +196,12 @@ function ThreadView({
   onCreateFollowUp,
   onPinLink,
   onUnpinLink,
+  onManualLinkSave,
+  onDownloadAttachment,
+  allContacts,
+  allDeals,
+  canEditLinks,
+  canCreateFollowUp,
 }: {
   thread: GmailThread | null
   match: ThreadMatch | null
@@ -204,9 +212,23 @@ function ThreadView({
   onCreateFollowUp: (thread: GmailThread, match: ThreadMatch | null) => void
   onPinLink: (thread: GmailThread, match: ThreadMatch | null) => void
   onUnpinLink: (thread: GmailThread) => void
+  onManualLinkSave: (thread: GmailThread, contactId?: string, dealId?: string) => void
+  onDownloadAttachment: (messageId: string, attachmentId: string, filename: string) => void
+  allContacts: Contact[]
+  allDeals: Array<{ id: string; title: string }>
+  canEditLinks: boolean
+  canCreateFollowUp: boolean
 }) {
   const t = useTranslations()
   const language = useI18nStore((s) => s.language)
+  const [manualContactId, setManualContactId] = useState(match?.contact?.id ?? '')
+  const [manualDealId, setManualDealId] = useState(match?.dealId ?? '')
+
+  useEffect(() => {
+    setManualContactId(match?.contact?.id ?? '')
+    setManualDealId(match?.dealId ?? '')
+  }, [match?.contact?.id, match?.dealId])
+
   if (!thread) return (
     <div className="flex items-center justify-center h-full text-slate-600 text-sm">
       {t.inbox.noMessages}
@@ -250,7 +272,7 @@ function ThreadView({
               {linkSource === 'manual' ? 'Pinned link' : 'Auto link'}
             </span>
           )}
-          {!hasPersistedLink && match && (
+          {!hasPersistedLink && match && canEditLinks && (
             <button
               onClick={() => onPinLink(thread, match)}
               className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition-colors"
@@ -260,7 +282,7 @@ function ThreadView({
               Pin link
             </button>
           )}
-          {hasPersistedLink && (
+          {hasPersistedLink && canEditLinks && (
             <button
               onClick={() => onUnpinLink(thread)}
               className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-slate-400 border border-white/10 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/20 transition-colors"
@@ -270,15 +292,51 @@ function ThreadView({
               Unpin
             </button>
           )}
-          <button
-            onClick={() => onCreateFollowUp(thread, match)}
-            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25 transition-colors"
-            title="Create follow-up task"
-            aria-label="Create follow-up task"
-          >
-            <Plus size={10} />
-            Follow-up
-          </button>
+          {canCreateFollowUp && (
+            <button
+              onClick={() => onCreateFollowUp(thread, match)}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25 transition-colors"
+              title="Create follow-up task"
+              aria-label="Create follow-up task"
+            >
+              <Plus size={10} />
+              Follow-up
+            </button>
+          )}
+          {canEditLinks && <div className="flex items-center gap-1">
+            <select
+              value={manualContactId}
+              onChange={(e) => setManualContactId(e.target.value)}
+              className="bg-[#0d0e1a] border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-slate-300"
+              title="Select contact link"
+              aria-label="Select contact link"
+            >
+              <option value="">Contact</option>
+              {allContacts.map((c) => (
+                <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+              ))}
+            </select>
+            <select
+              value={manualDealId}
+              onChange={(e) => setManualDealId(e.target.value)}
+              className="bg-[#0d0e1a] border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-slate-300"
+              title="Select deal link"
+              aria-label="Select deal link"
+            >
+              <option value="">Deal</option>
+              {allDeals.map((d) => (
+                <option key={d.id} value={d.id}>{d.title}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => onManualLinkSave(thread, manualContactId || undefined, manualDealId || undefined)}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-brand-600/20 text-brand-300 border border-brand-500/30 hover:bg-brand-600/30 transition-colors"
+              title="Save manual link"
+              aria-label="Save manual link"
+            >
+              Save link
+            </button>
+          </div>}
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -308,6 +366,26 @@ function ThreadView({
             </div>
             <div className="px-4 py-4">
               <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{msg.body || msg.snippet}</p>
+              {(msg.attachments?.length ?? 0) > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {msg.attachments!.map((att) => (
+                    <button
+                      key={att.attachmentId}
+                      onClick={() => onDownloadAttachment(msg.id, att.attachmentId, att.filename)}
+                      className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/10 text-xs text-slate-300 transition-colors"
+                    >
+                      <span className="inline-flex items-center gap-1 truncate">
+                        <Paperclip size={11} />
+                        {att.filename}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-slate-500">
+                        <Download size={11} />
+                        {Math.ceil((att.size || 0) / 1024)} KB
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -329,15 +407,17 @@ function ThreadView({
 }
 
 // ─── LocalEmailView ────────────────────────────────────────────────────────────
-function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTrackClick }: {
+function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTrackClick, canDeleteEmails }: {
   email: CRMEmail | null
   contacts: Contact[]
   onReply: (to: string, subject: string) => void
   onDelete: (id: string) => void
   onTrackOpen: (id: string) => void
   onTrackClick: (id: string) => void
+  canDeleteEmails: boolean
 }) {
   const t = useTranslations()
+  const language = useI18nStore((s) => s.language)
   if (!email) return (
     <div className="flex items-center justify-center h-full text-slate-600 text-sm">
       {t.inbox.noMessages}
@@ -363,14 +443,16 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
             <Reply size={12} />
             {t.common.back}
           </button>
-          <button
-            onClick={() => onDelete(email.id)}
-            title={t.common.delete}
-            aria-label={t.common.delete}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/6 hover:bg-red-500/15 hover:text-red-400 text-slate-500 transition-colors"
-          >
-            <Trash2 size={12} />
-          </button>
+          {canDeleteEmails && (
+            <button
+              onClick={() => onDelete(email.id)}
+              title={t.common.delete}
+              aria-label={t.common.delete}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/6 hover:bg-red-500/15 hover:text-red-400 text-slate-500 transition-colors"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -383,7 +465,7 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
             <div>
               <p className="text-sm font-medium text-white">{email.from}</p>
               <p className="text-[10px] text-slate-500">
-                {email.sentAt ? new Date(email.sentAt).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' }) : ''}
+                {email.sentAt ? new Date(email.sentAt).toLocaleString(language, { dateStyle: 'medium', timeStyle: 'short' }) : ''}
                 {email.gmailMessageId && (
                   <span className="ml-2 text-emerald-400">{t.settings.connected} Gmail</span>
                 )}
@@ -419,9 +501,10 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
 // ─── Main page ────────────────────────────────────────────────────────────────
 export function Inbox() {
   const t = useTranslations()
+  const currentUser = useAuthStore((s) => s.currentUser)
   const {
     emails, threads, threadsLoading, isGmailConnected,
-    gmailAddress, threadLinks, loadThreads, fetchThreadLinks, setThreadLink, clearThreadLink, deleteEmail, disconnectGmail,
+    gmailAddress, threadLinks, threadsError, threadsLastSyncedAt, loadThreads, fetchThreadLinks, setThreadLink, clearThreadLink, deleteEmail, disconnectGmail,
     trackEmailOpen, trackEmailClick,
   } = useEmailStore()
   const { accessToken, setGmailToken, clearGmailToken, isTokenValid } = useGmailToken()
@@ -437,6 +520,10 @@ export function Inbox() {
   const [composerOpen, setComposerOpen] = useState(false)
   const [replyTo, setReplyTo] = useState<{ to: string; subject: string } | null>(null)
   const [connecting, setConnecting] = useState(false)
+
+  const canCreateActivities = !!currentUser && hasPermission(currentUser.role, 'activities:create')
+  const canLinkEmails = !!currentUser && hasPermission(currentUser.role, 'email:link')
+  const canDeleteEmails = !!currentUser && hasPermission(currentUser.role, 'email:update')
 
   const connected = !!gmailAddress
 
@@ -620,6 +707,39 @@ export function Inbox() {
     toast.success('Pinned link removed')
   }
 
+  const saveManualThreadLink = (thread: GmailThread, contactId?: string, dealId?: string) => {
+    const deal = dealId ? deals.find((d) => d.id === dealId) : undefined
+    const contact = contactId ? contacts.find((c) => c.id === contactId) : undefined
+    setThreadLink({
+      threadId: thread.id,
+      contactId: contact?.id,
+      dealId: deal?.id,
+      companyId: deal?.companyId ?? contact?.companyId,
+      source: 'manual',
+    })
+    toast.success('Manual thread link saved')
+  }
+
+  const handleDownloadAttachment = async (messageId: string, attachmentId: string, filename: string) => {
+    try {
+      await refreshAndRetry(async (token) => {
+        const { data } = await downloadGmailAttachment(token, messageId, attachmentId)
+        const bytes = atob(data.replace(/-/g, '+').replace(/_/g, '/'))
+        const arr = new Uint8Array(bytes.length)
+        for (let i = 0; i < bytes.length; i += 1) arr[i] = bytes.charCodeAt(i)
+        const blob = new Blob([arr])
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename || 'attachment'
+        a.click()
+        URL.revokeObjectURL(url)
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to download attachment')
+    }
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* ── Left: Folders ────────────────────────────────────────────────── */}
@@ -686,7 +806,12 @@ export function Inbox() {
       {/* ── Center: Email list ───────────────────────────────────────────── */}
       <div className="w-72 flex-shrink-0 border-r border-white/6 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/6 flex-shrink-0">
-          <span className="text-sm font-semibold text-white capitalize">{FOLDERS.find((f) => f.id === folder)?.label}</span>
+          <div>
+            <span className="text-sm font-semibold text-white capitalize">{FOLDERS.find((f) => f.id === folder)?.label}</span>
+            {folder === 'inbox' && threadsLastSyncedAt && (
+              <p className="text-[10px] text-slate-600 mt-0.5">{t.common.updatedAt}: {new Date(threadsLastSyncedAt).toLocaleTimeString()}</p>
+            )}
+          </div>
           {connected && folder === 'inbox' && (
             <button
               onClick={() => handleLoadThreads()}
@@ -718,6 +843,11 @@ export function Inbox() {
               )}
               {connected && !threadsLoading && threads.length === 0 && (
                 <div className="p-6 text-center text-slate-600 text-sm">{t.inbox.noMessages}</div>
+              )}
+              {connected && threadsError && !threadsLoading && (
+                <div className="mx-3 my-3 p-2 rounded-lg border border-red-500/20 bg-red-500/10 text-[11px] text-red-300">
+                  {threadsError}
+                </div>
               )}
               {connected && threads.map((thread) => (
                 <ThreadItem
@@ -769,6 +899,12 @@ export function Inbox() {
             onCreateFollowUp={createFollowUpFromThread}
             onPinLink={pinThreadLink}
             onUnpinLink={unpinThreadLink}
+            onManualLinkSave={saveManualThreadLink}
+            onDownloadAttachment={handleDownloadAttachment}
+            allContacts={contacts}
+            allDeals={deals.map((d) => ({ id: d.id, title: d.title }))}
+            canEditLinks={canLinkEmails}
+            canCreateFollowUp={canCreateActivities}
           />
         ) : (
           <LocalEmailView
@@ -778,6 +914,7 @@ export function Inbox() {
             onDelete={(id) => { deleteEmail(id); setSelectedEmailId(null); toast.success(t.common.delete) }}
             onTrackOpen={trackEmailOpen}
             onTrackClick={trackEmailClick}
+            canDeleteEmails={canDeleteEmails}
           />
         )}
       </div>

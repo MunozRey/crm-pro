@@ -105,7 +105,7 @@ export function ResetPassword() {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  {t.common.save}
+                  {t.auth.savePassword}
                   <ArrowRight size={16} />
                 </>
               )}

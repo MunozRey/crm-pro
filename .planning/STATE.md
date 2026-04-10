@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 09 Ready
-last_updated: "2026-04-10T07:00:50.137Z"
+status: Phase 10 Ready
+last_updated: "2026-04-10T09:15:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 6
-  total_plans: 34
-  completed_plans: 36
+  completed_phases: 9
+  total_plans: 37
+  completed_plans: 43
 ---
 
 # CRM Pro — Project State
@@ -18,13 +18,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time with data persisted in Supabase and real-time sync across tabs.
-**Current focus:** Phase 09 — Test Suite (next up)
+**Current focus:** Phase 10 — Vercel Deployment (next up)
 
 ## Current Status
 
 **Milestone:** v1.0 — Full SaaS Upgrade
-**Phase:** 8 of 10 — COMPLETE
-**Next:** Phase 9 (Test Suite)
+**Phase:** 9 of 10 — COMPLETE
+**Next:** Phase 10 (Vercel Deployment)
 
 ## Completed Phases
 
@@ -38,6 +38,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | 06 | Secondary Stores & Real Users | 2026-04-08 |
 | 07 | Gmail Integration | 2026-04-09 |
 | 08 | i18n English | 2026-04-09 |
+| 09 | Test Suite + i18n completo | 2026-04-10 |
 
 ## Key Decisions
 
@@ -62,6 +63,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | supabase! non-null assertion inside isSupabaseConfigured guards (07) | isSupabaseConfigured is a boolean flag, not a TypeScript type guard | 2026-04-09 |
 | Activity logging in EmailComposer (07-5) | Single source of truth — avoids duplicating logic across ContactDetail, Deals, Inbox | 2026-04-09 |
 | Phase 08 i18n was pre-implemented | en.ts already had full key parity with es.ts; language switcher + persistence already in Settings | 2026-04-09 |
+| create-org Edge Function bypasses RLS (09) | Supabase project uses ECC P-256 JWT signing — PostgREST can't verify with legacy anon key; service role in Edge Function is the correct pattern | 2026-04-10 |
+| Zod schemas extracted to src/lib/schemas/ (09-3) | Unexported schemas inside .tsx files are untestable; extraction enables isolated unit tests | 2026-04-10 |
+| Per-file vi.mock() without vi.hoisted() for store tests (09-2) | Mock data defined inside factory body avoids hoisting issues with top-level variable references | 2026-04-10 |
 
 ## Blockers
 
@@ -78,4 +82,4 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-04-09 — Completed Phase 07 (Gmail Integration) and verified Phase 08 (i18n English — was already implemented). 8 of 10 phases complete.*
+*Last session: 2026-04-10 — Completed Phase 09 (Test Suite: 101 tests passing, GitHub Actions CI, complete i18n coverage for es/en/pt). 9 of 10 phases complete.*

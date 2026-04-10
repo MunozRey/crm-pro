@@ -175,7 +175,7 @@ export function Reports() {
           { label: t.reports.pipeline, value: formatCurrency(totalPipeline), color: 'text-brand-400' },
           { label: t.deals.stageLabels.closed_won, value: formatCurrency(totalWon), color: 'text-emerald-400' },
           { label: t.dashboard.activeDealsLabel, value: filteredDeals.filter((d) => !['closed_won', 'closed_lost'].includes(d.stage)).length, color: 'text-blue-400' },
-          { label: 'Tasa de conversión', value: (() => {
+          { label: t.reports.conversionRate, value: (() => {
             const closed = filteredDeals.filter((d) => ['closed_won', 'closed_lost'].includes(d.stage)).length
             const won = filteredDeals.filter((d) => d.stage === 'closed_won').length
             return closed > 0 ? `${Math.round((won / closed) * 100)}%` : '—'
@@ -288,7 +288,7 @@ export function Reports() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/8">
-                {[t.common.name, 'Deals ganados', 'Revenue', t.reports.pipeline, t.dashboard.activeDealsLabel, 'Tasa de conversión', t.activities.title].map((h) => (
+                {[t.common.name, t.leaderboard.dealsWon, t.leaderboard.revenue, t.reports.pipeline, t.dashboard.activeDealsLabel, t.reports.conversionRate, t.activities.title].map((h) => (
                   <th key={h} className="text-left text-xs font-semibold text-slate-500 py-2 pr-4 last:pr-0">{h}</th>
                 ))}
               </tr>

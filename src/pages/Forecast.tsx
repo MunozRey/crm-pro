@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
-import { useTranslations } from '../i18n'
+import { useTranslations, useI18nStore } from '../i18n'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Line, ComposedChart, Area,
@@ -13,7 +13,8 @@ import {
   subMonths, format, startOfMonth, endOfMonth, parseISO,
   isWithinInterval, addMonths,
 } from 'date-fns'
-import { es } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
+import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
 import { TrendingUp, TrendingDown, DollarSign, Target, Zap, Star } from 'lucide-react'
 import type { Deal } from '../types'
 
@@ -78,8 +79,8 @@ function isoMonth(date: Date): string {
   return format(date, 'yyyy-MM')
 }
 
-function monthLabel(date: Date): string {
-  return format(date, 'MMM yy', { locale: es })
+function monthLabel(date: Date, dateLocale: Locale): string {
+  return format(date, 'MMM yy', { locale: dateLocale })
 }
 
 // ─── Pipeline health score computation ───────────────────────────────────────
@@ -230,6 +231,9 @@ function KPICard({ label, value, sub, icon, trend, trendLabel }: KPICardProps) {
 
 export function Forecast() {
   const t = useTranslations()
+  const language = useI18nStore((s) => s.language)
+  const localeMap = { en: enUS, es, pt: ptBR, fr, de, it } as const
+  const dateLocale = localeMap[language]
   // Manual Zustand subscriptions to avoid getSnapshot issues with persist middleware
   const [deals, setDeals] = useState<Deal[]>(() => useDealsStore.getState().deals)
   const [activities, setActivities] = useState(
@@ -270,13 +274,13 @@ export function Forecast() {
       })
 
       return {
-        month: monthLabel(monthDate),
+        month: monthLabel(monthDate, dateLocale),
         isoMonth: iso,
         revenue: monthDeals.reduce((sum, d) => sum + d.value, 0),
         dealCount: monthDeals.length,
       }
     })
-  }, [deals])
+  }, [deals, dateLocale])
 
   // ── Forecast: next 3 months weighted pipeline ─────────────────────────────
 
@@ -301,14 +305,14 @@ export function Forecast() {
       })
 
       return {
-        month: monthLabel(monthDate),
+        month: monthLabel(monthDate, dateLocale),
         isoMonth: iso,
         weighted: closing.reduce((sum, d) => sum + d.value * (d.probability / 100), 0),
         dealCount: closing.length,
         isProjection: true as const,
       }
     })
-  }, [deals])
+  }, [deals, dateLocale])
 
   // ── Combined chart data (history + projection) ────────────────────────────
 
@@ -366,6 +370,16 @@ export function Forecast() {
 
     return { totalWonYTD, avgDealSize, projectedNextQ, growthRateMoM, hasGrowthData }
   }, [deals, forecastMonths, monthlyRevenue])
+
+  const scenarioTotals = useMemo(() => {
+    const activeDeals = deals.filter((d) => d.stage !== 'closed_won' && d.stage !== 'closed_lost')
+    const committed = activeDeals
+      .filter((d) => d.probability >= 70)
+      .reduce((sum, d) => sum + d.value, 0)
+    const bestCase = activeDeals.reduce((sum, d) => sum + d.value * Math.min(1, (d.probability + 20) / 100), 0)
+    const expected = activeDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0)
+    return { committed, bestCase, expected }
+  }, [deals])
 
   // ── Pipeline health score ─────────────────────────────────────────────────
 
@@ -434,19 +448,15 @@ export function Forecast() {
         />
         <KPICard
           label={t.forecast.bestCase}
-          value={formatCurrency(kpi.projectedNextQ)}
+          value={formatCurrency(scenarioTotals.bestCase)}
           sub={t.forecast.weighted}
           icon={<Zap size={15} />}
         />
         <KPICard
           label={t.forecast.committed}
-          value={
-            kpi.hasGrowthData
-              ? `${kpi.growthRateMoM >= 0 ? '+' : ''}${kpi.growthRateMoM.toFixed(1)}%`
-              : '—'
-          }
-          sub={t.reports.thisMonth}
-          icon={kpi.growthRateMoM >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
+          value={formatCurrency(scenarioTotals.committed)}
+          sub={t.forecast.expected}
+          icon={<TrendingUp size={15} />}
           trend={growthTrend}
           trendLabel={growthLabel}
         />
@@ -552,7 +562,7 @@ export function Forecast() {
               { label: t.dashboard.activeDealsLabel, value: health.diversityScore, max: 25 },
               { label: t.deals.stage, value: health.stageScore, max: 25 },
               { label: t.activities.title, value: health.activityRatioScore, max: 25 },
-              { label: 'Tasa de conversión', value: health.winRateScore, max: 25 },
+              { label: t.reports.conversionRate, value: health.winRateScore, max: 25 },
             ].map(({ label, value, max }) => (
               <div key={label} className="flex items-center gap-2">
                 <p className="text-[11px] text-slate-500 w-36 flex-shrink-0">{label}</p>
@@ -583,7 +593,7 @@ export function Forecast() {
                   {formatCurrency(m.weighted)}
                 </p>
                 <p className="text-[11px] text-slate-600 mt-1">
-                  {m.dealCount} deal{m.dealCount !== 1 ? 's' : ''} esperado{m.dealCount !== 1 ? 's' : ''}
+                  {m.dealCount} {t.deals.title.toLowerCase()}
                 </p>
               </div>
             ))}

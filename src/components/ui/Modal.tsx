@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { Button } from './Button'
 import { useTranslations } from '../../i18n'
@@ -21,17 +21,40 @@ const widthClasses = {
 
 export function SlideOver({ isOpen, onClose, title, children, width = 'lg' }: SlideOverProps) {
   const t = useTranslations()
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const lastFocusedRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusables.length) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     if (isOpen) {
+      lastFocusedRef.current = document.activeElement as HTMLElement
       document.addEventListener('keydown', handleKey)
       document.body.style.overflow = 'hidden'
+      window.setTimeout(() => {
+        panelRef.current?.querySelector<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        )?.focus()
+      }, 0)
     }
     return () => {
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
+      lastFocusedRef.current?.focus()
     }
   }, [isOpen, onClose])
 
@@ -45,7 +68,7 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg' }: Sl
         onClick={onClose}
       />
       {/* Panel */}
-      <div className={`absolute inset-y-0 right-0 flex w-full ${widthClasses[width]} animate-slide-in`}>
+      <div ref={panelRef} className={`absolute inset-y-0 right-0 flex w-full ${widthClasses[width]} animate-slide-in`}>
         <div className="flex flex-col w-full bg-[#111220] border-l border-white/8 shadow-float">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/6 flex-shrink-0">
@@ -86,17 +109,40 @@ const modalSizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
 
 export function Modal({ isOpen, onClose, title, children, size = 'lg' }: ModalProps) {
   const t = useTranslations()
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const lastFocusedRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusables.length) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     if (isOpen) {
+      lastFocusedRef.current = document.activeElement as HTMLElement
       document.addEventListener('keydown', handleKey)
       document.body.style.overflow = 'hidden'
+      window.setTimeout(() => {
+        panelRef.current?.querySelector<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        )?.focus()
+      }, 0)
     }
     return () => {
       document.removeEventListener('keydown', handleKey)
       document.body.style.overflow = ''
+      lastFocusedRef.current?.focus()
     }
   }, [isOpen, onClose])
 
@@ -109,6 +155,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'lg' }: ModalPr
         onClick={onClose}
       />
       <div
+        ref={panelRef}
         className={`relative w-full ${modalSizeClasses[size]} glass border border-white/10 rounded-2xl shadow-float animate-scale-in flex flex-col max-h-[90vh]`}
       >
         {/* Header */}
@@ -147,11 +194,11 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Confirmar',
+  confirmLabel,
   danger = false,
 }: ConfirmDialogProps) {
   const t = useTranslations()
-  const confirmText = confirmLabel === 'Confirmar' ? t.common.confirm : confirmLabel
+  const confirmText = confirmLabel ?? t.common.confirm
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()

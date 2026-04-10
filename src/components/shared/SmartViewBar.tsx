@@ -117,24 +117,26 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
                 className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-white/10 shadow-2xl z-50 py-1 bg-[#0d0f1e]"
               >
                 {unpinnedViews.map((view) => (
-                  <button
+                  <div
                     key={view.id}
-                    onClick={() => handleSelectView(view.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                    className="w-full flex items-center gap-2 px-2 py-1"
                   >
-                    {view.icon && ICON_MAP[view.icon]}
-                    <span className="flex-1 text-left">{view.name}</span>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        useViewsStore.getState().togglePin(view.id)
-                      }}
-                      className="text-slate-600 hover:text-brand-400 transition-colors"
+                      onClick={() => handleSelectView(view.id)}
+                      className="flex-1 flex items-center gap-2 px-1 py-1 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-colors"
+                    >
+                      {view.icon && ICON_MAP[view.icon]}
+                      <span className="flex-1 text-left">{view.name}</span>
+                    </button>
+                    <button
+                      onClick={() => useViewsStore.getState().togglePin(view.id)}
+                      className="p-1 text-slate-600 hover:text-brand-400 transition-colors"
                       title={t.common.add}
+                      aria-label={t.common.add}
                     >
                       <Pin size={11} />
                     </button>
-                  </button>
+                  </div>
                 ))}
               </div>
             </>

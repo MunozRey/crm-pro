@@ -1,7 +1,7 @@
 # CRM Pro — Roadmap
 
 **Milestone:** v1.0 — Full SaaS Upgrade
-**Status:** Phase 10 Ready
+**Status:** Phase 10 In Progress
 **Phases:** 10
 **Last updated:** 2026-04-10
 
@@ -35,7 +35,7 @@
 | 7. Gmail Integration | 5/5 | ✅ Complete | 2026-04-09 |
 | 8. i18n English | 3/3 | ✅ Complete | 2026-04-09 |
 | 9. Test Suite | 6/6 | ✅ Complete | 2026-04-10 |
-| 10. Vercel Deployment | 0/5 | Not started | - |
+| 10. Vercel Deployment | 0/5 | In progress | - |
 
 ---
 
@@ -315,23 +315,23 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHEMA-01 | Phase 1 | Pending |
-| SCHEMA-02 | Phase 1 | Pending |
-| SCHEMA-03 | Phase 1 | Pending |
-| SCHEMA-04 | Phase 1 | Pending |
-| SCHEMA-05 | Phase 1 | Pending |
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
-| AUTH-05 | Phase 2 | Pending |
+| SCHEMA-01 | Phase 1 | ✅ Complete |
+| SCHEMA-02 | Phase 1 | ✅ Complete |
+| SCHEMA-03 | Phase 1 | ✅ Complete |
+| SCHEMA-04 | Phase 1 | ✅ Complete |
+| SCHEMA-05 | Phase 1 | ✅ Complete |
+| AUTH-01 | Phase 2 | ✅ Complete |
+| AUTH-02 | Phase 2 | ✅ Complete |
+| AUTH-03 | Phase 2 | ✅ Complete |
+| AUTH-04 | Phase 2 | ✅ Complete |
+| AUTH-05 | Phase 2 | ✅ Complete |
 | SEC-01 | Phase 2 | Pending |
 | SEC-06 | Phase 2 | Pending |
-| AUTH-06 | Phase 3 | Pending |
-| AUTH-07 | Phase 3 | Pending |
-| AUTH-08 | Phase 3 | Pending |
-| AUTH-09 | Phase 3 | Pending |
-| AUTH-10 | Phase 3 | Pending |
+| AUTH-06 | Phase 3 | ✅ Complete |
+| AUTH-07 | Phase 3 | ✅ Complete |
+| AUTH-08 | Phase 3 | ✅ Complete |
+| AUTH-09 | Phase 3 | ✅ Complete |
+| AUTH-10 | Phase 3 | ✅ Complete |
 | SEC-02 | Phase 4 | ✅ Complete |
 | SEC-03 | Phase 4 | ✅ Complete |
 | SEC-04 | Phase 4 | ✅ Complete |
@@ -377,7 +377,7 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 | DEPLOY-04 | Phase 10 | Pending |
 | DEPLOY-05 | Phase 10 | Pending |
 
-**Requirements mapped: 52 total — 49 complete, 5 pending** *(5 AI requirements removed from scope)*
+**Requirements mapped:** see the table above for per-requirement status; only Phase 10 deployment requirements remain pending for release readiness.
 
 ---
 

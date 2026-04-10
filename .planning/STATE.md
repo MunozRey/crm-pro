@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 10 Ready
-last_updated: "2026-04-10T13:35:00.000Z"
+status: Phase 10 In Progress
+last_updated: "2026-04-10T14:25:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 9
@@ -18,7 +18,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** A sales team can sign up, invite their colleagues, and manage their entire pipeline in real-time with data persisted in Supabase and real-time sync across tabs.
-**Current focus:** Phase 10 — Vercel Deployment (next up)
+**Current focus:** Phase 10 — Vercel Deployment (in progress)
 
 ## Current Status
 
@@ -75,6 +75,7 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 | Gmail thread links persisted (`gmail_thread_links`) | Enables pin/unpin of thread-to-CRM relationships and stable context across sessions | 2026-04-10 |
 | Demo email seeds linked to deals/contacts | Improves first-run demo quality for Inbox, follow-ups, and quote-email scenarios | 2026-04-10 |
 | Quote builder supports export/email actions | Reduces workflow friction by enabling immediate sharing from deal detail | 2026-04-10 |
+| Lazy-loaded chart-heavy pages (`Dashboard`, `Reports`, `Forecast`) | Reduces initial bundle pressure and keeps build chunk-size warnings under control | 2026-04-10 |
 
 ## Blockers
 
@@ -91,7 +92,8 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 - Post-Phase 09 hardening: `authStore` Supabase branch starts with empty users/passwords and keeps runtime users org-scoped.
 - Post-Phase 09 hardening: calendar week labels no longer hardcoded in Spanish (`hour`/`all day` now language-aware).
 - Supabase remote already includes migration `20260410160000_gmail_thread_links.sql`.
+- Post-Phase 09 hardening: local email timestamps in Inbox now follow active UI language (no forced `es` locale).
 
 ---
 *Initialized: 2026-03-31*
-*Last session: 2026-04-10 — Gmail hardening shipped (dynamic redirect URI, refresh+retry, persisted thread links + migration + function deploy), Quote Builder extended with export/email actions, and demo inbox seeded with linked deal emails. Test/build remain green.*
+*Last session: 2026-04-10 — Gmail hardening shipped (dynamic redirect URI, refresh+retry, persisted thread links + migration + function deploy), Quote Builder extended with export/email actions, demo inbox seeded with linked deal emails, and chart-heavy routes lazy-loaded to keep production bundles healthy. Test/build remain green.*

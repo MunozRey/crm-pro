@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-10
 
 ## Directory Layout
 
@@ -51,12 +51,11 @@ CRM/
   - `src/pages/Dashboard.tsx` — KPI cards, charts, activity feed
   - `src/pages/Contacts.tsx` — contacts list with filters and smart views
   - `src/pages/ContactDetail.tsx` — single-contact detail view with timeline
-  - `src/pages/Deals.tsx` — kanban / list deal pipeline with AI enrichment
+  - `src/pages/Deals.tsx` — kanban / list deal pipeline + quote builder (save/export/email)
   - `src/pages/Companies.tsx` — companies list
   - `src/pages/CompanyDetail.tsx` — single-company view
   - `src/pages/Activities.tsx` — activity log with filters
   - `src/pages/Inbox.tsx` — Gmail integration inbox
-  - `src/pages/AIAgent.tsx` — AI chat interface
   - `src/pages/Reports.tsx` — charts and pipeline reports
   - `src/pages/Settings.tsx` — pipeline stage, tag, currency config
   - `src/pages/Automations.tsx` — rule builder for automated actions
@@ -73,14 +72,14 @@ CRM/
   - `src/store/dealsStore.ts` — deals array, kanban/list view mode, stage-move logic with side effects
   - `src/store/activitiesStore.ts` — activities with contact/deal associations
   - `src/store/companiesStore.ts` — companies with linked contacts/deals
-  - `src/store/aiStore.ts` — API keys, model selection, conversations, enrichment cache
+  - `src/store/aiStore.ts` — model selection, conversations, enrichment cache
   - `src/store/settingsStore.ts` — pipeline stages, tags, currency
   - `src/store/auditStore.ts` — audit log (max 500 entries, FIFO)
   - `src/store/notificationsStore.ts` — in-app notifications with type-level mute preferences
   - `src/store/toastStore.ts` — ephemeral UI toasts (not persisted)
   - `src/store/automationsStore.ts` — automation rules; `executeRulesForTrigger()` called by dealsStore
   - `src/store/sequencesStore.ts` — email sequences and enrollments
-  - `src/store/emailStore.ts` — composed emails and Gmail token state
+  - `src/store/emailStore.ts` — composed emails, Gmail threads, and persisted thread links
   - `src/store/templateStore.ts` — email template library
   - `src/store/goalsStore.ts` — sales goals per user per period
   - `src/store/productsStore.ts` — product catalog for deal quotes
@@ -126,8 +125,8 @@ CRM/
 **`src/services/`:**
 - Purpose: Functions that call external APIs; stateless (read config from stores via `getState()`, do not `set`)
 - Key files:
-  - `src/services/aiService.ts` — Anthropic Claude SDK (browser mode) + OpenRouter HTTP fallback; exports `enrichContact()`, `enrichDeal()`, `streamChatMessage()`, etc.
-  - `src/services/gmailService.ts` — Google Identity Services OAuth token flow + Gmail REST API calls
+  - `src/services/aiService.ts` — OpenRouter HTTP integration; exports `enrichContact()`, `enrichDeal()`, `streamChatMessage()`, etc.
+  - `src/services/gmailService.ts` — PKCE helpers + Gmail REST API calls (threads/messages/attachments)
 
 **`src/utils/`:**
 - Purpose: Pure functions with no side effects or store access
@@ -135,7 +134,7 @@ CRM/
   - `src/utils/permissions.ts` — `ROLE_PERMISSIONS` map, `hasPermission()`, `canAccessRoute()`, role label/color maps
   - `src/utils/constants.ts` — label/color maps for all status enums, `LS_KEYS` object (localStorage key names), `DEAL_STAGES_ORDER`
   - `src/utils/formatters.ts` — `formatCurrency()`, `formatDate()`, `formatRelativeDate()`
-  - `src/utils/seedData.ts` — `seedContacts`, `seedDeals`, `seedSettings`, `MOCK_USERS` used for initial localStorage population
+  - `src/utils/seedData.ts` — `seedContacts`, `seedDeals`, `seedSettings`, `seedEmails` used for mock/demo population
   - `src/utils/leadScoring.ts` — `computeLeadScore()` returning `LeadScoreBreakdown`
   - `src/utils/dealHealth.ts` — `computeDealHealth()` returning a health status indicator
   - `src/utils/followUpEngine.ts` — derives `FollowUpReminder` list from contacts + activities
@@ -157,7 +156,7 @@ CRM/
 - Purpose: Internationalisation — translations and language state
 - Key files:
   - `src/i18n/index.ts` — `useI18nStore` (persisted Zustand), `useTranslations()` hook, `LANGUAGE_LABELS`, `LANGUAGE_FLAGS`
-  - `src/i18n/es.ts`, `src/i18n/en.ts`, `src/i18n/pt.ts` — translation objects
+  - `src/i18n/en.ts`, `src/i18n/es.ts`, `src/i18n/pt.ts`, `src/i18n/fr.ts`, `src/i18n/de.ts`, `src/i18n/it.ts` — translation objects
 
 **`src/hooks/`:**
 - Purpose: Generic React hooks not tied to a specific domain
@@ -223,7 +222,7 @@ CRM/
 - Page component: `src/pages/MyFeature.tsx`
 - Route entry: Add `<Route>` in `src/App.tsx` inside `AppRoutes`, wrapped in `<ProtectedPage>`
 - Store (if needed): `src/store/myFeatureStore.ts` — follow the `create<State>()(persist(...))` pattern; add key to `LS_KEYS` in `src/utils/constants.ts`
-- Tests: `src/pages/MyFeature.test.tsx` (no test framework currently present — see CONCERNS.md)
+- Tests: `tests/**` (Vitest configured) and/or colocated tests when appropriate
 
 **New Domain Component:**
 - Place inside the matching domain directory: `src/components/deals/MyDealWidget.tsx`
@@ -246,7 +245,7 @@ CRM/
 - Add route mapping in `NAV_PERMISSIONS` if it gates a route
 
 **New Translation Key:**
-- Add to all three locale files: `src/i18n/es.ts`, `src/i18n/en.ts`, `src/i18n/pt.ts`
+- Add to all locale files: `src/i18n/en.ts`, `src/i18n/es.ts`, `src/i18n/pt.ts`, `src/i18n/fr.ts`, `src/i18n/de.ts`, `src/i18n/it.ts`
 - Add TypeScript signature to `src/i18n/types.ts` (the `Translations` interface)
 
 **New i18n Language:**
@@ -262,8 +261,8 @@ CRM/
 - Committed: Yes
 
 **`supabase/`:**
-- Purpose: SQL schema for the planned Supabase migration; not yet wired to the running app data layer
-- Generated: No (hand-authored)
+- Purpose: SQL schema, migrations, and Edge Functions for the active Supabase-backed runtime
+- Generated: Mixed (hand-authored + generated artifacts)
 - Committed: Yes
 
 **`public/`:**
@@ -278,4 +277,4 @@ CRM/
 
 ---
 
-*Structure analysis: 2026-03-31*
+*Structure analysis: 2026-04-10*

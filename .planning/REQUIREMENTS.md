@@ -10,6 +10,7 @@
 - Gmail integration is fully operational with PKCE OAuth, server-side refresh token storage, access-token refresh flow, and persisted thread links (`gmail_thread_links`).
 - i18n is expanded to 6 languages (`en`, `es`, `pt`, `fr`, `de`, `it`).
 - Quote workflow includes builder save + export-to-PDF (print layout) + send-by-email from deal detail.
+- Build hardening includes route-level lazy loading for chart-heavy pages (`Dashboard`, `Reports`, `Forecast`) to keep chunk warnings under control.
 - Test suite remains green (`101` tests) and build is passing.
 
 ## v1 Requirements
@@ -21,19 +22,19 @@
 - [x] **AUTH-03**: User can reset password via email link
 - [x] **AUTH-04**: User session persists across browser refresh (onAuthStateChange + `isLoadingAuth: true` initial state to prevent race condition redirect)
 - [x] **AUTH-05**: User can log out and session is fully cleared
-- [ ] **AUTH-06**: New user creates an organization on first login (org name, slug)
-- [ ] **AUTH-07**: User can invite team members by email (Supabase Edge Function — requires service role key)
-- [ ] **AUTH-08**: Invited user receives email and can accept invitation to join organization
+- [x] **AUTH-06**: New user creates an organization on first login (org name, slug)
+- [x] **AUTH-07**: User can invite team members by email (Supabase Edge Function — requires service role key)
+- [x] **AUTH-08**: Invited user receives email and can accept invitation to join organization
 - [x] **AUTH-09**: User has a role within organization (owner, admin, member)
 - [x] **AUTH-10**: All CRM data is scoped to organization via RLS — no cross-tenant data leakage
 
 ### Schema & Multi-Tenancy
 
-- [ ] **SCHEMA-01**: All core tables (contacts, companies, deals, activities, notifications, goals, sequences, automations, templates, products) have `organization_id uuid NOT NULL` column
-- [ ] **SCHEMA-02**: RLS policies on all tables enforce `organization_id = (auth.jwt() -> 'app_metadata' ->> 'organization_id')::uuid` (JWT claim, not subquery — performance critical)
-- [ ] **SCHEMA-03**: Trigger sets `organization_id` in JWT `app_metadata` on org membership changes
-- [ ] **SCHEMA-04**: `organizations` and `organization_members` tables created with correct FK structure
-- [ ] **SCHEMA-05**: `gmail_tokens` table created to store refresh tokens server-side (never in browser)
+- [x] **SCHEMA-01**: All core tables (contacts, companies, deals, activities, notifications, goals, sequences, automations, templates, products) have `organization_id uuid NOT NULL` column
+- [x] **SCHEMA-02**: RLS policies on all tables enforce `organization_id = (auth.jwt() -> 'app_metadata' ->> 'organization_id')::uuid` (JWT claim, not subquery — performance critical)
+- [x] **SCHEMA-03**: Trigger sets `organization_id` in JWT `app_metadata` on org membership changes
+- [x] **SCHEMA-04**: `organizations` and `organization_members` tables created with correct FK structure
+- [x] **SCHEMA-05**: `gmail_tokens` table created to store refresh tokens server-side (never in browser)
 
 ### Data Migration — Core Stores
 
@@ -89,24 +90,24 @@
 ### Gmail Integration
 
 - [x] **GMAIL-01**: Gmail OAuth uses Auth Code + PKCE flow (`initCodeClient`) — replaces current implicit token client that cannot obtain refresh tokens
-- [ ] **GMAIL-02**: Edge Function `gmail-oauth-exchange` exchanges authorization code for access + refresh tokens; stores refresh token in `gmail_tokens` table
-- [ ] **GMAIL-03**: Edge Function `gmail-refresh-token` refreshes access token when expired; returns short-lived token to browser only
-- [ ] **GMAIL-04**: Inbox view loads real Gmail threads via API using short-lived access token
-- [ ] **GMAIL-05**: Emails can be sent from within contact/deal detail pages
-- [ ] **GMAIL-06**: Incoming emails matched to contacts by sender email address; linked in activity feed
+- [x] **GMAIL-02**: Edge Function `gmail-oauth-exchange` exchanges authorization code for access + refresh tokens; stores refresh token in `gmail_tokens` table
+- [x] **GMAIL-03**: Edge Function `gmail-refresh-token` refreshes access token when expired; returns short-lived token to browser only
+- [x] **GMAIL-04**: Inbox view loads real Gmail threads via API using short-lived access token
+- [x] **GMAIL-05**: Emails can be sent from within contact/deal detail pages
+- [x] **GMAIL-06**: Incoming emails matched to contacts by sender email address; linked in activity feed
 
 ### Internationalization
 
-- [ ] **I18N-01**: English translation file `en.json` created covering all existing Spanish strings
-- [ ] **I18N-02**: Language switcher in Settings (or user profile) persists language preference
+- [x] **I18N-01**: English translation file `en.json` created covering all existing Spanish strings
+- [x] **I18N-02**: Language switcher in Settings (or user profile) persists language preference
 
 ### Testing
 
-- [ ] **TEST-01**: Vitest configured with `@testing-library/react` and jsdom
-- [ ] **TEST-02**: Unit tests for `leadScoring.ts` (`computeLeadScore`, `calculateLeadScore`) — pure functions, highest priority
-- [ ] **TEST-03**: Unit tests for Zustand stores (contact CRUD, deal stage transitions) with Supabase client mocked
-- [ ] **TEST-04**: Unit tests for Zod schemas in form validation
-- [ ] **TEST-05**: GitHub Actions CI runs `vitest run` + `tsc --noEmit` on every PR
+- [x] **TEST-01**: Vitest configured with `@testing-library/react` and jsdom
+- [x] **TEST-02**: Unit tests for `leadScoring.ts` (`computeLeadScore`, `calculateLeadScore`) — pure functions, highest priority
+- [x] **TEST-03**: Unit tests for Zustand stores (contact CRUD, deal stage transitions) with Supabase client mocked
+- [x] **TEST-04**: Unit tests for Zod schemas in form validation
+- [x] **TEST-05**: GitHub Actions CI runs `vitest run` + `tsc --noEmit` on every PR
 
 ### Deployment
 
@@ -155,9 +156,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHEMA-01–05 | Phase 1 | Pending |
-| AUTH-01–05 | Phase 2 | Pending |
-| AUTH-06–10 | Phase 3 | Pending |
+| SCHEMA-01–05 | Phase 1 | Complete |
+| AUTH-01–05 | Phase 2 | Complete |
+| AUTH-06–10 | Phase 3 | Complete |
 | SEC-01–06 | Phase 4 | Pending |
 | DATA-01–08 | Phase 5 | Pending |
 | REALTIME-01–04 | Phase 5 | Pending |

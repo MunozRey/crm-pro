@@ -23,8 +23,8 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 - ✓ Calendar view for scheduled activities — existing
 - ✓ Email sequences builder (Sequences page) — existing
 - ✓ Automation rules engine (Automations page) — existing
-- ✓ AI Agent chat interface (placeholder, Anthropic SDK wired) — existing
-- ✓ Gmail Inbox integrated view (OAuth flow incomplete) — existing
+- ✓ AI Agent chat interface (placeholder; provider via OpenRouter path, no browser Anthropic SDK usage) — existing
+- ✓ Gmail Inbox integrated view (PKCE OAuth + server refresh + persisted thread links) — existing
 - ✓ Forecast page with revenue projections — existing
 - ✓ Leaderboard and team performance metrics — existing
 - ✓ Sales Goals tracking — existing
@@ -34,7 +34,7 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 - ✓ Team Management (roles, mock users) — existing
 - ✓ Audit Log — existing
 - ✓ Notifications system — existing
-- ✓ i18n infrastructure ready (Spanish + English) — existing
+- ✓ i18n infrastructure ready (en/es/pt/fr/de/it) — existing
 - ✓ Settings: tags, pipeline stages, users, JSON export/import, data reset — existing
 - ✓ TypeScript strict mode throughout — existing
 - ✓ Supabase schema.sql and database.types.ts already written — existing
@@ -56,15 +56,15 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 ## Context
 
-**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (101/101). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, fixed UUID field mapping for deals/activities inserts, and added Gmail thread-link persistence with remote migration/deploy.
+**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (101/101). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, fixed UUID field mapping for deals/activities inserts, added Gmail thread-link persistence with remote migration/deploy, and applied lazy-loading for chart-heavy routes to improve bundle behavior.
 
 **Known critical issues (current):**
 - Team list is still partially driven by local auth-state user list and not fully hydrated from `organization_members`
 - Deployment and environment validation for production are still pending (Phase 10)
 
-**Tech stack:** React 18, TypeScript (strict), Vite 8, Tailwind CSS 3, Zustand 5, React Router v6, React Hook Form + Zod v4, Recharts, @hello-pangea/dnd, @supabase/supabase-js, @anthropic-ai/sdk, date-fns, lucide-react
+**Tech stack:** React 18, TypeScript (strict), Vite 8, Tailwind CSS 3, Zustand 5, React Router v6, React Hook Form + Zod v4, Recharts, @hello-pangea/dnd, @supabase/supabase-js, date-fns, lucide-react
 
-**Target market:** Spanish and European B2B sales teams. UI in Spanish with i18n infrastructure ready for English.
+**Target market:** Spanish and European B2B sales teams. UI is multilingual (en/es/pt/fr/de/it).
 
 ## Constraints
 
@@ -104,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after Gmail hardening + quote workflow updates*
+*Last updated: 2026-04-10 after Gmail hardening + quote workflow updates + build hardening (lazy chart routes)*

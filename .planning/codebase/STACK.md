@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-10
 
 ## Languages
 
@@ -30,8 +30,8 @@
 **State Management:**
 - Zustand 5.0 (`zustand`) with `persist` middleware — all global state lives in `src/store/*.ts`
   - `useAuthStore` — auth, users, sessions (`src/store/authStore.ts`)
-  - `useAIStore` — API keys, model selection, conversations, enrichments (`src/store/aiStore.ts`)
-  - `useEmailStore` — Gmail tokens, sent emails, threads (`src/store/emailStore.ts`)
+  - `useAIStore` — model selection, conversations, enrichments (`src/store/aiStore.ts`)
+  - `useEmailStore` — sent emails, Gmail threads and persisted thread links (`src/store/emailStore.ts`)
   - `useSettingsStore` — pipeline stages, currency, tags (`src/store/settingsStore.ts`)
   - 14 additional stores in `src/store/`
 
@@ -51,11 +51,13 @@
 
 **i18n:**
 - Custom Zustand-based i18n store (`src/i18n/index.ts`)
-- Supported languages: Spanish (`es`), English (`en`), Portuguese (`pt`)
-- Translations at `src/i18n/es.ts`, `src/i18n/en.ts`, `src/i18n/pt.ts`
+- Supported languages: English (`en`), Spanish (`es`), Portuguese (`pt`), French (`fr`), German (`de`), Italian (`it`)
+- Translations at `src/i18n/en.ts`, `src/i18n/es.ts`, `src/i18n/pt.ts`, `src/i18n/fr.ts`, `src/i18n/de.ts`, `src/i18n/it.ts`
 
 **Testing:**
-- Not detected — no test framework configured (no `jest.config.*`, `vitest.config.*`)
+- Vitest 4 (`vitest`) + jsdom + Testing Library
+- Commands: `npm run test`, `npm run test:run`, `npm run test:coverage`
+- Current baseline: 101 tests passing
 
 **Build/Dev:**
 - Vite 8.0 (`vite`) — dev server and production bundler; config at `vite.config.ts`
@@ -67,7 +69,6 @@
 
 **Critical:**
 - `@supabase/supabase-js` 2.100 — database client and optional auth provider (`src/lib/supabase.ts`)
-- `@anthropic-ai/sdk` 0.80 — Anthropic Claude API SDK (`src/services/aiService.ts`)
 - `date-fns` 4.1 — date formatting and arithmetic throughout the codebase
 - `uuid` 13.0 — UUID v4 generation for all entity IDs
 - `zustand` 5.0 — all application state (see stores above)
@@ -83,8 +84,8 @@
   - `VITE_SUPABASE_URL` — Supabase project URL (optional; app falls back to localStorage)
   - `VITE_SUPABASE_ANON_KEY` — Supabase anon/public key (optional)
 - See `.env.example` for template
-- AI API keys (`ANTHROPIC_API_KEY`, OpenRouter key) are entered by the user at runtime and persisted to `localStorage` via `useAIStore` — they are NOT stored in `.env`
-- Google OAuth `clientId` for Gmail is also entered at runtime in the Settings page
+- OpenRouter API key is user-provided at runtime via settings store; sensitive server-only keys are kept in Supabase Edge Function env vars
+- Google OAuth `clientId` is configured at runtime in Settings; refresh tokens remain server-side in Supabase (`gmail_tokens`)
 
 **Build:**
 - `tsconfig.json` — app source TypeScript config; path alias `@/*` → `./src/*`
@@ -105,4 +106,4 @@
 
 ---
 
-*Stack analysis: 2026-03-31*
+*Stack analysis: 2026-04-10*

@@ -1,6 +1,6 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-10
 
 ## Naming Patterns
 
@@ -50,14 +50,14 @@
 ## Code Style
 
 **Formatting:**
-- No Prettier or ESLint config files present — formatting is not enforced by tooling
+- Formatting is mostly project-conventional (2 spaces, single quotes); lint diagnostics are enforced in-editor and must stay clean on touched files
 - Indentation: 2 spaces (observed throughout)
 - Quotes: single quotes for strings
 - No trailing semicolons on type/interface lines; function bodies use no explicit style enforcement
 - Arrow functions preferred for callbacks; function declarations for named exports
 
 **Linting:**
-- No `.eslintrc` or `eslint.config.*` detected — linting is not configured
+- Lint/a11y checks are actively used during development (including accessibility labels for icon-only controls)
 
 ## Import Organization
 
@@ -132,12 +132,9 @@ export const useContactsStore = create<ContactsState>()(
 const contacts = useContactsStore((s) => s.contacts)  // selector function
 ```
 
-**Lazy cross-store imports** (to avoid circular deps):
-```typescript
-import('./automationsStore').then(({ useAutomationsStore }) => { ... })
-```
+**Cross-store calls:** Prefer direct static imports + `useXStore.getState()` unless there is a proven circular-dependency issue.
 
-**Seeded initial data:** Stores check for empty state on rehydrate and populate with seed data from `src/utils/seedData.ts`
+**Seeded initial data:** Demo seeds are used in mock mode; Supabase mode must avoid rehydrating demo users/data into real org sessions.
 
 ## Form Validation Pattern
 
@@ -182,7 +179,7 @@ toast.error('Error al guardar')
 const { addToast } = useToastStore()
 ```
 
-**Async errors:** `try/catch` with empty catch blocks are used in `useLocalStorage` and similar utilities (silently fail). Store operations do not use async/await — they are synchronous (localStorage-backed).
+**Async errors:** Prefer explicit error handling with user-facing toasts for actionable failures. Most data stores are async Supabase-backed.
 
 **Type narrowing:** Nullish coalescing `??` and optional chaining `?.` preferred over explicit null checks:
 ```typescript
@@ -197,16 +194,16 @@ contact.jobTitle ?? ''
 // ─── Contact ────────────────────────────────────────────────────────────────
 ```
 
-**TODO markers:** Used to flag Supabase migration work:
+**TODO markers:** Use sparingly for bounded follow-ups; avoid stale migration TODOs that no longer apply.
 ```typescript
-// TODO: Replace localStorage persistence with Supabase client calls
-// TODO: Swap this hook for Supabase real-time subscriptions when migrating
+// TODO: Phase 10 deploy checklist item pending external infra setup
+// TODO: Replace manual smoke with automated integration test for this flow
 ```
 
 **Inline rationale comments:** Used for non-obvious decisions:
 ```typescript
-// Lazy to avoid circular deps at module init time
-// Simple hash for demo purposes (in production, use bcrypt + backend)
+// Keep org scope from JWT claims to avoid per-row subqueries
+// Refresh Gmail token server-side on demand after 401
 ```
 
 ## Constants and Label Maps
@@ -229,7 +226,7 @@ The color strings in `*_COLORS` maps are Tailwind color names (used as Badge var
 
 ## Internationalization
 
-**i18n system:** Custom Zustand-backed i18n at `src/i18n/`. Three languages: `es` (default), `en`, `pt`.
+**i18n system:** Custom Zustand-backed i18n at `src/i18n/`. Supported languages: `en`, `es`, `pt`, `fr`, `de`, `it`.
 
 **Usage:**
 ```typescript
@@ -245,4 +242,4 @@ const t = getTranslations()
 
 ---
 
-*Convention analysis: 2026-03-31*
+*Convention analysis: 2026-04-10*

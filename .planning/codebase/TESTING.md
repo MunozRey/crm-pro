@@ -1,155 +1,70 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-10
 
 ## Test Framework
 
-**Runner:** None configured
+**Runner:** Vitest 4 (`vitest`)
 
-**Assertion Library:** None
+**Environment:** jsdom
 
-**Test files found:** 0
+**Libraries:**
+- `@testing-library/react`
+- `@testing-library/user-event`
+- `@testing-library/jest-dom`
+- `@vitest/coverage-v8`
 
-No test runner, test framework, or test files exist in this codebase. The `package.json` contains no test script, no `vitest`, `jest`, `@testing-library/*`, `playwright`, or `cypress` dependencies (neither in `dependencies` nor `devDependencies`).
+**Commands:**
+- `npm run test` (watch)
+- `npm run test:run` (CI/local full run)
+- `npm run test:coverage`
 
-```json
-// package.json scripts — no test command present
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  }
-}
-```
+## Current Baseline
+
+- Test files: 15
+- Total tests: 101 passing
+- CI includes test + typecheck (`vitest run` + `tsc --noEmit`)
+- Build remains part of release validation (`npm run build`)
 
 ## Test File Organization
 
-**No test files exist.** A search for `*.test.*` and `*.spec.*` files returned zero results across the entire codebase.
+- Main tests are under `tests/**` grouped by domain:
+  - `tests/auth/*`
+  - `tests/stores/*`
+  - `tests/utils/*`
+  - `tests/schemas/*`
+- Shared setup: `tests/setup.ts`
+- Vitest configuration is embedded in `vite.config.ts` (`test` key).
 
-## Current Quality Safeguards
+## Patterns In Use
 
-While there are no automated tests, TypeScript strict mode provides compile-time safety:
+**Store tests (Zustand + Supabase-aware):**
+- Mock Supabase client interactions per file with `vi.mock(...)`.
+- Reset state between tests.
+- Verify add/update/delete and selector behavior.
 
-- `"strict": true` — enables all strict type checks
-- `"noFallthroughCasesInSwitch": true` — prevents switch fallthrough bugs
-- `tsc` runs as part of the build: `"build": "tsc && vite build"` — TypeScript errors block production builds
+**Schema tests (Zod):**
+- Validate required fields and coercion behavior.
+- Assert invalid payloads fail with expected field-level messages.
 
-The TypeScript configuration in `tsconfig.json` is the only automated correctness check in place.
+**Auth/i18n page tests:**
+- Use language-tolerant matchers where copy can vary by locale.
+- Assert flows (login/register/recovery/reset) instead of exact UI cosmetics.
 
-## Code Testability Assessment
+## Remaining Testing Gaps
 
-**Well-suited for unit testing:**
+- Gmail end-to-end flows (OAuth callback + token refresh + attachment download) are still primarily manual smoke/UAT.
+- Edge Functions are validated through integration/manual checks rather than local isolated unit suites.
+- Route-level lazy loading behavior is validated via build artifacts/manual smoke, not dedicated automated assertions.
 
-- `src/utils/formatters.ts` — pure functions with no side effects: `formatCurrency`, `formatDate`, `formatRelativeDate`, `getInitials`, `truncate`
-- `src/utils/leadScoring.ts` — deterministic scoring logic: `computeLeadScore`, `calculateLeadScore`
-- `src/utils/permissions.ts` — pure lookup functions: `hasPermission`, `hasAnyPermission`, `canAccessRoute`
-- `src/utils/dealHealth.ts` — pure computation
-- `src/utils/followUpEngine.ts` — pure computation
-- `src/utils/duplicateDetection.ts` — pure computation
-- `src/hooks/useFilters.ts` — simple state hook testable with `renderHook`
-- `src/hooks/useSearch.ts` — pure filtering logic via `useMemo`, testable with `renderHook`
+## Quality Gates
 
-**Moderately suited (requires mocking):**
-
-- `src/store/contactsStore.ts` — Zustand stores can be tested by resetting state between tests
-- `src/store/dealsStore.ts` — cross-store calls (`useAuditStore.getState()`) need mocking
-- `src/hooks/useLocalStorage.ts` — requires `localStorage` mock (`jest.spyOn(window.localStorage, ...)` or `vitest`'s `vi.spyOn`)
-- Form components (`src/components/contacts/ContactForm.tsx`, etc.) — testable with `@testing-library/react` + `userEvent`
-
-**Hard to test without significant refactoring:**
-
-- `src/store/authStore.ts` — contains a hardcoded `simpleHash` function used for password comparison; mixing auth logic with store state makes isolation difficult
-- `src/store/dealsStore.ts` `moveDeal` action — dynamic `import('./automationsStore')` inside an action makes it difficult to intercept in tests
-- `src/services/aiService.ts` — depends on `@anthropic-ai/sdk` network calls
-- `src/services/gmailService.ts` — depends on OAuth and Gmail API
-
-## Recommended Test Setup (if testing is added)
-
-**Recommended framework stack:**
-- `vitest` — native Vite integration, no config overhead
-- `@testing-library/react` — component testing
-- `@testing-library/user-event` — interaction simulation
-- `jsdom` — browser environment for Vitest
-
-**Minimal `vitest.config.ts`:**
-```typescript
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-  },
-})
-```
-
-**Recommended file placement:** Co-locate test files next to source files:
-```
-src/utils/formatters.ts
-src/utils/formatters.test.ts
-src/hooks/useFilters.ts
-src/hooks/useFilters.test.ts
-```
-
-**Example unit test pattern for pure utils:**
-```typescript
-// src/utils/formatters.test.ts
-import { describe, it, expect } from 'vitest'
-import { formatCurrency, getInitials, truncate } from './formatters'
-
-describe('formatCurrency', () => {
-  it('formats EUR values with locale', () => {
-    expect(formatCurrency(1500, 'EUR')).toBe('1.500 €')
-  })
-})
-
-describe('getInitials', () => {
-  it('returns first two initials uppercased', () => {
-    expect(getInitials('David Muñoz')).toBe('DM')
-  })
-})
-```
-
-**Example Zustand store test pattern:**
-```typescript
-// src/store/contactsStore.test.ts
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useContactsStore } from './contactsStore'
-
-beforeEach(() => {
-  useContactsStore.setState({ contacts: [], filters: defaultFilters })
-})
-
-it('adds a contact and assigns an id', () => {
-  const store = useContactsStore.getState()
-  const contact = store.addContact({ firstName: 'Test', ... })
-  expect(contact.id).toBeTruthy()
-  expect(useContactsStore.getState().contacts).toHaveLength(1)
-})
-```
-
-## Coverage Gaps (if testing were added)
-
-**High priority — business logic with no tests:**
-- Lead scoring algorithm in `src/utils/leadScoring.ts` — complex branching logic
-- Deal health computation in `src/utils/dealHealth.ts`
-- Follow-up urgency logic in `src/utils/followUpEngine.ts`
-- Duplicate detection matching in `src/utils/duplicateDetection.ts`
-- Permission system in `src/utils/permissions.ts` — security-critical
-
-**Medium priority:**
-- Store CRUD operations (add/update/delete/filter) across all entity stores
-- `useFilters` and `useSearch` hooks
-- Form validation schema correctness (Zod schemas in form components)
-
-**Lower priority:**
-- UI rendering of primitive components (`Button`, `Badge`, `Avatar`)
-- Page-level components (high mocking overhead, low logic density)
+- Required before merge/release:
+  - `npm run test:run`
+  - `npm run build`
+- For changes to schemas/stores/auth flows:
+  - Add/adjust targeted tests in `tests/**`.
 
 ---
 
-*Testing analysis: 2026-03-31*
+*Testing analysis: 2026-04-10*

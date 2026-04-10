@@ -93,6 +93,7 @@ All components are kept under 200 lines. Large pages (Contacts, Deals) delegate 
 - Test suite is passing (`101` tests).
 - Gmail integration is hardened (PKCE + server refresh + resilient inbox load + persisted thread links).
 - Quote workflow now supports save, print-to-PDF export, and email send from deal detail.
+- Build hardening is applied: chart-heavy routes are lazy-loaded (`Dashboard`, `Reports`, `Forecast`) and the production build no longer triggers chunk-size warnings at the configured threshold.
 - Next major milestone: deployment/release hardening (Phase 10).
 
 ## Seed Data

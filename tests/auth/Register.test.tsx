@@ -63,7 +63,7 @@ describe('Register', () => {
     renderRegister()
     await fillAndSubmit()
     await waitFor(() => {
-      expect(screen.getByText(/check your email/i)).toBeInTheDocument()
+      expect(screen.getByText(/revisa tu correo|check your email/i)).toBeInTheDocument()
     })
   })
 

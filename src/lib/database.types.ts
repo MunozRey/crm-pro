@@ -189,6 +189,7 @@ export interface Database {
           id: string
           user_id: string
           organization_id: string
+          email_address: string
           access_token: string | null
           refresh_token: string
           token_type: string

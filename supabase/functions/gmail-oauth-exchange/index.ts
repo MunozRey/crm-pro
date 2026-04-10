@@ -38,6 +38,14 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    const { data: orgId, error: orgErr } = await callerClient.rpc('get_org_id')
+    if (orgErr || !orgId) {
+      return new Response(
+        JSON.stringify({ error: 'Organization context not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Exchange code + verifier for tokens at Google token endpoint
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -91,13 +99,15 @@ Deno.serve(async (req: Request) => {
       .from('gmail_tokens')
       .upsert({
         user_id: user.id,
+        organization_id: orgId,
         email_address: profile.emailAddress,
         refresh_token: tokens.refresh_token,
         access_token: null,   // Never store access token in DB
-        token_expiry: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-        scopes: tokens.scope,
+        expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        scope: tokens.scope,
+        token_type: tokens.token_type ?? 'Bearer',
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+      }, { onConflict: 'user_id,organization_id' })
 
     if (upsertErr) {
       return new Response(

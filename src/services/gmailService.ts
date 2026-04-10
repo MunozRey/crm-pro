@@ -2,7 +2,7 @@ import type { GmailThread, GmailMessage, GmailAttachment } from '../types'
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
-  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.compose',
 ].join(' ')
 
@@ -107,15 +107,26 @@ async function gmailFetch<T>(path: string, token: string, options: RequestInit =
 function buildMimeMessage(params: {
   to: string[]
   cc?: string[]
+  bcc?: string[]
+  replyTo?: string
   subject: string
   body: string
   from?: string
 }): string {
+  const sanitizeHeader = (value: string) => value.replace(/[\r\n]+/g, ' ').trim()
+  const sanitizeList = (values: string[]) => values.map(sanitizeHeader).filter(Boolean)
+
+  const to = sanitizeList(params.to)
+  const cc = params.cc ? sanitizeList(params.cc) : []
+  const bcc = params.bcc ? sanitizeList(params.bcc) : []
+
   const lines = [
-    `To: ${params.to.join(', ')}`,
-    params.cc?.length ? `Cc: ${params.cc.join(', ')}` : null,
-    params.from ? `From: ${params.from}` : null,
-    `Subject: ${params.subject}`,
+    `To: ${to.join(', ')}`,
+    cc.length ? `Cc: ${cc.join(', ')}` : null,
+    bcc.length ? `Bcc: ${bcc.join(', ')}` : null,
+    params.replyTo ? `Reply-To: ${sanitizeHeader(params.replyTo)}` : null,
+    params.from ? `From: ${sanitizeHeader(params.from)}` : null,
+    `Subject: ${sanitizeHeader(params.subject)}`,
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=utf-8',
     'Content-Transfer-Encoding: base64',
@@ -131,10 +142,69 @@ function buildMimeMessage(params: {
 }
 
 export async function sendGmailEmail(
-  params: { to: string[]; cc?: string[]; subject: string; body: string },
+  params: {
+    to: string[]
+    cc?: string[]
+    bcc?: string[]
+    replyTo?: string
+    subject: string
+    body: string
+    attachments?: Array<{
+      name: string
+      mimeType: string
+      dataBase64: string
+    }>
+  },
   accessToken: string,
 ): Promise<{ id: string; threadId: string }> {
-  const raw = buildMimeMessage(params)
+  const encodeBody = (value: string) => btoa(unescape(encodeURIComponent(value)))
+  const formatBase64 = (value: string) => value.replace(/(.{76})/g, '$1\r\n')
+
+  const buildMultipartMimeMessage = () => {
+    const boundary = `crm-pro-${crypto.randomUUID()}`
+    const sanitizeHeader = (value: string) => value.replace(/[\r\n]+/g, ' ').trim()
+    const sanitizeList = (values: string[]) => values.map(sanitizeHeader).filter(Boolean)
+    const to = sanitizeList(params.to)
+    const cc = params.cc ? sanitizeList(params.cc) : []
+    const bcc = params.bcc ? sanitizeList(params.bcc) : []
+    const lines: string[] = [
+      `To: ${to.join(', ')}`,
+      cc.length ? `Cc: ${cc.join(', ')}` : '',
+      bcc.length ? `Bcc: ${bcc.join(', ')}` : '',
+      params.replyTo ? `Reply-To: ${sanitizeHeader(params.replyTo)}` : '',
+      `Subject: ${sanitizeHeader(params.subject)}`,
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      formatBase64(encodeBody(params.body)),
+    ].filter(Boolean)
+
+    for (const attachment of params.attachments ?? []) {
+      lines.push(
+        `--${boundary}`,
+        `Content-Type: ${attachment.mimeType || 'application/octet-stream'}; name="${attachment.name}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${attachment.name}"`,
+        '',
+        formatBase64(attachment.dataBase64),
+      )
+    }
+
+    lines.push(`--${boundary}--`)
+    const raw = lines.join('\r\n')
+    return btoa(unescape(encodeURIComponent(raw)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+  }
+
+  const raw = params.attachments?.length
+    ? buildMultipartMimeMessage()
+    : buildMimeMessage(params)
   return gmailFetch<{ id: string; threadId: string }>('/messages/send', accessToken, {
     method: 'POST',
     body: JSON.stringify({ raw }),
@@ -225,6 +295,9 @@ function parseMessage(raw: RawMessage): GmailMessage {
     threadId: raw.threadId,
     from: get('From'),
     to: get('To'),
+    cc: get('Cc') || undefined,
+    bcc: get('Bcc') || undefined,
+    replyTo: get('Reply-To') || undefined,
     subject: get('Subject'),
     snippet: raw.snippet,
     body: extractBody(raw),
@@ -289,4 +362,27 @@ export async function getGmailThread(threadId: string, accessToken: string): Pro
 
 export async function getGmailProfile(accessToken: string): Promise<{ emailAddress: string; messagesTotal: number }> {
   return gmailFetch<{ emailAddress: string; messagesTotal: number }>('/profile', accessToken)
+}
+
+export async function modifyGmailThreadLabels(
+  accessToken: string,
+  threadId: string,
+  payload: { addLabelIds?: string[]; removeLabelIds?: string[] },
+): Promise<void> {
+  await gmailFetch(`/threads/${threadId}/modify`, accessToken, {
+    method: 'POST',
+    body: JSON.stringify({
+      addLabelIds: payload.addLabelIds ?? [],
+      removeLabelIds: payload.removeLabelIds ?? [],
+    }),
+  })
+}
+
+export async function trashGmailThread(
+  accessToken: string,
+  threadId: string,
+): Promise<void> {
+  await gmailFetch(`/threads/${threadId}/trash`, accessToken, {
+    method: 'POST',
+  })
 }

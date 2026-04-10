@@ -25,6 +25,14 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    const { data: orgId, error: orgErr } = await callerClient.rpc('get_org_id')
+    if (orgErr || !orgId) {
+      return new Response(
+        JSON.stringify({ error: 'Organization context not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Read the stored refresh token for this user (admin client bypasses RLS for server reads)
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -35,6 +43,7 @@ Deno.serve(async (req: Request) => {
       .from('gmail_tokens')
       .select('refresh_token, email_address')
       .eq('user_id', user.id)
+      .eq('organization_id', orgId)
       .single()
 
     if (fetchErr || !tokenRow) {
@@ -71,6 +80,17 @@ Deno.serve(async (req: Request) => {
       scope: string
       token_type: string
     }
+
+    await adminClient
+      .from('gmail_tokens')
+      .update({
+        access_token: null,
+        expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+        scope: refreshed.scope,
+        token_type: refreshed.token_type ?? 'Bearer',
+      })
+      .eq('user_id', user.id)
+      .eq('organization_id', orgId)
 
     // Return ONLY the new short-lived access token — refresh token stays in the DB
     return new Response(

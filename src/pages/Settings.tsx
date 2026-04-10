@@ -22,6 +22,7 @@ import { CSVImport } from '../components/import/CSVImport'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { useNotificationsStore, ALL_NOTIFICATION_TYPES } from '../store/notificationsStore'
 import { useTranslations, useI18nStore, LANGUAGE_LABELS, LANGUAGE_FLAGS } from '../i18n'
+import { supabase } from '../lib/supabase'
 import type { Language } from '../i18n'
 import type { DealCurrency, CustomFieldEntityType, CustomFieldType } from '../types'
 import type { NotificationType } from '../types'
@@ -153,6 +154,7 @@ export function Settings() {
     () => (settings as { googleClientId?: string }).googleClientId ?? ''
   )
   const [connectingGmail, setConnectingGmail] = useState(false)
+  const [disconnectingGmail, setDisconnectingGmail] = useState(false)
   const [showCSVImport, setShowCSVImport] = useState(false)
 
   const connected = isGmailConnected()
@@ -222,7 +224,7 @@ export function Settings() {
           }
           toast.success(t.settings.importData + ' ✓')
         } catch {
-          toast.error('Import error')
+          toast.error(t.errors.generic)
         }
       }
       reader.readAsText(file)
@@ -241,6 +243,26 @@ export function Settings() {
     } catch (err) {
       setConnectingGmail(false)
       toast.error(err instanceof Error ? err.message : t.errors.gmailConnectionError)
+    }
+  }
+
+  const handleDisconnectGmail = async () => {
+    if (!supabase) {
+      disconnectGmail()
+      toast.success(t.settings.gmailDisconnected)
+      return
+    }
+
+    setDisconnectingGmail(true)
+    try {
+      const { error } = await supabase.functions.invoke('gmail-disconnect')
+      if (error) throw error
+      disconnectGmail()
+      toast.success(t.settings.gmailDisconnected)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t.errors.gmailConnectionError)
+    } finally {
+      setDisconnectingGmail(false)
     }
   }
 
@@ -313,7 +335,7 @@ export function Settings() {
                   <p className="text-xs text-emerald-400">{t.settings.gmailConnectionActive}</p>
                 </div>
               </div>
-              <Button variant="danger" size="sm" leftIcon={<WifiOff size={12} />} onClick={() => { disconnectGmail(); toast.success(t.settings.gmailDisconnected) }}>
+              <Button variant="danger" size="sm" loading={disconnectingGmail} leftIcon={disconnectingGmail ? undefined : <WifiOff size={12} />} onClick={handleDisconnectGmail}>
                 {t.settings.disconnect}
               </Button>
             </div>

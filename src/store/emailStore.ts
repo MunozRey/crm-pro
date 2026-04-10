@@ -19,6 +19,29 @@ export interface GmailThreadLink {
   updatedAt: string
 }
 
+interface ScheduledEmailJob {
+  id: string
+  emailId: string
+  runAt: string
+  payload: {
+    to: string[]
+    cc?: string[]
+    bcc?: string[]
+    replyTo?: string
+    attachments?: Array<{
+      name: string
+      mimeType: string
+      size: number
+      dataBase64?: string
+    }>
+    subject: string
+    body: string
+    contactId?: string
+    dealId?: string
+    companyId?: string
+  }
+}
+
 export interface EmailStore {
   emails: CRMEmail[]
   gmailAddress: string | null
@@ -27,6 +50,7 @@ export interface EmailStore {
   threadsLoading: boolean
   threadsError: string | null
   threadsLastSyncedAt: string | null
+  scheduledQueue: ScheduledEmailJob[]
 
   // Local email actions
   addEmail: (email: Omit<CRMEmail, 'id' | 'createdAt'>) => CRMEmail
@@ -47,6 +71,14 @@ export interface EmailStore {
   sendEmail: (params: {
     to: string[]
     cc?: string[]
+    bcc?: string[]
+    replyTo?: string
+    attachments?: Array<{
+      name: string
+      mimeType: string
+      size: number
+      dataBase64?: string
+    }>
     subject: string
     body: string
     contactId?: string
@@ -54,6 +86,25 @@ export interface EmailStore {
     companyId?: string
     accessToken?: string
   }) => Promise<CRMEmail>
+  scheduleEmail: (params: {
+    to: string[]
+    cc?: string[]
+    bcc?: string[]
+    replyTo?: string
+    attachments?: Array<{
+      name: string
+      mimeType: string
+      size: number
+      dataBase64?: string
+    }>
+    subject: string
+    body: string
+    contactId?: string
+    dealId?: string
+    companyId?: string
+    runAt: string
+  }) => CRMEmail
+  processScheduledEmails: (accessToken?: string) => Promise<void>
 
   // Load Gmail threads
   loadThreads: (accessToken: string, query?: string) => Promise<void>
@@ -78,6 +129,7 @@ export const useEmailStore = create<EmailStore>()(
       threadsLoading: false,
       threadsError: null,
       threadsLastSyncedAt: null,
+      scheduledQueue: [],
 
       addEmail: (data) => {
         const email: CRMEmail = { ...data, id: uuid(), createdAt: new Date().toISOString() }
@@ -139,9 +191,27 @@ export const useEmailStore = create<EmailStore>()(
         let gmailMessageId: string | undefined
         let gmailThreadId: string | undefined
 
+        if (get().isGmailConnected() && !accessToken) {
+          throw new Error('Gmail connected but no active access token. Reconnect and retry.')
+        }
+
         if (accessToken) {
           const sent = await sendGmailEmail(
-            { to: params.to, cc: params.cc, subject: params.subject, body: params.body },
+            {
+              to: params.to,
+              cc: params.cc,
+              bcc: params.bcc,
+              replyTo: params.replyTo,
+              attachments: (params.attachments ?? [])
+                .filter((a) => !!a.dataBase64)
+                .map((a) => ({
+                  name: a.name,
+                  mimeType: a.mimeType,
+                  dataBase64: a.dataBase64 as string,
+                })),
+              subject: params.subject,
+              body: params.body,
+            },
             accessToken,
           )
           gmailMessageId = sent.id
@@ -153,6 +223,13 @@ export const useEmailStore = create<EmailStore>()(
           from,
           to: params.to,
           cc: params.cc,
+          bcc: params.bcc,
+          replyTo: params.replyTo,
+          attachments: params.attachments?.map((a) => ({
+            name: a.name,
+            mimeType: a.mimeType,
+            size: a.size,
+          })),
           subject: params.subject,
           body: params.body,
           status: 'sent',
@@ -164,8 +241,109 @@ export const useEmailStore = create<EmailStore>()(
           sentAt: new Date().toISOString(),
         })
 
+        // Deduplicate local sent records when Gmail returns same message id across retries.
+        if (gmailMessageId) {
+          const duplicates = get().emails.filter((e) => e.gmailMessageId === gmailMessageId)
+          if (duplicates.length > 1) {
+            const keepId = duplicates[0].id
+            set((s) => ({
+              emails: s.emails.filter((e) => e.gmailMessageId !== gmailMessageId || e.id === keepId),
+            }))
+          }
+        }
+
         useAuditStore.getState().logAction('email_sent', 'email', email.id, params.subject, 'Email enviado')
         return email
+      },
+
+      scheduleEmail: (params) => {
+        const from = get().gmailAddress ?? 'me@crm.local'
+        const email = get().addEmail({
+          from,
+          to: params.to,
+          cc: params.cc,
+          bcc: params.bcc,
+          replyTo: params.replyTo,
+          attachments: params.attachments?.map((a) => ({
+            name: a.name,
+            mimeType: a.mimeType,
+            size: a.size,
+          })),
+          subject: params.subject,
+          body: params.body,
+          status: 'scheduled',
+          scheduledFor: params.runAt,
+          contactId: params.contactId,
+          dealId: params.dealId,
+          companyId: params.companyId,
+        })
+
+        const job: ScheduledEmailJob = {
+          id: uuid(),
+          emailId: email.id,
+          runAt: params.runAt,
+          payload: {
+            to: params.to,
+            cc: params.cc,
+            bcc: params.bcc,
+            replyTo: params.replyTo,
+            attachments: params.attachments,
+            subject: params.subject,
+            body: params.body,
+            contactId: params.contactId,
+            dealId: params.dealId,
+            companyId: params.companyId,
+          },
+        }
+        set((s) => ({ scheduledQueue: [...s.scheduledQueue, job] }))
+        return email
+      },
+
+      processScheduledEmails: async (accessToken) => {
+        const now = Date.now()
+        const dueJobs = get().scheduledQueue.filter((j) => new Date(j.runAt).getTime() <= now)
+        if (!dueJobs.length) return
+
+        for (const job of dueJobs) {
+          try {
+            let gmailMessageId: string | undefined
+            let gmailThreadId: string | undefined
+            if (get().isGmailConnected()) {
+              if (!accessToken) continue
+              const sent = await sendGmailEmail(
+                {
+                  to: job.payload.to,
+                  cc: job.payload.cc,
+                  bcc: job.payload.bcc,
+                  replyTo: job.payload.replyTo,
+                  attachments: (job.payload.attachments ?? [])
+                    .filter((a) => !!a.dataBase64)
+                    .map((a) => ({
+                      name: a.name,
+                      mimeType: a.mimeType,
+                      dataBase64: a.dataBase64 as string,
+                    })),
+                  subject: job.payload.subject,
+                  body: job.payload.body,
+                },
+                accessToken,
+              )
+              gmailMessageId = sent.id
+              gmailThreadId = sent.threadId
+            }
+
+            get().updateEmail(job.emailId, {
+              status: 'sent',
+              sentAt: new Date().toISOString(),
+              scheduledFor: undefined,
+              gmailMessageId,
+              gmailThreadId,
+            })
+            set((s) => ({ scheduledQueue: s.scheduledQueue.filter((q) => q.id !== job.id) }))
+          } catch {
+            // Keep in queue for next processing attempt.
+          }
+        }
       },
 
       loadThreads: async (accessToken: string, query = '') => {
@@ -259,7 +437,7 @@ export const useEmailStore = create<EmailStore>()(
     }),
     {
       name: 'crm_emails_v2',
-      version: 3,
+      version: 4,
       migrate: (persistedState: unknown, version: number) => {
         if (version < 2) {
           const s = persistedState as Record<string, unknown>
@@ -275,6 +453,9 @@ export const useEmailStore = create<EmailStore>()(
             s.emails = seedEmails
           }
         }
+        if (version < 4) {
+          s.scheduledQueue = []
+        }
         return s as unknown as EmailStore
       },
       partialize: (s) => ({
@@ -282,6 +463,7 @@ export const useEmailStore = create<EmailStore>()(
         gmailAddress: s.gmailAddress,
         threadLinks: s.threadLinks,
         threadsLastSyncedAt: s.threadsLastSyncedAt,
+        scheduledQueue: s.scheduledQueue,
       }),
     },
   ),

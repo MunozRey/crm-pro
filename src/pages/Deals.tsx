@@ -208,7 +208,7 @@ function QuoteBuilder({
 
     const w = window.open('', '_blank', 'noopener,noreferrer')
     if (!w) {
-      toast.error('Unable to open print window')
+      toast.error(t.errors.generic)
       return
     }
     w.document.open()
@@ -220,7 +220,7 @@ function QuoteBuilder({
 
   const sendQuoteByEmail = async () => {
     if (!contactEmail) {
-      toast.error('No contact email in this deal')
+      toast.error(t.errors.generic)
       return
     }
 
@@ -252,9 +252,9 @@ function QuoteBuilder({
         dealId,
         companyId,
       })
-      toast.success('Quote sent to contact')
+      toast.success(t.inbox.sent)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Unable to send quote')
+      toast.error(err instanceof Error ? err.message : t.errors.generic)
     } finally {
       setSendingQuote(false)
     }
@@ -267,8 +267,8 @@ function QuoteBuilder({
         <select
           defaultValue=""
           onChange={(e) => { if (e.target.value) { addFromProduct(e.target.value); e.target.value = '' } }}
-          aria-label="Add product to quote"
-          title="Add product to quote"
+          aria-label={`${t.common.add} ${t.products.title.toLowerCase()} ${t.deals.quote.toLowerCase()}`}
+          title={`${t.common.add} ${t.products.title.toLowerCase()} ${t.deals.quote.toLowerCase()}`}
           className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
         >
           <option value="" disabled>+ {t.deals.addItem}...</option>
@@ -307,8 +307,8 @@ function QuoteBuilder({
                       value={item.name}
                       onChange={(e) => updateItem(item.id, { name: e.target.value })}
                       placeholder={t.common.name}
-                      aria-label="Quote item name"
-                      title="Quote item name"
+                      aria-label={t.common.name}
+                      title={t.common.name}
                       className="w-full bg-transparent border-b border-white/10 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -318,8 +318,8 @@ function QuoteBuilder({
                       min={1}
                       value={item.quantity}
                       onChange={(e) => updateItem(item.id, { quantity: Math.max(1, Number(e.target.value)) })}
-                      aria-label="Quote item quantity"
-                      title="Quote item quantity"
+                      aria-label={t.common.total}
+                      title={t.common.total}
                       className="w-12 text-right bg-transparent border-b border-white/10 text-slate-200 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -330,8 +330,8 @@ function QuoteBuilder({
                       step={0.01}
                       value={item.unitPrice}
                       onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                      aria-label="Quote item unit price"
-                      title="Quote item unit price"
+                      aria-label={t.products.price}
+                      title={t.products.price}
                       className="w-20 text-right bg-transparent border-b border-white/10 text-slate-200 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -342,8 +342,8 @@ function QuoteBuilder({
                       max={100}
                       value={item.discount}
                       onChange={(e) => updateItem(item.id, { discount: Math.min(100, Math.max(0, Number(e.target.value))) })}
-                      aria-label="Quote item discount percentage"
-                      title="Quote item discount percentage"
+                      aria-label={t.deals.discount}
+                      title={t.deals.discount}
                       className="w-14 text-right bg-transparent border-b border-white/10 text-slate-200 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
                   </td>
@@ -388,9 +388,9 @@ function QuoteBuilder({
           value={quoteNumber}
           onChange={(e) => setQuoteNumber(e.target.value)}
           className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
-          aria-label="Quote number"
-          title="Quote number"
-          placeholder="Quote number"
+          aria-label={t.deals.quoteNumber}
+          title={t.deals.quoteNumber}
+          placeholder={t.deals.quoteNumber}
         />
         <input
           type="number"
@@ -399,9 +399,9 @@ function QuoteBuilder({
           value={vatPercent}
           onChange={(e) => setVatPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
           className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
-          aria-label="VAT percentage"
-          title="VAT percentage"
-          placeholder="VAT %"
+          aria-label={t.deals.vatPercent}
+          title={t.deals.vatPercent}
+          placeholder={t.deals.vatPercent}
         />
         <input
           type="number"
@@ -409,9 +409,9 @@ function QuoteBuilder({
           value={validityDays}
           onChange={(e) => setValidityDays(Math.max(1, Number(e.target.value)))}
           className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
-          aria-label="Quote validity in days"
-          title="Quote validity in days"
-          placeholder="Validity (days)"
+          aria-label={t.deals.validityDays}
+          title={t.deals.validityDays}
+          placeholder={t.deals.validityDays}
         />
       </div>
 
@@ -753,8 +753,8 @@ export function Deals() {
                         type="checkbox"
                         checked={selectedDealIds.size === filtered.length && filtered.length > 0}
                         onChange={toggleAllDeals}
-                        aria-label="Select all deals"
-                        title="Select all deals"
+                        aria-label={t.common.selectAll}
+                        title={t.common.selectAll}
                         className="rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500"
                       />
                     </th>

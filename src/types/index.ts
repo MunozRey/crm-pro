@@ -216,7 +216,7 @@ export interface AIConversation {
 
 // ─── Email ───────────────────────────────────────────────────────────────────
 
-export type EmailStatus = 'draft' | 'sent' | 'received'
+export type EmailStatus = 'draft' | 'scheduled' | 'sent' | 'received'
 
 export interface CRMEmail {
   id: string
@@ -225,6 +225,13 @@ export interface CRMEmail {
   from: string
   to: string[]
   cc?: string[]
+  bcc?: string[]
+  replyTo?: string
+  attachments?: Array<{
+    name: string
+    mimeType: string
+    size: number
+  }>
   subject: string
   body: string
   htmlBody?: string
@@ -234,6 +241,7 @@ export interface CRMEmail {
   companyId?: string
   createdAt: string
   sentAt?: string
+  scheduledFor?: string
   trackingEnabled?: boolean
   openedAt?: string
   openCount?: number
@@ -259,6 +267,9 @@ export interface GmailMessage {
   threadId: string
   from: string
   to: string
+  cc?: string
+  bcc?: string
+  replyTo?: string
   subject: string
   snippet: string
   body: string

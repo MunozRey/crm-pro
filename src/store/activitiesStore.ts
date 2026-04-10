@@ -4,7 +4,7 @@ import type { Activity, ActivityFilters } from '../types'
 import { seedActivities } from '../utils/seedData'
 import { useAuditStore } from './auditStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { getOrgId, sbDelete } from '../lib/supabaseHelpers'
+import { getErrorMessage, getOrgId, runSupabaseWrite, sbDelete } from '../lib/supabaseHelpers'
 import { useAuthStore } from './authStore'
 
 // ── Snake ↔ Camel mappers ───────────────────────────────────────────────────
@@ -126,16 +126,20 @@ export const useActivitiesStore = create<ActivitiesState>()(
         const row = activityToRow(activityData)
         const currentUserId = useAuthStore.getState().currentUser?.id
         const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
-        ;((supabase as any).from('activities').insert({ ...row, created_by: createdBy, organization_id: getOrgId() }).select().single()
-        ).then(({ data, error }: any) => {
+        ;(supabase.from('activities').insert({ ...row, created_by: createdBy, organization_id: getOrgId() } as never).select().single()
+        ).then(({ data, error }: { data: Record<string, unknown> | null; error: { message: string } | null }) => {
             if (error) {
-              set((s: any) => ({ activities: s.activities.filter((a: any) => a.id !== id), error: error.message }))
+              set((s) => ({ activities: s.activities.filter((a) => a.id !== id), error: error.message }))
               return
             }
-            const real = rowToActivity(data as Record<string, unknown>)
-            set((s: any) => ({ activities: s.activities.map((a: any) => a.id === id ? real : a) }))
-          }).catch(() => {
-            set((s: any) => ({ activities: s.activities.filter((a: any) => a.id !== id) }))
+            if (!data) {
+              set((s) => ({ activities: s.activities.filter((a) => a.id !== id), error: 'Empty Supabase insert response' }))
+              return
+            }
+            const real = rowToActivity(data)
+            set((s) => ({ activities: s.activities.map((a) => a.id === id ? real : a) }))
+          }, (error: unknown) => {
+            set((s) => ({ activities: s.activities.filter((a) => a.id !== id), error: getErrorMessage(error) }))
           })
       }
 
@@ -151,7 +155,11 @@ export const useActivitiesStore = create<ActivitiesState>()(
 
       if (isSupabaseConfigured && supabase) {
         const row = activityToRow(updates)
-        ;(supabase as any).from('activities').update({ ...row, updated_at: new Date().toISOString() }).eq('id', id)
+        runSupabaseWrite(
+          'activitiesStore:updateActivity',
+          supabase.from('activities').update({ ...row, updated_at: new Date().toISOString() } as never).eq('id', id),
+          (message) => set({ error: message }),
+        )
       }
     },
 
@@ -180,7 +188,11 @@ export const useActivitiesStore = create<ActivitiesState>()(
       if (isSupabaseConfigured && supabase) {
         const updates: Record<string, unknown> = { status: 'completed', completed_at: now, updated_at: now }
         if (outcome) updates.outcome = outcome
-        ;(supabase as any).from('activities').update(updates).eq('id', id)
+        runSupabaseWrite(
+          'activitiesStore:completeActivity',
+          supabase.from('activities').update(updates as never).eq('id', id),
+          (message) => set({ error: message }),
+        )
       }
     },
 

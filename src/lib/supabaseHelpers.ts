@@ -8,6 +8,15 @@ export function getOrgId(): string {
   return orgId
 }
 
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const msg = (error as { message?: unknown }).message
+    if (typeof msg === 'string') return msg
+  }
+  return 'Unknown error'
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = () => supabase as any
 
@@ -46,4 +55,22 @@ export async function sbBulkDelete(table: string, ids: string[]): Promise<void> 
   if (!isSupabaseConfigured || !supabase) throw new Error('Supabase not configured')
   const { error } = await supabase.from(table).delete().in('id', ids)
   if (error) throw error
+}
+
+export function runSupabaseWrite(
+  context: string,
+  operation: PromiseLike<{ error: unknown | null }>,
+  onError?: (message: string) => void,
+): void {
+  operation
+    .then(({ error }) => {
+      if (!error) return
+      const message = getErrorMessage(error)
+      console.error(`[${context}]`, message)
+      onError?.(message)
+    }, (error: unknown) => {
+      const message = getErrorMessage(error)
+      console.error(`[${context}]`, message)
+      onError?.(message)
+    })
 }

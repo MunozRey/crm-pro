@@ -5,9 +5,10 @@ import type { CRMEmail, GmailThread } from '../types'
 import { sendGmailEmail, getGmailProfile, listGmailThreads } from '../services/gmailService'
 import { useAuditStore } from './auditStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { getOrgId } from '../lib/supabaseHelpers'
+import { getOrgId, runSupabaseWrite } from '../lib/supabaseHelpers'
 import { useAuthStore } from './authStore'
 import { seedEmails } from '../utils/seedData'
+import type { Database } from '../lib/database.types'
 
 export interface GmailThreadLink {
   threadId: string
@@ -25,6 +26,7 @@ export interface EmailStore {
   threadLinks: Record<string, GmailThreadLink>
   threadsLoading: boolean
   threadsError: string | null
+  threadsLastSyncedAt: string | null
 
   // Local email actions
   addEmail: (email: Omit<CRMEmail, 'id' | 'createdAt'>) => CRMEmail
@@ -64,6 +66,8 @@ export interface EmailStore {
   getEmailsByDeal: (dealId: string) => CRMEmail[]
 }
 
+type GmailThreadLinkRow = Database['public']['Tables']['gmail_thread_links']['Row']
+
 export const useEmailStore = create<EmailStore>()(
   persist(
     (set, get) => ({
@@ -73,6 +77,7 @@ export const useEmailStore = create<EmailStore>()(
       threadLinks: {},
       threadsLoading: false,
       threadsError: null,
+      threadsLastSyncedAt: null,
 
       addEmail: (data) => {
         const email: CRMEmail = { ...data, id: uuid(), createdAt: new Date().toISOString() }
@@ -171,11 +176,12 @@ export const useEmailStore = create<EmailStore>()(
             set({ gmailAddress: profile.emailAddress })
           }
           const threads = await listGmailThreads(accessToken, query)
-          set({ threads, threadsLoading: false })
+          set({ threads, threadsLoading: false, threadsLastSyncedAt: new Date().toISOString() })
         } catch (err) {
           set({
             threadsLoading: false,
             threadsError: err instanceof Error ? err.message : 'Error al cargar correos',
+            threadsLastSyncedAt: new Date().toISOString(),
           })
         }
       },
@@ -183,14 +189,14 @@ export const useEmailStore = create<EmailStore>()(
       fetchThreadLinks: async () => {
         if (!isSupabaseConfigured || !supabase) return
         try {
-          const { data, error } = await (supabase as any)
+          const { data, error } = await supabase
             .from('gmail_thread_links')
             .select('thread_id, contact_id, company_id, deal_id, source, updated_at')
 
           if (error) return
 
           const links: Record<string, GmailThreadLink> = {}
-          for (const row of data ?? []) {
+          for (const row of (data ?? []) as Pick<GmailThreadLinkRow, 'thread_id' | 'contact_id' | 'company_id' | 'deal_id' | 'source' | 'updated_at'>[]) {
             links[row.thread_id] = {
               threadId: row.thread_id,
               contactId: row.contact_id ?? undefined,
@@ -218,9 +224,9 @@ export const useEmailStore = create<EmailStore>()(
         if (isSupabaseConfigured && supabase) {
           const currentUserId = useAuthStore.getState().currentUser?.id
           if (!currentUserId) return
-          ;(supabase as any)
-            .from('gmail_thread_links')
-            .upsert({
+          runSupabaseWrite(
+            'emailStore:setThreadLink',
+            supabase.from('gmail_thread_links').upsert({
               thread_id: link.threadId,
               user_id: currentUserId,
               contact_id: link.contactId ?? null,
@@ -228,7 +234,8 @@ export const useEmailStore = create<EmailStore>()(
               deal_id: link.dealId ?? null,
               source: link.source,
               organization_id: getOrgId(),
-            }, { onConflict: 'thread_id,user_id,organization_id' })
+            } as never, { onConflict: 'thread_id,user_id,organization_id' }),
+          )
         }
       },
 
@@ -240,7 +247,10 @@ export const useEmailStore = create<EmailStore>()(
         })
 
         if (isSupabaseConfigured && supabase) {
-          ;(supabase as any).from('gmail_thread_links').delete().eq('thread_id', threadId)
+          runSupabaseWrite(
+            'emailStore:clearThreadLink',
+            supabase.from('gmail_thread_links').delete().eq('thread_id', threadId),
+          )
         }
       },
 
@@ -271,6 +281,7 @@ export const useEmailStore = create<EmailStore>()(
         emails: s.emails,
         gmailAddress: s.gmailAddress,
         threadLinks: s.threadLinks,
+        threadsLastSyncedAt: s.threadsLastSyncedAt,
       }),
     },
   ),

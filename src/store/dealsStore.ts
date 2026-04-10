@@ -5,8 +5,9 @@ import { seedDeals } from '../utils/seedData'
 import { useAuditStore } from './auditStore'
 import { useNotificationsStore } from './notificationsStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { getOrgId, sbDelete } from '../lib/supabaseHelpers'
+import { getErrorMessage, getOrgId, runSupabaseWrite, sbDelete } from '../lib/supabaseHelpers'
 import { useAuthStore } from './authStore'
+import { useAutomationsStore } from './automationsStore'
 
 // ── Snake ↔ Camel mappers ───────────────────────────────────────────────────
 
@@ -138,16 +139,20 @@ export const useDealsStore = create<DealsState>()(
         const row = dealToRow(dealData)
         const currentUserId = useAuthStore.getState().currentUser?.id
         const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
-        ;((supabase as any).from('deals').insert({ ...row, created_by: createdBy, organization_id: getOrgId() }).select().single()
-        ).then(({ data, error }: any) => {
+        ;(supabase.from('deals').insert({ ...row, created_by: createdBy, organization_id: getOrgId() } as never).select().single()
+        ).then(({ data, error }: { data: Record<string, unknown> | null; error: { message: string } | null }) => {
             if (error) {
-              set((s: any) => ({ deals: s.deals.filter((d: any) => d.id !== id), error: error.message }))
+              set((s) => ({ deals: s.deals.filter((d) => d.id !== id), error: error.message }))
               return
             }
-            const real = rowToDeal(data as Record<string, unknown>)
-            set((s: any) => ({ deals: s.deals.map((d: any) => d.id === id ? real : d) }))
-          }).catch(() => {
-            set((s: any) => ({ deals: s.deals.filter((d: any) => d.id !== id) }))
+            if (!data) {
+              set((s) => ({ deals: s.deals.filter((d) => d.id !== id), error: 'Empty Supabase insert response' }))
+              return
+            }
+            const real = rowToDeal(data)
+            set((s) => ({ deals: s.deals.map((d) => d.id === id ? real : d) }))
+          }, (error: unknown) => {
+            set((s) => ({ deals: s.deals.filter((d) => d.id !== id), error: getErrorMessage(error) }))
           })
       }
 
@@ -165,10 +170,11 @@ export const useDealsStore = create<DealsState>()(
 
       if (isSupabaseConfigured && supabase) {
         const row = dealToRow(updates)
-        ;(supabase as any).from('deals').update({ ...row, updated_at: new Date().toISOString() }).eq('id', id)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'dealsStore:updateDeal',
+          supabase.from('deals').update({ ...row, updated_at: new Date().toISOString() } as never).eq('id', id),
+          (message) => set({ error: message }),
+        )
       }
     },
 
@@ -221,22 +227,20 @@ export const useDealsStore = create<DealsState>()(
           : newStage === 'closed_lost'
             ? 'deal_closed_lost'
             : 'deal_stage_changed'
-        // Lazy to avoid circular deps at module init time
-        import('./automationsStore').then(({ useAutomationsStore }) => {
-          useAutomationsStore.getState().executeRulesForTrigger(triggerType, {
-            deal,
-            fromStage: oldDeal?.stage,
-            toStage: newStage,
-          })
-        }).catch(() => { /* automations not critical */ })
+        useAutomationsStore.getState().executeRulesForTrigger(triggerType, {
+          deal,
+          fromStage: oldDeal?.stage,
+          toStage: newStage,
+        })
       }
 
       // Fire-and-forget Supabase update
       if (isSupabaseConfigured && supabase) {
-        ;(supabase as any).from('deals').update({ stage: newStage, updated_at: new Date().toISOString() }).eq('id', id)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'dealsStore:moveDeal',
+          supabase.from('deals').update({ stage: newStage, updated_at: new Date().toISOString() } as never).eq('id', id),
+          (message) => set({ error: message }),
+        )
       }
     },
 
@@ -250,10 +254,11 @@ export const useDealsStore = create<DealsState>()(
       }))
 
       if (isSupabaseConfigured && supabase) {
-        ;(supabase as any).from('deals').update({ quote_items: items as unknown as Record<string, unknown>, updated_at: new Date().toISOString() }).eq('id', dealId)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'dealsStore:updateQuote',
+          supabase.from('deals').update({ quote_items: items as unknown as Record<string, unknown>, updated_at: new Date().toISOString() } as never).eq('id', dealId),
+          (message) => set({ error: message }),
+        )
       }
     },
 

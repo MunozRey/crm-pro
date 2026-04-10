@@ -56,6 +56,8 @@ vi.mock('../../src/store/automationsStore', () => ({
 vi.mock('../../src/lib/supabaseHelpers', () => ({
   getOrgId: vi.fn().mockReturnValue('org-1'),
   sbDelete: vi.fn().mockResolvedValue({ error: null }),
+  getErrorMessage: vi.fn().mockReturnValue('mock error'),
+  runSupabaseWrite: vi.fn(),
 }))
 
 const emptyFilters = {

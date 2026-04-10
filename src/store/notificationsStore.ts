@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { CRMNotification, NotificationType } from '../types'
 import { useAuthStore } from './authStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { getOrgId, sbDelete } from '../lib/supabaseHelpers'
+import { getErrorMessage, getOrgId, runSupabaseWrite, sbDelete } from '../lib/supabaseHelpers'
 
 const MAX_NOTIFICATIONS = 200
 
@@ -160,7 +160,7 @@ export const useNotificationsStore = create<NotificationsStore>()(
           set({ notifications: getSeedNotifications(), isLoading: false })
         }
       } catch (e: unknown) {
-        set({ error: (e as Error).message, isLoading: false })
+        set({ error: getErrorMessage(e), isLoading: false })
       }
     },
 
@@ -186,10 +186,11 @@ export const useNotificationsStore = create<NotificationsStore>()(
 
       if (isSupabaseConfigured && supabase) {
         const row = notificationToRow(notification)
-        ;(supabase as any).from('notifications').insert({ ...row, organization_id: getOrgId() } as any)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'notificationsStore:notify',
+          supabase.from('notifications').insert({ ...row, organization_id: getOrgId() } as never),
+          (message) => set({ error: message }),
+        )
       }
     },
 
@@ -201,10 +202,11 @@ export const useNotificationsStore = create<NotificationsStore>()(
       }))
 
       if (isSupabaseConfigured && supabase) {
-        ;(supabase as any).from('notifications').update({ is_read: true }).eq('id', id)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'notificationsStore:markAsRead',
+          supabase.from('notifications').update({ is_read: true } as never).eq('id', id),
+          (message) => set({ error: message }),
+        )
       }
     },
 
@@ -215,10 +217,11 @@ export const useNotificationsStore = create<NotificationsStore>()(
       }))
 
       if (isSupabaseConfigured && supabase && unreadIds.length > 0) {
-        ;(supabase as any).from('notifications').update({ is_read: true }).in('id', unreadIds)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'notificationsStore:markAllAsRead',
+          supabase.from('notifications').update({ is_read: true } as never).in('id', unreadIds),
+          (message) => set({ error: message }),
+        )
       }
     },
 
@@ -237,10 +240,11 @@ export const useNotificationsStore = create<NotificationsStore>()(
       set({ notifications: [] })
 
       if (isSupabaseConfigured && supabase && ids.length > 0) {
-        ;(supabase as any).from('notifications').delete().in('id', ids)
-          .then(({ error }: any) => {
-            if (error) set({ error: error.message })
-          })
+        runSupabaseWrite(
+          'notificationsStore:clearAll',
+          supabase.from('notifications').delete().in('id', ids),
+          (message) => set({ error: message }),
+        )
       }
     },
 

@@ -651,6 +651,11 @@ export interface Translations {
     attachments: string
     crmSentInThread: string
     scheduled: string
+    unknownSender: string
+    clicks: string
+    searchPlaceholder: string
+    loadMore: string
+    disconnectError: string
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────

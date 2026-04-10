@@ -654,6 +654,11 @@ export const es: Translations = {
     attachments: 'Adjuntos',
     crmSentInThread: 'Correos enviados desde CRM en este hilo',
     scheduled: 'Programado',
+    unknownSender: 'Remitente desconocido',
+    clicks: 'Clics',
+    searchPlaceholder: 'Buscar en el buzón...',
+    loadMore: 'Cargar más',
+    disconnectError: 'No se pudo desconectar Gmail',
   },
 
   // ─── Auth ────────────────────────────────────────────────────────────────────

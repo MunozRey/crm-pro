@@ -643,6 +643,11 @@ export const en: Translations = {
     attachments: 'Attachments',
     crmSentInThread: 'CRM sent emails in this thread',
     scheduled: 'Scheduled',
+    unknownSender: 'Unknown sender',
+    clicks: 'Clicks',
+    searchPlaceholder: 'Search mailbox...',
+    loadMore: 'Load more',
+    disconnectError: 'Failed to disconnect Gmail',
   },
 
   // ─── Auth ────────────────────────────────────────────────────────────────────

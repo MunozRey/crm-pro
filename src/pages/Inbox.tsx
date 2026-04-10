@@ -18,6 +18,7 @@ import { hasPermission } from '../utils/permissions'
 import { useTranslations, useI18nStore } from '../i18n'
 import type { GmailThread, CRMEmail, Contact } from '../types'
 import { formatRelativeDate } from '../utils/formatters'
+import { trackUxAction } from '../lib/uxMetrics'
 
 // ─── Thread item ──────────────────────────────────────────────────────────────
 function extractEmail(from: string): string {
@@ -95,7 +96,7 @@ function ThreadItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-0.5">
             <p className={`text-sm truncate ${isUnread ? 'font-semibold text-white' : 'text-slate-300'}`}>
-              {lastMsg?.from?.replace(/<.*>/, '').trim() ?? 'Unknown'}
+              {lastMsg?.from?.replace(/<.*>/, '').trim() || t.inbox.unknownSender}
             </p>
             <span className="text-[10px] text-slate-500 flex-shrink-0">
               {lastMsg?.date ? formatRelativeDate(lastMsg.date) : ''}
@@ -141,7 +142,7 @@ function TrackingBadges({ email }: { email: CRMEmail }) {
       {(email.clickCount ?? 0) > 0 && (
         <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20">
           <MousePointerClick size={9} />
-          Click {email.clickCount}x
+          {t.inbox.clicks} {email.clickCount}x
         </span>
       )}
     </div>
@@ -192,7 +193,7 @@ function LocalEmailItem({
           {email.status === 'scheduled' && (
             <span className="inline-flex items-center gap-1 mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
               <Clock size={9} />
-              {email.scheduledFor ? new Date(email.scheduledFor).toLocaleString() : 'Scheduled'}
+              {email.scheduledFor ? new Date(email.scheduledFor).toLocaleString() : t.inbox.scheduled}
             </span>
           )}
           <TrackingBadges email={email} />
@@ -208,7 +209,7 @@ function LocalEmailItem({
                 onClick={() => onTrackClick(email.id)}
                 className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 hover:bg-blue-500/15 text-slate-500 hover:text-blue-400 border border-white/8 transition-colors"
               >
-                Click
+                {t.inbox.clicks}
               </button>
             </div>
           )}
@@ -551,7 +552,7 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
                     onClick={() => onTrackClick(email.id)}
                     className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 hover:bg-blue-500/15 text-slate-500 hover:text-blue-400 border border-white/8 transition-colors"
                   >
-                    Click
+                    {t.inbox.clicks}
                   </button>
                 </div>
               )}
@@ -572,7 +573,7 @@ export function Inbox() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const {
     emails, threads, threadsLoading, isGmailConnected,
-    gmailAddress, threadLinks, threadWorkspace, threadsError, threadsLastSyncedAt, threadsNextPageToken, threadsHistoryId, loadThreads, fetchThreadLinks, setThreadLink, clearThreadLink, setThreadOwner, setThreadNote, deleteEmail, disconnectGmail,
+    gmailAddress, threadLinks, threadWorkspace, threadsError, threadsLastSyncedAt, threadsNextPageToken, threadsHistoryId, loadThreads, fetchThreadLinks, fetchThreadWorkspace, setThreadLink, clearThreadLink, setThreadOwner, setThreadNote, deleteEmail, disconnectGmail,
     trackEmailOpen, trackEmailClick, processScheduledEmails,
   } = useEmailStore()
   const { accessToken, setGmailToken, clearGmailToken, isTokenValid } = useGmailToken()
@@ -635,6 +636,7 @@ export function Inbox() {
   const handleLoadThreads = async (query = '') => {
     try {
       await refreshAndRetry((token) => useEmailStore.getState().loadThreads(token, query))
+      if (query.trim()) trackUxAction('inbox_search', { queryLength: query.trim().length })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.errors.generic)
     }
@@ -649,6 +651,7 @@ export function Inbox() {
           pageToken: threadsNextPageToken,
         }),
       )
+      trackUxAction('inbox_load_more')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.errors.generic)
     }
@@ -671,8 +674,17 @@ export function Inbox() {
   useEffect(() => {
     if (connected) {
       fetchThreadLinks()
+      fetchThreadWorkspace()
     }
-  }, [connected, fetchThreadLinks])
+  }, [connected, fetchThreadLinks, fetchThreadWorkspace])
+
+  useEffect(() => {
+    if (!connected || folder !== 'inbox') return
+    const timer = window.setTimeout(() => {
+      handleLoadThreads(listQuery.trim())
+    }, 280)
+    return () => window.clearTimeout(timer)
+  }, [listQuery, connected, folder])
 
   const handleConnectGmail = async () => {
     const clientId = settings.googleClientId
@@ -892,7 +904,7 @@ export function Inbox() {
       disconnectGmail()
       toast.success(t.settings.gmailDisconnected)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to disconnect Gmail')
+      toast.error(err instanceof Error ? err.message : t.inbox.disconnectError)
     } finally {
       setDisconnecting(false)
     }
@@ -1095,7 +1107,7 @@ export function Inbox() {
             <input
               value={listQuery}
               onChange={(e) => setListQuery(e.target.value)}
-              placeholder={`${t.common.search}...`}
+              placeholder={t.inbox.searchPlaceholder}
               className="w-full bg-[#0d0e1a] border border-white/8 rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-brand-500/40"
             />
           </div>
@@ -1142,7 +1154,7 @@ export function Inbox() {
                     onClick={handleLoadMoreThreads}
                     className="w-full px-3 py-2 rounded-lg text-xs bg-white/6 hover:bg-white/10 text-slate-300 transition-colors"
                   >
-                    {t.common.view} +
+                    {t.inbox.loadMore}
                   </button>
                 </div>
               )}
@@ -1200,7 +1212,7 @@ export function Inbox() {
         {folder === 'inbox' && selectedThread && (
           <div className="px-3 py-2 border-b border-white/6 flex items-center gap-2 flex-wrap">
             <select
-                      aria-label={t.common.assignedTo}
+              aria-label={t.common.assignedTo}
               value={selectedWorkspace?.ownerUserId ?? ''}
               onChange={(e) => setThreadOwner(selectedThread.id, e.target.value || undefined)}
               className="bg-[#0d0e1a] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"

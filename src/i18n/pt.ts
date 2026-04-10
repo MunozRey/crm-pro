@@ -653,6 +653,11 @@ export const pt: Translations = {
     attachments: 'Anexos',
     crmSentInThread: 'E-mails enviados do CRM nesta conversa',
     scheduled: 'Agendado',
+    unknownSender: 'Remetente desconhecido',
+    clicks: 'Cliques',
+    searchPlaceholder: 'Buscar na caixa...',
+    loadMore: 'Carregar mais',
+    disconnectError: 'Falha ao desconectar o Gmail',
   },
 
   // ─── Auth ────────────────────────────────────────────────────────────────────

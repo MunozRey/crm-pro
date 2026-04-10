@@ -119,6 +119,7 @@ export interface EmailStore {
   // Load Gmail threads
   loadThreads: (accessToken: string, query?: string, opts?: { append?: boolean; pageToken?: string }) => Promise<void>
   fetchThreadLinks: () => Promise<void>
+  fetchThreadWorkspace: () => Promise<void>
   setThreadLink: (link: Omit<GmailThreadLink, 'updatedAt'>) => void
   clearThreadLink: (threadId: string) => void
   setThreadOwner: (threadId: string, ownerUserId?: string) => void
@@ -414,6 +415,35 @@ export const useEmailStore = create<EmailStore>()(
         }
       },
 
+      fetchThreadWorkspace: async () => {
+        if (!isSupabaseConfigured || !supabase) return
+        try {
+          const { data, error } = await (supabase as any)
+            .from('gmail_thread_workspace')
+            .select('thread_id, owner_user_id, internal_note, updated_at')
+
+          if (error) return
+
+          const workspace: Record<string, GmailThreadWorkspaceMeta> = {}
+          for (const row of (data ?? []) as Array<{
+            thread_id: string
+            owner_user_id?: string | null
+            internal_note?: string | null
+            updated_at?: string | null
+          }>) {
+            workspace[row.thread_id] = {
+              threadId: row.thread_id,
+              ownerUserId: row.owner_user_id ?? undefined,
+              internalNote: row.internal_note ?? undefined,
+              updatedAt: row.updated_at ?? new Date().toISOString(),
+            }
+          }
+          set({ threadWorkspace: workspace })
+        } catch {
+          // Non-critical: local state is still available.
+        }
+      },
+
       setThreadLink: (link) => {
         const next: GmailThreadLink = {
           ...link,
@@ -458,32 +488,66 @@ export const useEmailStore = create<EmailStore>()(
 
       setThreadOwner: (threadId, ownerUserId) => {
         const current = get().threadWorkspace[threadId]
+        const next = {
+          threadId,
+          ownerUserId,
+          internalNote: current?.internalNote,
+          updatedAt: new Date().toISOString(),
+        }
         set((s) => ({
           threadWorkspace: {
             ...s.threadWorkspace,
-            [threadId]: {
-              threadId,
-              ownerUserId,
-              internalNote: current?.internalNote,
-              updatedAt: new Date().toISOString(),
-            },
+            [threadId]: next,
           },
         }))
+
+        if (isSupabaseConfigured && supabase) {
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          if (!currentUserId) return
+          runSupabaseWrite(
+            'emailStore:setThreadOwner',
+            (supabase as any).from('gmail_thread_workspace').upsert({
+              thread_id: threadId,
+              user_id: currentUserId,
+              owner_user_id: next.ownerUserId ?? null,
+              internal_note: next.internalNote ?? null,
+              organization_id: getOrgId(),
+              updated_at: next.updatedAt,
+            }, { onConflict: 'thread_id,user_id,organization_id' }),
+          )
+        }
       },
 
       setThreadNote: (threadId, internalNote) => {
         const current = get().threadWorkspace[threadId]
+        const next = {
+          threadId,
+          ownerUserId: current?.ownerUserId,
+          internalNote: internalNote?.trim() || undefined,
+          updatedAt: new Date().toISOString(),
+        }
         set((s) => ({
           threadWorkspace: {
             ...s.threadWorkspace,
-            [threadId]: {
-              threadId,
-              ownerUserId: current?.ownerUserId,
-              internalNote: internalNote?.trim() || undefined,
-              updatedAt: new Date().toISOString(),
-            },
+            [threadId]: next,
           },
         }))
+
+        if (isSupabaseConfigured && supabase) {
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          if (!currentUserId) return
+          runSupabaseWrite(
+            'emailStore:setThreadNote',
+            (supabase as any).from('gmail_thread_workspace').upsert({
+              thread_id: threadId,
+              user_id: currentUserId,
+              owner_user_id: next.ownerUserId ?? null,
+              internal_note: next.internalNote ?? null,
+              organization_id: getOrgId(),
+              updated_at: next.updatedAt,
+            }, { onConflict: 'thread_id,user_id,organization_id' }),
+          )
+        }
       },
 
       getEmailsByContact: (contactId) => get().emails.filter((e) => e.contactId === contactId),

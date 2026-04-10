@@ -130,7 +130,6 @@ export const NAV_PERMISSIONS: NavPermission[] = [
   { path: '/timeline', requiredPermission: 'deals:read' },
   { path: '/forecast', requiredPermission: 'reports:read' },
   { path: '/notifications', requiredPermission: 'contacts:read' },
-  { path: '/leaderboard', requiredPermission: 'reports:read' },
   { path: '/sequences', requiredPermission: 'templates:read' },
   { path: '/automations', requiredPermission: 'settings:read' },
   { path: '/calendar', requiredPermission: 'activities:read' },

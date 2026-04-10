@@ -36,6 +36,7 @@ import { Calendar } from './pages/Calendar'
 import { useTranslations } from './i18n'
 import { useDataInit } from './hooks/useDataInit'
 import { GmailTokenProvider } from './contexts/GmailTokenContext'
+import { GmailCallback } from './pages/GmailCallback'
 
 function ProtectedPage({ title, children, requiredPermission }: { title: string; children: React.ReactNode; requiredPermission?: import('./types/auth').Permission }) {
   return (
@@ -59,6 +60,7 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/org-setup" element={<OrgSetup />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
+      <Route path="/auth/gmail/callback" element={<GmailCallback />} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedPage title={t.nav.dashboard}><Dashboard /></ProtectedPage>} />

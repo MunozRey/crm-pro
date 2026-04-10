@@ -3,16 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import {
   ArrowLeft, Edit2, Plus, Building2, Phone, Mail, Calendar,
-  FileText, Loader2, Copy, RefreshCw, CheckCircle2, Eye, MousePointerClick,
+  FileText, CheckCircle2, Eye, MousePointerClick,
 } from 'lucide-react'
 import { useContactsStore } from '../store/contactsStore'
 import { useCompaniesStore } from '../store/companiesStore'
 import { useDealsStore } from '../store/dealsStore'
 import { useActivitiesStore } from '../store/activitiesStore'
 import { useEmailStore } from '../store/emailStore'
-import { useAIStore } from '../store/aiStore'
-import { enrichContact } from '../services/aiService'
-import { calculateLeadScore, computeLeadScore } from '../utils/leadScoring'
 import { Avatar } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -26,7 +23,7 @@ import { Textarea } from '../components/ui/Textarea'
 import { toast } from '../store/toastStore'
 import { formatDate, formatCurrency, formatRelativeDate } from '../utils/formatters'
 import { CONTACT_SOURCE_LABELS, DEAL_STAGE_COLORS } from '../utils/constants'
-import type { Contact, DealStage, LeadScoreBreakdown, ActivityType } from '../types'
+import type { Contact, DealStage, ActivityType } from '../types'
 import { CustomFieldsDisplay } from '../components/shared/CustomFieldRenderer'
 import { useTranslations, useI18nStore } from '../i18n'
 import { format } from 'date-fns'
@@ -39,7 +36,7 @@ const STAGE_BADGE: Record<DealStage, BadgeColor> = {
   negotiation: 'orange', closed_won: 'emerald', closed_lost: 'rose',
 }
 
-type TabId = 'overview' | 'activities' | 'deals' | 'emails' | 'notes' | 'ai'
+type TabId = 'overview' | 'activities' | 'deals' | 'emails' | 'notes'
 
 const ACTIVITY_ICONS: Record<ActivityType, typeof Phone> = {
   call: Phone,
@@ -55,38 +52,6 @@ function getMonthLabel(dateStr: string, locale: Locale): string {
   return format(d, 'MMMM yyyy', { locale })
 }
 
-function LeadScoreBadge({ score }: { score: number }) {
-  const color =
-    score > 70
-      ? 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
-      : score >= 40
-        ? 'text-amber-400 border-amber-500/40 bg-amber-500/10'
-        : 'text-red-400 border-red-500/40 bg-red-500/10'
-
-  return (
-    <div
-      className={`inline-flex items-center justify-center w-10 h-10 rounded-full border-2 font-bold text-sm ${color}`}
-      title={`Lead Score: ${score}`}
-    >
-      {score}
-    </div>
-  )
-}
-
-function ScoreFactorPills({ factors }: { factors: string[] }) {
-  return (
-    <div className="flex flex-wrap gap-1.5 mt-2">
-      {factors.map((f) => (
-        <span
-          key={f}
-          className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/8"
-        >
-          {f}
-        </span>
-      ))}
-    </div>
-  )
-}
 
 export function ContactDetail() {
   const t = useTranslations()
@@ -101,9 +66,6 @@ export function ContactDetail() {
   const [isEmailOpen, setIsEmailOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [notesSaved, setNotesSaved] = useState(false)
-  const [showScoreFactors, setShowScoreFactors] = useState(false)
-  const [enriching, setEnriching] = useState(false)
-  const [copiedOpener, setCopiedOpener] = useState(false)
 
   const contact = useContactsStore((s) => s.contacts.find((c) => c.id === id))
   const { updateContact } = useContactsStore()
@@ -112,8 +74,6 @@ export function ContactDetail() {
   const { activities, addActivity, completeActivity, deleteActivity } = useActivitiesStore()
   const emails = useEmailStore((s) => s.emails)
   const { trackEmailOpen, trackEmailClick } = useEmailStore()
-  const { contactEnrichments, saveContactEnrichment } = useAIStore()
-  const openRouterKey = useAIStore((s) => s.openRouterKey)
 
   if (!contact) {
     return (
@@ -136,17 +96,6 @@ export function ContactDetail() {
     (e) => e.contactId === id || e.to.some((addr) => addr === contact.email),
   )
 
-  const leadScore: LeadScoreBreakdown = useMemo(
-    () => calculateLeadScore(contact, activities, deals, company),
-    [contact, activities, deals, company],
-  )
-
-  const newLeadScore = useMemo(
-    () => computeLeadScore(contact, activities, deals),
-    [contact, activities, deals],
-  )
-
-  const enrichment = contactEnrichments[contact.id] ?? null
 
   // Group activities by month for timeline
   const activitiesByMonth = useMemo(() => {
@@ -190,29 +139,6 @@ export function ContactDetail() {
     toast.success(t.activities.newActivity)
   }
 
-  const handleEnrich = async () => {
-    if (!openRouterKey) {
-      toast.error(t.settings.apiKey)
-      return
-    }
-    setEnriching(true)
-    try {
-      const result = await enrichContact(contact, company)
-      saveContactEnrichment(contact.id, result)
-      toast.success(t.contacts.updated)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.contacts.emptyTitle)
-    } finally {
-      setEnriching(false)
-    }
-  }
-
-  const handleCopyOpener = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopiedOpener(true)
-    setTimeout(() => setCopiedOpener(false), 2000)
-    toast.success(t.common.ok)
-  }
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: t.common.details },
@@ -220,7 +146,6 @@ export function ContactDetail() {
     { id: 'deals', label: `${t.deals.title} (${contactDeals.length})` },
     { id: 'emails', label: `${t.nav.inbox} (${contactEmails.length})` },
     { id: 'notes', label: t.common.notes },
-    { id: 'ai', label: '\u{1F916} IA' },
   ]
 
   return (
@@ -252,16 +177,6 @@ export function ContactDetail() {
                     </Link>
                   )}
                 </div>
-                {/* Lead Score Badge */}
-                <div className="flex flex-col items-center gap-1">
-                  <button
-                    onClick={() => setShowScoreFactors((v) => !v)}
-                    title={t.contacts.score}
-                  >
-                    <LeadScoreBadge score={leadScore.total} />
-                  </button>
-                  <span className="text-[10px] text-slate-500">{t.contacts.score}</span>
-                </div>
               </div>
               <div className="flex items-center gap-2">
                 <PermissionGate permission="contacts:update">
@@ -278,30 +193,6 @@ export function ContactDetail() {
                 <Badge key={tag} variant="indigo">{tag}</Badge>
               ))}
             </div>
-            {/* Score factors expandable */}
-            {showScoreFactors && (
-              <div className="mt-3 p-3 rounded-lg bg-white/3 border border-white/8">
-                <div className="grid grid-cols-4 gap-3 text-center mb-2">
-                  <div>
-                    <p className="text-[10px] text-slate-500">{t.activities.title}</p>
-                    <p className="text-sm font-semibold text-slate-300">{leadScore.activityScore}/25</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500">Engagement</p>
-                    <p className="text-sm font-semibold text-slate-300">{leadScore.engagementScore}/25</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500">{t.auth.profile}</p>
-                    <p className="text-sm font-semibold text-slate-300">{leadScore.profileScore}/25</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-500">{t.deals.title}</p>
-                    <p className="text-sm font-semibold text-slate-300">{leadScore.dealScore}/25</p>
-                  </div>
-                </div>
-                <ScoreFactorPills factors={leadScore.factors} />
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -358,65 +249,6 @@ export function ContactDetail() {
       {/* Tab: Overview */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
-          {/* Lead Score Card */}
-          <div className="glass border border-white/8 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-200">{t.contacts.score}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{t.contacts.emptyDescription}</p>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className={`flex items-center justify-center w-14 h-14 rounded-full border-2 font-bold text-xl ${
-                  newLeadScore.score >= 80
-                    ? 'border-emerald-500/60 text-emerald-400 bg-emerald-500/10'
-                    : newLeadScore.score >= 60
-                      ? 'border-orange-500/60 text-orange-400 bg-orange-500/10'
-                      : newLeadScore.score >= 30
-                        ? 'border-amber-500/60 text-amber-400 bg-amber-500/10'
-                        : 'border-slate-500/60 text-slate-400 bg-slate-500/10'
-                }`}>
-                  {newLeadScore.score}
-                </div>
-                <span className={`text-[11px] font-semibold ${newLeadScore.color}`}>{newLeadScore.label}</span>
-              </div>
-            </div>
-            {/* Breakdown bars */}
-            <div className="space-y-2.5">
-              {([
-                { key: 'activityRecency', label: t.activities.upcoming, max: 30 },
-                { key: 'activityVolume', label: t.activities.title, max: 20 },
-                { key: 'contactStatus', label: t.common.status, max: 20 },
-                { key: 'dealValue', label: t.common.value, max: 20 },
-                { key: 'dataCompleteness', label: t.common.details, max: 10 },
-              ] as const).map(({ key, label, max }) => {
-                const val = newLeadScore.breakdown[key]
-                const pct = Math.round((val / max) * 100)
-                return (
-                  <div key={key}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-slate-500">{label}</span>
-                      <span className="text-xs font-medium text-slate-400">{val}/{max}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          newLeadScore.score >= 80
-                            ? 'bg-emerald-500'
-                            : newLeadScore.score >= 60
-                              ? 'bg-orange-500'
-                              : newLeadScore.score >= 30
-                                ? 'bg-amber-500'
-                                : 'bg-slate-500'
-                        }`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
           {/* Contact Info */}
           <div className="glass border border-white/8 rounded-xl p-6">
             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
@@ -616,131 +448,6 @@ export function ContactDetail() {
         </div>
       )}
 
-      {/* Tab: AI Enrichment */}
-      {activeTab === 'ai' && (
-        <div className="space-y-4">
-          {enrichment ? (
-            <>
-              {/* Score comparison */}
-              <div className="glass border border-white/8 rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-slate-300 mb-4">{t.contacts.score}</h3>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 mb-2">{t.contacts.score}</p>
-                    <LeadScoreBadge score={leadScore.total} />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 mb-2">{t.contacts.score} IA</p>
-                    <LeadScoreBadge score={enrichment.leadScore} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Personality & Buying Signals */}
-              <div className="glass border border-white/8 rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="text-sm font-semibold text-slate-300">{t.auth.profile}</h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-600/15 text-brand-400 font-medium capitalize">
-                    {enrichment.personalityType}
-                  </span>
-                </div>
-
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  {t.activities.title}
-                </h4>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {enrichment.buyingSignals.map((signal) => (
-                    <span
-                      key={signal}
-                      className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    >
-                      {signal}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Approach Strategy */}
-              <div className="glass border border-white/8 rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-slate-300 mb-2">{t.contacts.source}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">{enrichment.approachStrategy}</p>
-              </div>
-
-              {/* Email Opener (copyable) */}
-              <div className="glass border border-white/8 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-slate-300">{t.inbox.compose}</h3>
-                  <button
-                    onClick={() => handleCopyOpener(enrichment.suggestedEmailOpener)}
-                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    {copiedOpener ? <CheckCircle2 size={12} /> : <Copy size={12} />}
-                    {copiedOpener ? t.common.ok : t.common.view}
-                  </button>
-                </div>
-                <div className="p-3 rounded-lg bg-white/3 border border-white/8">
-                  <p className="text-sm text-slate-300 italic">&quot;{enrichment.suggestedEmailOpener}&quot;</p>
-                </div>
-              </div>
-
-              {/* Objection Handlers */}
-              <div className="glass border border-white/8 rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-slate-300 mb-3">{t.common.description}</h3>
-                <ul className="space-y-2">
-                  {enrichment.objectionHandlers.map((handler, idx) => (
-                    <li key={idx} className="text-sm text-slate-400 flex gap-2">
-                      <span className="text-brand-400 mt-0.5 flex-shrink-0">&bull;</span>
-                      {handler}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Insights */}
-              <div className="glass border border-white/8 rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-slate-300 mb-2">{t.common.details}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">{enrichment.insights}</p>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-600">
-                  {t.common.updatedAt} {formatDate(enrichment.enrichedAt)}
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={enriching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                  onClick={handleEnrich}
-                  disabled={enriching}
-                >
-                  {t.common.reset}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="glass border border-white/8 rounded-xl p-12 text-center">
-              <div className="max-w-xs mx-auto">
-                <p className="text-slate-400 text-sm mb-4">
-                  {t.contacts.emptyDescription}
-                </p>
-                <button
-                  onClick={handleEnrich}
-                  disabled={enriching}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full btn-gradient text-white text-sm font-semibold disabled:opacity-50"
-                >
-                  {enriching ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <RefreshCw size={16} />
-                  )}
-                  {enriching ? t.common.loading : t.nav.aiAssistant}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Edit slide-over */}
       <SlideOver isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title={t.contacts.editContact}>

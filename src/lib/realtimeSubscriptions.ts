@@ -4,6 +4,12 @@ import { useCompaniesStore } from '../store/companiesStore'
 import { useDealsStore } from '../store/dealsStore'
 import { useActivitiesStore } from '../store/activitiesStore'
 import { useNotificationsStore } from '../store/notificationsStore'
+import { useGoalsStore } from '../store/goalsStore'
+import { useSequencesStore } from '../store/sequencesStore'
+import { useAutomationsStore } from '../store/automationsStore'
+import { useTemplateStore } from '../store/templateStore'
+import { useProductsStore } from '../store/productsStore'
+import { useCustomFieldsStore } from '../store/customFieldsStore'
 
 /**
  * Subscribe to Postgres changes on all core tables.
@@ -27,6 +33,24 @@ export function initRealtimeSubscriptions(): () => void {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
       useNotificationsStore.getState().fetchNotifications()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_goals' }, () => {
+      useGoalsStore.getState().fetchGoals()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'email_sequences' }, () => {
+      useSequencesStore.getState().fetchSequences()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'automation_rules' }, () => {
+      useAutomationsStore.getState().fetchRules()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'email_templates' }, () => {
+      useTemplateStore.getState().fetchTemplates()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+      useProductsStore.getState().fetchProducts()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_field_definitions' }, () => {
+      useCustomFieldsStore.getState().fetchCustomFields()
     })
     .subscribe()
 

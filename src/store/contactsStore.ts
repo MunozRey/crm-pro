@@ -20,7 +20,7 @@ function rowToContact(row: Record<string, unknown>): Contact {
     phone: (row.phone as string) ?? '',
     jobTitle: (row.job_title as string) ?? '',
     companyId: (row.company_id as string) ?? '',
-    status: (row.status as Contact['status']) ?? 'lead',
+    status: (row.status as Contact['status']) ?? 'prospect',
     source: (row.source as Contact['source']) ?? 'other',
     tags: (row.tags as string[]) ?? [],
     assignedTo: (row.assigned_to as string) ?? '',

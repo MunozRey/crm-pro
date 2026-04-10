@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Users, Building2, KanbanSquare, Activity, LayoutDashboard, BarChart3, Settings, ArrowRight, Sparkles } from 'lucide-react'
+import { Search, Users, Building2, KanbanSquare, Activity, LayoutDashboard, BarChart3, Settings, ArrowRight } from 'lucide-react'
 import { useContactsStore } from '../../store/contactsStore'
 import { useCompaniesStore } from '../../store/companiesStore'
 import { useDealsStore } from '../../store/dealsStore'
-import { useAIStore } from '../../store/aiStore'
-import { parseNaturalLanguageCommand } from '../../services/aiService'
-import type { NLCommandResult } from '../../services/aiService'
 import { useTranslations } from '../../i18n'
 
 interface CommandItem {
@@ -27,20 +24,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const t = useTranslations()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
-  const [nlResult, setNlResult] = useState<NLCommandResult | null>(null)
-  const [nlLoading, setNlLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
-  const { openRouterKey } = useAIStore()
-
   const contacts = useContactsStore((s) => s.contacts)
   const companies = useCompaniesStore((s) => s.companies)
   const deals = useDealsStore((s) => s.deals)
 
   const go = (path: string) => { navigate(path); onClose() }
-
-  const isNaturalLanguage = (q: string) =>
-    q.startsWith('?') || (q.includes(' ') && q.length > 15)
 
   const navLabel = t.navSections.main
   const staticItems: CommandItem[] = [
@@ -100,82 +90,29 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   const allItems = [...dynamicItems, ...filteredStatic]
 
-  // Reset NL result when query changes
   useEffect(() => {
     setSelected(0)
-    setNlResult(null)
   }, [query])
 
   useEffect(() => {
     if (isOpen) {
       setQuery('')
       setSelected(0)
-      setNlResult(null)
-      setNlLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [isOpen])
-
-  const handleNLCommand = async () => {
-    if (!openRouterKey || !query.trim()) return
-    setNlLoading(true)
-    setNlResult(null)
-    try {
-      const ctxContacts = useContactsStore.getState().contacts.slice(0, 50).map((c) => ({
-        id: c.id,
-        name: `${c.firstName} ${c.lastName}`,
-      }))
-      const allDeals = useDealsStore.getState().deals
-      const ctxDeals = allDeals.slice(0, 50).map((d) => ({
-        id: d.id,
-        title: d.title,
-        stage: d.stage,
-        value: d.value,
-      }))
-      const openDeals = allDeals.filter(
-        (d) => d.stage !== 'closed_won' && d.stage !== 'closed_lost',
-      )
-
-      const result = await parseNaturalLanguageCommand(
-        query,
-        {
-          contacts: ctxContacts,
-          deals: ctxDeals,
-          pipelineValue: openDeals.reduce((s, d) => s + d.value, 0),
-          openDealsCount: openDeals.length,
-          currentPath: window.location.pathname,
-        },
-      )
-      setNlResult(result)
-
-      // Auto-execute navigate intent
-      if (result.intent === 'navigate' && result.navigateTo) {
-        navigate(result.navigateTo)
-        onClose()
-      }
-    } catch (err) {
-      console.error('NL command failed:', err)
-    } finally {
-      setNlLoading(false)
-    }
-  }
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (!isOpen) return
       if (e.key === 'Escape') { onClose(); return }
-      if (e.ctrlKey && e.key === 'Enter') {
-        e.preventDefault()
-        handleNLCommand()
-        return
-      }
       if (e.key === 'ArrowDown') { e.preventDefault(); setSelected((s) => Math.min(s + 1, allItems.length - 1)) }
       if (e.key === 'ArrowUp') { e.preventDefault(); setSelected((s) => Math.max(s - 1, 0)) }
       if (e.key === 'Enter' && allItems[selected]) { allItems[selected].action() }
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [isOpen, allItems, selected, onClose, query, openRouterKey])
+  }, [isOpen, allItems, selected, onClose])
 
   if (!isOpen) return null
 
@@ -205,37 +142,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           <kbd className="px-1.5 py-0.5 rounded-md bg-white/8 text-[10px] font-medium text-slate-500 flex-shrink-0">ESC</kbd>
         </div>
 
-        {/* AI hint bar — shown when query looks like a natural language command */}
-        {openRouterKey && isNaturalLanguage(query) && (
-          <div className="px-3 py-1.5 border-b border-white/6 flex items-center justify-between">
-            <span className="text-[10px] text-slate-500 flex items-center gap-1">
-              <Sparkles size={10} className="text-brand-400" /> AI command detected
-            </span>
-            <button
-              onClick={handleNLCommand}
-              className="text-[10px] text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors"
-            >
-              Send to AI <ArrowRight size={10} />
-            </button>
-          </div>
-        )}
-
         {/* Results */}
         <div className="max-h-80 overflow-y-auto py-2">
-          {/* NL loading state */}
-          {nlLoading && (
-            <div className="px-4 py-6 flex items-center gap-2 text-sm text-slate-400">
-              <Sparkles size={14} className="text-brand-400 animate-pulse" />
-              Thinking...
-            </div>
-          )}
-
-          {/* Regular results — hidden while NL is loading */}
-          {!nlLoading && allItems.length === 0 && !nlResult && (
+          {allItems.length === 0 && (
             <p className="px-4 py-6 text-center text-sm text-slate-500">{t.common.noResults} "{query}"</p>
           )}
 
-          {!nlLoading && Object.entries(groups).map(([category, items]) => (
+          {Object.entries(groups).map(([category, items]) => (
             <div key={category}>
               <p className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">{category}</p>
               {items.map((item) => {
@@ -266,44 +179,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           ))}
         </div>
 
-        {/* NL result panel */}
-        {nlResult && !nlLoading && (
-          <div className="p-4 border-t border-white/6">
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-lg btn-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Sparkles size={11} className="text-white" />
-              </div>
-              <div className="flex-1">
-                {nlResult.intent === 'answer' && nlResult.answer && (
-                  <p className="text-sm text-slate-200 leading-relaxed">{nlResult.answer}</p>
-                )}
-                {nlResult.intent === 'navigate' && nlResult.navigateTo && (
-                  <p className="text-sm text-slate-200">Navigating to {nlResult.navigateTo}...</p>
-                )}
-                {nlResult.intent === 'search' && (
-                  <button
-                    onClick={() => {
-                      navigate(`/${nlResult.searchEntity ?? 'contacts'}?q=${encodeURIComponent(nlResult.searchQuery ?? '')}`)
-                      onClose()
-                    }}
-                    className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1"
-                  >
-                    Search {nlResult.searchEntity}: "{nlResult.searchQuery}" <ArrowRight size={12} />
-                  </button>
-                )}
-                {nlResult.explanation && (
-                  <p className="text-[11px] text-slate-500 mt-1">{nlResult.explanation}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Footer */}
         <div className="px-4 py-2 border-t border-white/6 flex items-center gap-4 text-[10px] text-slate-600">
           <span><kbd className="font-semibold">↑↓</kbd> navegar</span>
           <span><kbd className="font-semibold">↵</kbd> abrir</span>
-          {openRouterKey && <span><kbd className="font-semibold">Ctrl+↵</kbd> AI</span>}
           <span><kbd className="font-semibold">ESC</kbd> cerrar</span>
         </div>
       </div>

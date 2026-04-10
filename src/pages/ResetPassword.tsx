@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Zap, Lock, Loader2, ArrowRight } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useTranslations } from '../i18n'
 
 export function ResetPassword() {
+  const t = useTranslations()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -13,11 +15,11 @@ export function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
+      setError(t.auth.passwordsDoNotMatch)
       return
     }
     if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+      setError(t.auth.passwordMinLength)
       return
     }
     if (!isSupabaseConfigured || !supabase) {
@@ -48,12 +50,12 @@ export function ResetPassword() {
             <Zap size={24} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">CRM Pro</h1>
-          <p className="text-sm text-slate-500 mt-1">Nueva contraseña</p>
+          <p className="text-sm text-slate-500 mt-1">{t.auth.forgotPasswordTitle}</p>
         </div>
 
         <div className="glass rounded-2xl shadow-float border-white/10 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <p className="text-sm text-slate-400">Introduce tu nueva contraseña.</p>
+            <p className="text-sm text-slate-400">{t.auth.checkEmailInstructions}</p>
 
             {error && (
               <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
@@ -62,7 +64,7 @@ export function ResetPassword() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Nueva contraseña</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.auth.password}</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
@@ -79,7 +81,7 @@ export function ResetPassword() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirmar contraseña</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.auth.confirmPassword}</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
@@ -103,7 +105,7 @@ export function ResetPassword() {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  Guardar contraseña
+                  {t.common.save}
                   <ArrowRight size={16} />
                 </>
               )}

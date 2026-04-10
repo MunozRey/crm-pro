@@ -790,8 +790,8 @@ export function Calendar() {
         <div className="flex items-center gap-1">
           <button
             onClick={goBack}
-            aria-label="Previous period"
-            title="Previous period"
+            aria-label={`${t.common.previous} ${t.common.date}`}
+            title={`${t.common.previous} ${t.common.date}`}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/6 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -809,8 +809,8 @@ export function Calendar() {
           </button>
           <button
             onClick={goForward}
-            aria-label="Next period"
-            title="Next period"
+            aria-label={`${t.common.next} ${t.common.date}`}
+            title={`${t.common.next} ${t.common.date}`}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/6 transition-colors"
           >
             <ChevronRight className="w-4 h-4" />

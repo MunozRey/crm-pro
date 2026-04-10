@@ -86,7 +86,7 @@ export function TeamManagement() {
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) { toast.error(t.team.toastEnterEmail); return }
-    if (!currentUser?.organizationId) { toast.error('Sin organización configurada'); return }
+    if (!currentUser?.organizationId) { toast.error(t.errors.supabaseNotConfigured); return }
 
     // Mock mode fallback: supabase not configured
     if (!supabase) {

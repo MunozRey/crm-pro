@@ -192,8 +192,8 @@ export function AuditLog() {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              aria-label="From date"
-              title="From date"
+              aria-label={`${t.common.from} ${t.common.date}`}
+              title={`${t.common.from} ${t.common.date}`}
               className="bg-[#0d0e1a] border border-white/10 rounded-full px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-white/20"
             />
             <span className="text-slate-400 text-sm">{t.common.to}:</span>
@@ -201,8 +201,8 @@ export function AuditLog() {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              aria-label="To date"
-              title="To date"
+              aria-label={`${t.common.to} ${t.common.date}`}
+              title={`${t.common.to} ${t.common.date}`}
               className="bg-[#0d0e1a] border border-white/10 rounded-full px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-white/20"
             />
           </div>

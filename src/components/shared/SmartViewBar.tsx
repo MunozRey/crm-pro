@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Bookmark, Plus, Pin, X, Flame, Users, Handshake, TrendingUp, Cloud } from 'lucide-react'
 import { useViewsStore } from '../../store/viewsStore'
 import type { CustomFieldEntityType, SmartViewFilter } from '../../types'
+import { useTranslations } from '../../i18n'
 
 // Icon map for view icons
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -28,6 +29,7 @@ interface SmartViewBarProps {
 }
 
 export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps) {
+  const t = useTranslations()
   // Manual subscriptions for persisted store — never use useStore selector here
   const [views, setViews] = useState(() => useViewsStore.getState().views)
   const [activeViewId, setActiveViewId] = useState(() => useViewsStore.getState().activeViewId)
@@ -70,7 +72,7 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
             : 'bg-white/4 border-white/8 text-slate-500 hover:text-slate-300'
         }`}
       >
-        Todas
+        {t.common.all}
       </button>
 
       {/* Pinned view pills */}
@@ -102,7 +104,7 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-[#0d0e1a] border border-white/8 text-slate-500 hover:text-slate-300 transition-colors"
           >
             <Plus size={12} />
-            Vistas
+            {t.common.view}
           </button>
           {showDropdown && (
             <>
@@ -112,8 +114,7 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
                 onClick={() => setShowDropdown(false)}
               />
               <div
-                className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-white/10 shadow-2xl z-50 py-1"
-                style={{ background: '#0d0f1e' }}
+                className="absolute top-full left-0 mt-1 w-56 rounded-xl border border-white/10 shadow-2xl z-50 py-1 bg-[#0d0f1e]"
               >
                 {unpinnedViews.map((view) => (
                   <button
@@ -129,7 +130,7 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
                         useViewsStore.getState().togglePin(view.id)
                       }}
                       className="text-slate-600 hover:text-brand-400 transition-colors"
-                      title="Fijar en barra"
+                      title={t.common.add}
                     >
                       <Pin size={11} />
                     </button>

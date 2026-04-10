@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { Button } from './Button'
+import { useTranslations } from '../../i18n'
 
 interface SlideOverProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ const widthClasses = {
 }
 
 export function SlideOver({ isOpen, onClose, title, children, width = 'lg' }: SlideOverProps) {
+  const t = useTranslations()
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -50,7 +52,7 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg' }: Sl
             <h2 className="text-base font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
-              aria-label="Cerrar panel"
+              aria-label={t.common.close}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
             >
               <X size={16} />
@@ -83,6 +85,7 @@ const modalSizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'lg' }: ModalProps) {
+  const t = useTranslations()
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -113,7 +116,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'lg' }: ModalPr
           <h2 className="text-base font-semibold text-white">{title}</h2>
           <button
             onClick={onClose}
-            aria-label="Close modal"
+            aria-label={t.common.close}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
           >
             <X size={16} />
@@ -147,6 +150,8 @@ export function ConfirmDialog({
   confirmLabel = 'Confirmar',
   danger = false,
 }: ConfirmDialogProps) {
+  const t = useTranslations()
+  const confirmText = confirmLabel === 'Confirmar' ? t.common.confirm : confirmLabel
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -158,17 +163,17 @@ export function ConfirmDialog({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
       <div className="absolute inset-0 bg-navy-950/80 backdrop-blur-md" onClick={onClose} />
       <div className="relative glass rounded-2xl shadow-float p-6 w-full max-w-sm mx-4 animate-scale-in border-white/10">
         <h3 className="text-base font-semibold text-white mb-2">{title}</h3>
         <p className="text-sm text-slate-400 mb-6">{message}</p>
         <div className="flex gap-3 justify-end">
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t.common.cancel}
           </Button>
           <Button variant={danger ? 'danger' : 'primary'} onClick={() => { onConfirm(); onClose() }}>
-            {confirmLabel}
+            {confirmText}
           </Button>
         </div>
       </div>

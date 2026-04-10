@@ -52,13 +52,13 @@ export function ActivityItem({ activity, onComplete, onDelete, showActions = tru
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {activity.status === 'completed' ? (
-              <Badge variant="emerald"><Check size={10} className="mr-0.5" />Completada</Badge>
+              <Badge variant="emerald"><Check size={10} className="mr-0.5" />{t.activities.statusLabels.completed}</Badge>
             ) : activity.status === 'cancelled' ? (
-              <Badge variant="gray">Cancelada</Badge>
+              <Badge variant="gray">{t.activities.statusLabels.cancelled}</Badge>
             ) : (
               <Badge variant={isOverdue ? 'rose' : 'yellow'}>
                 <Clock size={10} className="mr-0.5" />
-                {isOverdue ? 'Vencida' : 'Pendiente'}
+                {isOverdue ? t.activities.overdue : t.activities.statusLabels.pending}
               </Badge>
             )}
           </div>
@@ -87,7 +87,7 @@ export function ActivityItem({ activity, onComplete, onDelete, showActions = tru
               variant="ghost"
               size="xs"
               onClick={() => onComplete(activity.id)}
-              aria-label="Marcar como completada"
+              aria-label={t.activities.completed}
               className="p-1 text-emerald-400 hover:text-emerald-300"
             >
               <Check size={14} />
@@ -98,7 +98,7 @@ export function ActivityItem({ activity, onComplete, onDelete, showActions = tru
               variant="ghost"
               size="xs"
               onClick={() => onDelete(activity.id)}
-              aria-label="Eliminar actividad"
+              aria-label={t.common.delete}
               className="p-1 text-red-400 hover:text-red-300"
             >
               <X size={14} />

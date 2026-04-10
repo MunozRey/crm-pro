@@ -77,7 +77,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         sublabel: `€${d.value.toLocaleString()}`,
         icon: <KanbanSquare size={15} />,
         action: () => go('/deals'),
-        category: 'Deals',
+        category: t.commandPalette.dealsCategory,
       })
     })
 
@@ -139,7 +139,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             placeholder={t.common.searchPlaceholder}
             className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-600 outline-none"
           />
-          <kbd className="px-1.5 py-0.5 rounded-md bg-white/8 text-[10px] font-medium text-slate-500 flex-shrink-0">ESC</kbd>
+          <kbd className="px-1.5 py-0.5 rounded-md bg-white/8 text-[10px] font-medium text-slate-500 flex-shrink-0">{t.common.close.toUpperCase()}</kbd>
         </div>
 
         {/* Results */}
@@ -181,9 +181,9 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
         {/* Footer */}
         <div className="px-4 py-2 border-t border-white/6 flex items-center gap-4 text-[10px] text-slate-600">
-          <span><kbd className="font-semibold">↑↓</kbd> navegar</span>
-          <span><kbd className="font-semibold">↵</kbd> abrir</span>
-          <span><kbd className="font-semibold">ESC</kbd> cerrar</span>
+          <span><kbd className="font-semibold">↑↓</kbd> {t.commandPalette.navigateHint}</span>
+          <span><kbd className="font-semibold">↵</kbd> {t.commandPalette.openHint}</span>
+          <span><kbd className="font-semibold">ESC</kbd> {t.commandPalette.closeHint}</span>
         </div>
       </div>
     </div>

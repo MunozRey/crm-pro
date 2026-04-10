@@ -6,8 +6,10 @@ import { useEmailStore } from '../store/emailStore'
 import { supabase } from '../lib/supabase'
 import { toast } from '../store/toastStore'
 import { getGmailRedirectUri } from '../services/gmailService'
+import { useTranslations } from '../i18n'
 
 export function GmailCallback() {
+  const t = useTranslations()
   const navigate = useNavigate()
   const { setGmailToken } = useGmailToken()
   const setGmailAddress = useEmailStore((s) => s.setGmailAddress)
@@ -27,13 +29,13 @@ export function GmailCallback() {
       const codeVerifier = sessionStorage.getItem('gmail_oauth_verifier')
 
       if (!code || !returnedState || !storedState || !codeVerifier) {
-        toast.error('Gmail connection failed — missing OAuth parameters')
+        toast.error(t.errors.gmailConnectionError)
         navigate('/inbox', { replace: true })
         return
       }
 
       if (returnedState !== storedState) {
-        toast.error('Gmail connection failed — state mismatch (possible CSRF)')
+        toast.error(t.errors.gmailConnectionError)
         navigate('/inbox', { replace: true })
         return
       }
@@ -48,7 +50,7 @@ export function GmailCallback() {
         })
 
         if (error || !data?.access_token) {
-          toast.error('Gmail connection failed — try again')
+          toast.error(t.errors.gmailConnectionError)
           navigate('/inbox', { replace: true })
           return
         }
@@ -64,7 +66,7 @@ export function GmailCallback() {
 
         navigate('/inbox', { replace: true })
       } catch {
-        toast.error('Gmail connection failed — try again')
+        toast.error(t.errors.gmailConnectionError)
         navigate('/inbox', { replace: true })
       }
     }
@@ -76,7 +78,7 @@ export function GmailCallback() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="w-10 h-10 text-brand-400 animate-spin" />
-        <p className="text-slate-300 text-sm font-medium">Connecting Gmail...</p>
+        <p className="text-slate-300 text-sm font-medium">{t.common.loading}</p>
       </div>
     </div>
   )

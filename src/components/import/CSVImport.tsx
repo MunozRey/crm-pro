@@ -5,6 +5,7 @@ import { useCompaniesStore } from '../../store/companiesStore'
 import { useAuditStore } from '../../store/auditStore'
 import { toast } from '../../store/toastStore'
 import type { ContactStatus, ContactSource } from '../../types'
+import { useTranslations } from '../../i18n'
 
 interface CSVImportProps {
   isOpen: boolean
@@ -71,6 +72,7 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
 }
 
 export function CSVImport({ isOpen, onClose }: CSVImportProps) {
+  const t = useTranslations()
   const [step, setStep] = useState<Step>('upload')
   const [entityType, setEntityType] = useState<EntityType>('contacts')
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
@@ -93,7 +95,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
       const text = e.target?.result as string
       const { headers, rows } = parseCSV(text)
       if (headers.length === 0) {
-        toast.error('No se pudo leer el archivo CSV')
+        toast.error(t.errors.generic)
         return
       }
       setCsvHeaders(headers)
@@ -120,7 +122,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
     if (file && (file.name.endsWith('.csv') || file.type === 'text/csv')) {
       handleFileSelect(file)
     } else {
-      toast.error('Solo se aceptan archivos .csv')
+      toast.error(t.errors.generic)
     }
   }
 

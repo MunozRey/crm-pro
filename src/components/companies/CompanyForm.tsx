@@ -8,6 +8,7 @@ import { Button } from '../ui/Button'
 import type { Company } from '../../types'
 import { COMPANY_SIZE_OPTIONS } from '../../utils/constants'
 import { CustomFieldsForm } from '../shared/CustomFieldRenderer'
+import { useTranslations } from '../../i18n'
 
 const schema = z.object({
   name: z.string().min(1, 'Nombre requerido'),
@@ -32,6 +33,7 @@ interface CompanyFormProps {
 }
 
 export function CompanyForm({ company, onSubmit, onCancel }: CompanyFormProps) {
+  const t = useTranslations()
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -58,53 +60,53 @@ export function CompanyForm({ company, onSubmit, onCancel }: CompanyFormProps) {
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 space-y-4">
-      <Input label="Nombre de empresa" required error={errors.name?.message} {...register('name')} />
+      <Input label={t.companies.name} required error={errors.name?.message} {...register('name')} />
       <div className="grid grid-cols-2 gap-4">
-        <Input label="Dominio" placeholder="empresa.com" {...register('domain')} />
-        <Input label="Teléfono" {...register('phone')} />
+        <Input label={t.companies.domain} placeholder={t.companies.domainPlaceholder} {...register('domain')} />
+        <Input label={t.common.phone} {...register('phone')} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Select
-          label="Industria"
+          label={t.companies.industry}
           required
           options={[
-            { value: 'fintech', label: 'Fintech' },
-            { value: 'saas', label: 'SaaS' },
-            { value: 'consulting', label: 'Consultoría' },
-            { value: 'insurance', label: 'Seguros' },
-            { value: 'banking', label: 'Banca' },
-            { value: 'retail', label: 'Retail' },
-            { value: 'healthcare', label: 'Salud' },
-            { value: 'other', label: 'Otro' },
+            { value: 'fintech', label: t.companies.industryLabels.fintech },
+            { value: 'saas', label: t.companies.industryLabels.saas },
+            { value: 'consulting', label: t.companies.industryLabels.consulting },
+            { value: 'insurance', label: t.companies.industryLabels.insurance },
+            { value: 'banking', label: t.companies.industryLabels.banking },
+            { value: 'retail', label: t.companies.industryLabels.retail },
+            { value: 'healthcare', label: t.companies.industryLabels.healthcare },
+            { value: 'other', label: t.companies.industryLabels.other },
           ]}
           {...register('industry')}
         />
         <Select
-          label="Tamaño"
+          label={t.companies.size}
           options={COMPANY_SIZE_OPTIONS.map((s) => ({ value: s, label: s }))}
-          placeholder="Seleccionar"
+          placeholder={t.common.select}
           {...register('size')}
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Input label="País" {...register('country')} />
-        <Input label="Ciudad" {...register('city')} />
+        <Input label={t.companies.country} {...register('country')} />
+        <Input label={t.companies.city} {...register('city')} />
       </div>
-      <Input label="Website" type="url" placeholder="https://" {...register('website')} />
+      <Input label={t.companies.website} type="url" placeholder="https://" {...register('website')} />
       <div className="grid grid-cols-2 gap-4">
         <Select
-          label="Estado"
+          label={t.common.status}
           options={[
-            { value: 'prospect', label: 'Prospecto' },
-            { value: 'customer', label: 'Cliente' },
-            { value: 'partner', label: 'Partner' },
-            { value: 'churned', label: 'Perdido' },
+            { value: 'prospect', label: t.companies.statusLabels.prospect },
+            { value: 'customer', label: t.companies.statusLabels.customer },
+            { value: 'partner', label: t.companies.statusLabels.partner },
+            { value: 'churned', label: t.companies.statusLabels.churned },
           ]}
           {...register('status')}
         />
-        <Input label="Facturación (€)" type="number" {...register('revenue')} />
+        <Input label={t.companies.revenue} type="number" {...register('revenue')} />
       </div>
-      <Textarea label="Notas" rows={3} {...register('notes')} />
+      <Textarea label={t.common.notes} rows={3} {...register('notes')} />
 
       {company && (
         <CustomFieldsForm entityId={company.id} entityType="company" />
@@ -112,9 +114,9 @@ export function CompanyForm({ company, onSubmit, onCancel }: CompanyFormProps) {
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" className="flex-1">
-          {company ? 'Guardar cambios' : 'Crear empresa'}
+          {company ? t.common.save : t.companies.newCompany}
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>{t.common.cancel}</Button>
       </div>
     </form>
   )

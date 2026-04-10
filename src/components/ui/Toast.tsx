@@ -1,6 +1,7 @@
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
 import { useToastStore } from '../../store/toastStore'
 import type { ToastType } from '../../store/toastStore'
+import { useTranslations } from '../../i18n'
 
 const iconMap: Record<ToastType, React.ReactNode> = {
   success: <CheckCircle size={18} className="text-emerald-400 flex-shrink-0" />,
@@ -17,6 +18,7 @@ const bgMap: Record<ToastType, string> = {
 }
 
 export function ToastContainer() {
+  const tr = useTranslations()
   const { toasts, removeToast } = useToastStore()
 
   return (
@@ -35,7 +37,7 @@ export function ToastContainer() {
           <p className="flex-1 text-sm text-zinc-200">{t.message}</p>
           <button
             onClick={() => removeToast(t.id)}
-            aria-label="Cerrar notificación"
+            aria-label={tr.common.close}
             className="text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             <X size={14} />

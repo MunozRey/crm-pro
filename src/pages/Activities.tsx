@@ -48,6 +48,7 @@ function CalendarView({
   dateLocale: Locale
   noActivitiesLabel: string
 }) {
+  const t = useTranslations()
   const [calendarMonth, setCalendarMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
@@ -97,8 +98,8 @@ function CalendarView({
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
-            title="Previous month"
-            aria-label="Previous month"
+            title={`${t.common.previous} ${t.common.date}`}
+            aria-label={`${t.common.previous} ${t.common.date}`}
             className="hover:bg-white/6 rounded-lg p-1.5 text-slate-400 hover:text-white transition-colors"
           >
             <ChevronLeft size={16} />
@@ -108,8 +109,8 @@ function CalendarView({
           </h3>
           <button
             onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
-            title="Next month"
-            aria-label="Next month"
+            title={`${t.common.next} ${t.common.date}`}
+            aria-label={`${t.common.next} ${t.common.date}`}
             className="hover:bg-white/6 rounded-lg p-1.5 text-slate-400 hover:text-white transition-colors"
           >
             <ChevronRight size={16} />

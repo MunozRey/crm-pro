@@ -125,7 +125,7 @@ export function AcceptInvite() {
     }
   }
 
-  const orgName = invitation?.organizations?.name ?? 'tu organización'
+  const orgName = invitation?.organizations?.name ?? t.acceptInvite.organization
 
   // ── Render states ──────────────────────────────────────────
 
@@ -144,13 +144,13 @@ export function AcceptInvite() {
           <div className="w-14 h-14 rounded-full bg-red-500/15 flex items-center justify-center mx-auto mb-4">
             <XCircle size={28} className="text-red-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">Invitación inválida</h1>
+          <h1 className="text-xl font-bold text-white mb-2">{t.acceptInvite.invalidTitle}</h1>
           <p className="text-sm text-slate-500 mb-6">{errorMsg}</p>
           <Link
             to="/login"
             className="inline-flex items-center px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            Ir al inicio de sesión
+            {t.acceptInvite.loginCta}
           </Link>
         </div>
       </div>
@@ -164,8 +164,8 @@ export function AcceptInvite() {
           <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={28} className="text-emerald-400" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">¡Bienvenido a {orgName}!</h1>
-          <p className="text-sm text-slate-500">Redirigiendo al panel...</p>
+          <h1 className="text-xl font-bold text-white mb-2">{t.acceptInvite.welcomeTo} {orgName}!</h1>
+          <p className="text-sm text-slate-500">{t.acceptInvite.redirecting}</p>
         </div>
       </div>
     )
@@ -173,10 +173,10 @@ export function AcceptInvite() {
 
   // pageState === 'ready' || 'joining'
   const ROLE_LABELS: Record<string, string> = {
-    admin: 'Administrador',
-    manager: 'Director Comercial',
-    sales_rep: 'Comercial',
-    viewer: 'Solo lectura',
+    admin: t.acceptInvite.roleAdmin,
+    manager: t.acceptInvite.roleManager,
+    sales_rep: t.acceptInvite.roleSalesRep,
+    viewer: t.acceptInvite.roleViewer,
   }
 
   return (
@@ -186,23 +186,23 @@ export function AcceptInvite() {
           <div className="w-14 h-14 rounded-2xl bg-brand-500/20 flex items-center justify-center mb-4">
             <UserPlus size={28} className="text-brand-400" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Únete a {orgName}</h1>
+          <h1 className="text-2xl font-bold text-white">{t.acceptInvite.joinOrg} {orgName}</h1>
           <p className="text-sm text-slate-500 mt-1 text-center">
-            Has sido invitado a unirte al equipo
+            {t.acceptInvite.invitedToTeam}
           </p>
         </div>
 
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-6 space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Organización</span>
+            <span className="text-slate-500">{t.acceptInvite.organization}</span>
             <span className="text-white font-medium">{orgName}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Email</span>
+            <span className="text-slate-500">{t.auth.email}</span>
             <span className="text-white">{invitation?.email}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Rol asignado</span>
+            <span className="text-slate-500">{t.acceptInvite.assignedRole}</span>
             <span className="text-brand-400 font-medium">
               {ROLE_LABELS[invitation?.role ?? ''] ?? invitation?.role}
             </span>
@@ -219,7 +219,7 @@ export function AcceptInvite() {
           ) : (
             <>
               <UserPlus size={18} />
-              Aceptar invitación
+              {t.acceptInvite.acceptCta}
             </>
           )}
         </button>

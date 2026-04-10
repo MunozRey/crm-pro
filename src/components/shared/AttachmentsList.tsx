@@ -88,7 +88,7 @@ export function AttachmentsList({ entityType, entityId }: AttachmentsListProps) 
         <div className="flex items-center gap-2">
           <Paperclip size={14} className="text-slate-500" />
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            Documentos {attachments.length > 0 && `(${attachments.length})`}
+            {t.inbox.attachments} {attachments.length > 0 && `(${attachments.length})`}
           </p>
         </div>
         <button
@@ -96,13 +96,15 @@ export function AttachmentsList({ entityType, entityId }: AttachmentsListProps) 
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#0d0e1a] border border-white/8 text-slate-400 hover:text-white hover:border-white/15 transition-colors"
         >
           <Upload size={12} />
-          Adjuntar
+          {t.email.addFile}
         </button>
         <input
           ref={fileInputRef}
           type="file"
           multiple
           className="hidden"
+          title={t.email.addFile}
+          aria-label={t.email.addFile}
           onChange={(e) => { handleFiles(e.target.files); e.target.value = '' }}
         />
       </div>
@@ -121,10 +123,10 @@ export function AttachmentsList({ entityType, entityId }: AttachmentsListProps) 
         }`}
       >
         {attachments.length === 0 && !dragOver && (
-          <p className="text-xs text-slate-600">Arrastra archivos aquí o haz clic en Adjuntar</p>
+          <p className="text-xs text-slate-600">{t.email.attachHint}</p>
         )}
         {dragOver && (
-          <p className="text-xs text-brand-400">Suelta para adjuntar</p>
+          <p className="text-xs text-brand-400">{t.email.addFile}</p>
         )}
 
         {/* File list */}
@@ -148,14 +150,14 @@ export function AttachmentsList({ entityType, entityId }: AttachmentsListProps) 
                     <button
                       onClick={() => handleDownload(att)}
                       className="p-1 rounded text-slate-500 hover:text-brand-400 transition-colors"
-                      title="Descargar"
+                      title={t.common.export}
                     >
                       <Download size={13} />
                     </button>
                     <button
                       onClick={() => handleDelete(att.id, att.fileName)}
                       className="p-1 rounded text-slate-500 hover:text-red-400 transition-colors"
-                      title="Eliminar"
+                      title={t.common.delete}
                     >
                       <Trash2 size={13} />
                     </button>

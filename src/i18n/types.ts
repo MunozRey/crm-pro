@@ -70,6 +70,7 @@ export interface Translations {
     all: string
     selected: string
     selectAll: string
+    select: string
     assignedTo: string
     back: string
     details: string
@@ -85,6 +86,8 @@ export interface Translations {
     showing: string
     from: string
     to: string
+    previous: string
+    next: string
     date: string
     type: string
     description: string
@@ -143,8 +146,11 @@ export interface Translations {
   // ─── Company ─────────────────────────────────────────────────────────────────
   companies: {
     title: string
+    name: string
     newCompany: string
     editCompany: string
+    domain: string
+    domainPlaceholder: string
     industry: string
     size: string
     country: string
@@ -200,6 +206,9 @@ export interface Translations {
     addItem: string
     subtotal: string
     discount: string
+    quoteNumber: string
+    vatPercent: string
+    validityDays: string
     emptyTitle: string
     emptyDescription: string
     deleteConfirm: string
@@ -616,6 +625,31 @@ export interface Translations {
     sent: string
     drafts: string
     noMessages: string
+    markRead: string
+    markUnread: string
+    archive: string
+    trash: string
+    replyAll: string
+    pinnedLink: string
+    autoLink: string
+    pinLink: string
+    unpin: string
+    saveLink: string
+    contactPlaceholder: string
+    dealPlaceholder: string
+    refreshInbox: string
+    selectThread: string
+    selectedCount: string
+    threadUpdated: string
+    appliedToThreads: string
+    followUpCreated: string
+    noEntityToPin: string
+    pinnedLinkRemoved: string
+    manualLinkSaved: string
+    downloadAttachmentError: string
+    attachments: string
+    crmSentInThread: string
+    scheduled: string
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -643,6 +677,8 @@ export interface Translations {
     realAuthEnabled: string
     emailPlaceholder: string
     checkEmailConfirmation: string
+    passwordsDoNotMatch: string
+    passwordMinLength: string
   }
 
   // ─── Org Setup ───────────────────────────────────────────────────────────────
@@ -668,9 +704,39 @@ export interface Translations {
     expired: string
   }
 
+  acceptInvite: {
+    invalidTitle: string
+    loginCta: string
+    welcomeTo: string
+    redirecting: string
+    joinOrg: string
+    invitedToTeam: string
+    organization: string
+    assignedRole: string
+    acceptCta: string
+    roleAdmin: string
+    roleManager: string
+    roleSalesRep: string
+    roleViewer: string
+  }
+
+  errorBoundary: {
+    title: string
+    fallbackDescription: string
+    retry: string
+  }
+
+  commandPalette: {
+    dealsCategory: string
+    navigateHint: string
+    openHint: string
+    closeHint: string
+  }
+
   // ─── Errors ──────────────────────────────────────────────────────────────────
   errors: {
     supabaseNotConfigured: string
+    generic: string
     gmailConnectionError: string
     invitationSendError: string
     duplicateTag: string
@@ -680,6 +746,16 @@ export interface Translations {
   email: {
     gmailApiLabel: string
     googleClientIdLabel: string
+    ccLabel: string
+    bccLabel: string
+    replyToLabel: string
+    closeComposer: string
+    discardDraftConfirm: string
+    addFile: string
+    sendLater: string
+    scheduleSendTime: string
+    attachHint: string
+    emailScheduled: string
   }
 
   // ─── Notifications page ──────────────────────────────────────────────────────

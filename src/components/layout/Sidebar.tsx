@@ -243,7 +243,7 @@ export function Sidebar() {
         {!collapsed && (
           <div>
             <span className="text-sm font-bold text-white tracking-tight">CRM Pro</span>
-            <p className="text-[10px] text-slate-500 font-medium">Sales Platform</p>
+            <p className="text-[10px] text-slate-500 font-medium">{t.navSections.sales}</p>
           </div>
         )}
       </div>

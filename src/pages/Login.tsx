@@ -148,10 +148,10 @@ export function Login() {
         {!isSupabaseConfigured && <div className="mt-6 glass rounded-xl border-white/8 p-4">
           <p className="text-xs font-semibold text-slate-400 mb-2">{t.auth.login} demo</p>
           <div className="space-y-1.5">
-            {[
-              { email: 'david@crmpro.es', role: 'Admin', color: 'text-red-400' },
-              { email: 'sara@crmpro.es', role: 'Manager', color: 'text-brand-400' },
-              { email: 'carlos@crmpro.es', role: 'Comercial', color: 'text-emerald-400' },
+              {[
+              { email: 'david@crmpro.es', role: t.acceptInvite.roleAdmin, color: 'text-red-400' },
+              { email: 'sara@crmpro.es', role: t.acceptInvite.roleManager, color: 'text-brand-400' },
+              { email: 'carlos@crmpro.es', role: t.acceptInvite.roleSalesRep, color: 'text-emerald-400' },
             ].map((demo) => (
               <button
                 key={demo.email}

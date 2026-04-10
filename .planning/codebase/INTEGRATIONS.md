@@ -35,7 +35,7 @@
   - `https://www.googleapis.com/auth/gmail.readonly`
   - `https://www.googleapis.com/auth/gmail.compose`
 - Operations: `GET /threads`, `GET /threads/{id}`, `POST /messages/send`, `GET /profile`
-- Additional integration: `gmail_thread_links` table stores pinned thread-to-CRM links (contact/company/deal)
+- Additional integration: `gmail_thread_links` table stores pinned thread-to-CRM links (contact/company/deal), and `20260410195500_gmail_thread_workspace.sql` extends workspace-aware linkage behavior.
 
 ## Data Storage
 
@@ -86,7 +86,7 @@
 
 **Logs:**
 - `src/store/auditStore.ts` provides an in-app audit log: `logAction(action, entity, entityId, title, detail)`
-- Audit entries are persisted to `localStorage` via Zustand persist
+- Audit entries are persisted in Supabase in configured mode (with local fallback only when Supabase is not configured)
 - Audit log is viewable at the `/audit` route (`src/pages/AuditLog.tsx`)
 - No external log shipping
 

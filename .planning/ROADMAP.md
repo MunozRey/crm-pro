@@ -1,7 +1,7 @@
 # CRM Pro — Roadmap
 
 **Milestone:** v1.0 — Full SaaS Upgrade
-**Status:** Phase 10 In Progress
+**Status:** Phase 10 Pending Deploy
 **Phases:** 10
 **Last updated:** 2026-04-10
 
@@ -26,8 +26,8 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Schema & Multi-Tenancy | 0/5 | Complete    | 2026-03-31 |
-| 2. Supabase Auth | 5/6 | Complete    | 2026-04-05 |
+| 1. Schema & Multi-Tenancy | 5/5 | Complete    | 2026-03-31 |
+| 2. Supabase Auth | 5/5 | Complete    | 2026-04-05 |
 | 3. Organization Onboarding | 4/4 | Complete   | 2026-04-06 |
 | 4. Security Fixes | 4/4 | ✅ Complete | 2026-04-07 |
 | 5. Core Data Stores + Real-Time | 4/4 | ✅ Complete | 2026-04-07 |
@@ -35,7 +35,7 @@
 | 7. Gmail Integration | 5/5 | ✅ Complete | 2026-04-09 |
 | 8. i18n English | 3/3 | ✅ Complete | 2026-04-09 |
 | 9. Test Suite | 6/6 | ✅ Complete | 2026-04-10 |
-| 10. Vercel Deployment | 0/5 | In progress | - |
+| 10. Vercel Deployment | 0/5 | Pending Deploy | - |
 
 ---
 
@@ -325,8 +325,8 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 | AUTH-03 | Phase 2 | ✅ Complete |
 | AUTH-04 | Phase 2 | ✅ Complete |
 | AUTH-05 | Phase 2 | ✅ Complete |
-| SEC-01 | Phase 2 | Pending |
-| SEC-06 | Phase 2 | Pending |
+| SEC-01 | Phase 2 | ✅ Complete |
+| SEC-06 | Phase 2 | ✅ Complete |
 | AUTH-06 | Phase 3 | ✅ Complete |
 | AUTH-07 | Phase 3 | ✅ Complete |
 | AUTH-08 | Phase 3 | ✅ Complete |
@@ -371,11 +371,11 @@ DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 | TEST-03 | Phase 9 | ✅ Complete |
 | TEST-04 | Phase 9 | ✅ Complete |
 | TEST-05 | Phase 9 | ✅ Complete |
-| DEPLOY-01 | Phase 10 | Pending |
-| DEPLOY-02 | Phase 10 | Pending |
-| DEPLOY-03 | Phase 10 | Pending |
-| DEPLOY-04 | Phase 10 | Pending |
-| DEPLOY-05 | Phase 10 | Pending |
+| DEPLOY-01 | Phase 10 | Pending Deploy |
+| DEPLOY-02 | Phase 10 | Pending Deploy |
+| DEPLOY-03 | Phase 10 | Pending Deploy |
+| DEPLOY-04 | Phase 10 | Pending Deploy |
+| DEPLOY-05 | Phase 10 | Pending Deploy |
 
 **Requirements mapped:** see the table above for per-requirement status; only Phase 10 deployment requirements remain pending for release readiness.
 

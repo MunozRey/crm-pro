@@ -1,3 +1,13 @@
+> [!NOTE]
+> Historical snapshot: this phase file is kept for audit/history and may be outdated.
+> Source of truth for current status and priorities: `.planning/STATE.md` and `.planning/ROADMAP.md`.
+
+> [!NOTE]
+> Historical snapshot: this phase document is preserved for implementation history.
+> Source of truth for current status and priorities:  and .
+
+> **Historical Snapshot:** This phase document is retained for historical context. Current source of truth is `.planning/STATE.md` and `.planning/ROADMAP.md`.
+
 ---
 phase: 09-test-suite
 plan: 3
@@ -55,7 +65,7 @@ The ContactForm, DealForm, and ActivityForm components each had an unexported lo
 
 - `npx tsc --noEmit`: 0 errors
 - `npx vitest run tests/schemas/`: 3 test files, 17 tests — all passed
-- Full suite: 101 tests passing (pre-existing failures in Register.test.tsx and contactsStore.test.ts are unrelated to this plan)
+- Full suite: 105 tests passing (pre-existing failures in Register.test.tsx and contactsStore.test.ts are unrelated to this plan)
 
 ## Deviations from Plan
 

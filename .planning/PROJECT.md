@@ -31,7 +31,7 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 - ✓ Pipeline Timeline view — existing
 - ✓ Email Templates library — existing
 - ✓ Products catalog — existing
-- ✓ Team Management (roles, mock users) — existing
+- ✓ Team Management (roles, invitations, org-scoped users) — existing
 - ✓ Audit Log — existing
 - ✓ Notifications system — existing
 - ✓ i18n infrastructure ready (en/es/pt/fr/de/it) — existing
@@ -56,7 +56,7 @@ A sales team can sign up, invite their colleagues, and manage their entire pipel
 
 ## Context
 
-**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (101/101). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, fixed UUID field mapping for deals/activities inserts, added Gmail thread-link persistence with remote migration/deploy, and applied lazy-loading for chart-heavy routes to improve bundle behavior.
+**Current state:** Core modules are backed by Supabase with org-scoped data and RLS. Auth/session is handled by Supabase Auth, stores fetch from Supabase, and tests are green (105/105). Recent hardening fixes removed demo-user bleed in Supabase mode, stabilized org creation session checks, fixed UUID field mapping for deals/activities inserts, added Gmail thread-link persistence with remote migrations/deploy (`gmail_thread_links`, `gmail_thread_workspace`), and applied lazy-loading plus UX/UI polish for chart-heavy and inbox/date-localized flows.
 
 **Known critical issues (current):**
 - Team list is still partially driven by local auth-state user list and not fully hydrated from `organization_members`
@@ -104,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after Gmail hardening + quote workflow updates + build hardening (lazy chart routes)*
+*Last updated: 2026-04-10 after Gmail hardening + inbox collaboration migration updates + post-phase UX/UI upgrade + build hardening*

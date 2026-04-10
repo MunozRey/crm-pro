@@ -114,12 +114,9 @@ export interface ContactsState {
   getById: (id: string) => Contact | undefined
 }
 
-// 2. Create store with persist middleware
+// 2. Create store (Supabase-backed in configured environments)
 export const useContactsStore = create<ContactsState>()(
-  persist(
-    (set, get) => ({ ... }),
-    { name: LS_KEYS.contacts, onRehydrateStorage: ... }
-  )
+  (set, get) => ({ ... })
 )
 ```
 

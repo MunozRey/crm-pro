@@ -1,3 +1,13 @@
+> [!NOTE]
+> Historical snapshot: this phase file is kept for audit/history and may be outdated.
+> Source of truth for current status and priorities: `.planning/STATE.md` and `.planning/ROADMAP.md`.
+
+> [!NOTE]
+> Historical snapshot: this phase document is preserved for implementation history.
+> Source of truth for current status and priorities:  and .
+
+> **Historical Snapshot:** This phase document is retained for historical context. Current source of truth is `.planning/STATE.md` and `.planning/ROADMAP.md`.
+
 ---
 phase: 09-test-suite
 plan: 5
@@ -39,7 +49,7 @@ Created `.github/workflows/ci.yml` — a single-job CI pipeline that:
 2. Sets up Node 22 with npm cache enabled
 3. Installs dependencies via `npm ci`
 4. Runs `npx tsc --noEmit` (type check)
-5. Runs `npx vitest run` (101 tests)
+5. Runs `npx vitest run` (105 tests)
 
 Both steps must pass for the workflow to succeed; failure of either blocks the PR.
 
@@ -47,7 +57,7 @@ Both steps must pass for the workflow to succeed; failure of either blocks the P
 
 - YAML file readable: PASSED
 - `npx tsc --noEmit`: exit 0
-- `npx vitest run`: 15 test files, 101 tests — all passed
+- `npx vitest run`: 15 test files, 105 tests — all passed
 
 ## Deviations from Plan
 
@@ -67,4 +77,4 @@ None.
 
 - `.github/workflows/ci.yml` exists: FOUND
 - TypeScript check: exit 0
-- Vitest: 101 tests passing
+- Vitest: 105 tests passing

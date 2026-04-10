@@ -57,7 +57,7 @@
 **Testing:**
 - Vitest 4 (`vitest`) + jsdom + Testing Library
 - Commands: `npm run test`, `npm run test:run`, `npm run test:coverage`
-- Current baseline: 101 tests passing
+- Current baseline: 105 tests passing
 
 **Build/Dev:**
 - Vite 8.0 (`vite`) — dev server and production bundler; config at `vite.config.ts`

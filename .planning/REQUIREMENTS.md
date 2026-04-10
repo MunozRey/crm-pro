@@ -11,7 +11,7 @@
 - i18n is expanded to 6 languages (`en`, `es`, `pt`, `fr`, `de`, `it`).
 - Quote workflow includes builder save + export-to-PDF (print layout) + send-by-email from deal detail.
 - Build hardening includes route-level lazy loading for chart-heavy pages (`Dashboard`, `Reports`, `Forecast`) to keep chunk warnings under control.
-- Test suite remains green (`101` tests) and build is passing.
+- Test suite remains green (`105` tests) and build is passing.
 
 ## v1 Requirements
 
@@ -38,44 +38,44 @@
 
 ### Data Migration — Core Stores
 
-- [ ] **DATA-01**: `contactsStore` migrated from Zustand `persist` to async Supabase calls (create, read, update, delete)
-- [ ] **DATA-02**: `companiesStore` migrated to Supabase
-- [ ] **DATA-03**: `dealsStore` migrated to Supabase
-- [ ] **DATA-04**: `activitiesStore` migrated to Supabase
-- [ ] **DATA-05**: `notificationsStore` migrated to Supabase
-- [ ] **DATA-06**: Seed data `onRehydrateStorage` hooks removed from all migrated stores (conflict with Supabase fetch)
-- [ ] **DATA-07**: Loading states (`isLoading`, `error`) added to all migrated stores
-- [ ] **DATA-08**: Optimistic updates implemented with `updated_at` timestamp guard to prevent double-apply on realtime echo
+- [x] **DATA-01**: `contactsStore` migrated from Zustand `persist` to async Supabase calls (create, read, update, delete)
+- [x] **DATA-02**: `companiesStore` migrated to Supabase
+- [x] **DATA-03**: `dealsStore` migrated to Supabase
+- [x] **DATA-04**: `activitiesStore` migrated to Supabase
+- [x] **DATA-05**: `notificationsStore` migrated to Supabase
+- [x] **DATA-06**: Seed data `onRehydrateStorage` hooks removed from all migrated stores (conflict with Supabase fetch)
+- [x] **DATA-07**: Loading states (`isLoading`, `error`) added to all migrated stores
+- [x] **DATA-08**: Optimistic updates implemented with `updated_at` timestamp guard to prevent double-apply on realtime echo
 
 ### Data Migration — Secondary Stores
 
-- [ ] **DATA-09**: `goalsStore` migrated to Supabase
-- [ ] **DATA-10**: `sequencesStore` migrated to Supabase
-- [ ] **DATA-11**: `automationsStore` migrated to Supabase
-- [ ] **DATA-12**: `templateStore` migrated to Supabase
-- [ ] **DATA-13**: `productsStore` migrated to Supabase
-- [ ] **DATA-14**: `auditStore` migrated to Supabase
-- [ ] **DATA-15**: `customFieldsStore` migrated to Supabase
+- [x] **DATA-09**: `goalsStore` migrated to Supabase
+- [x] **DATA-10**: `sequencesStore` migrated to Supabase
+- [x] **DATA-11**: `automationsStore` migrated to Supabase
+- [x] **DATA-12**: `templateStore` migrated to Supabase
+- [x] **DATA-13**: `productsStore` migrated to Supabase
+- [x] **DATA-14**: `auditStore` migrated to Supabase
+- [x] **DATA-15**: `customFieldsStore` migrated to Supabase
 
 ### Real-Time Sync
 
-- [ ] **REALTIME-01**: Contacts table has Supabase Realtime subscription — changes by any org member appear instantly for all
-- [ ] **REALTIME-02**: Deals table has Realtime subscription
-- [ ] **REALTIME-03**: Activities table has Realtime subscription
-- [ ] **REALTIME-04**: Notifications table has Realtime subscription
+- [x] **REALTIME-01**: Contacts table has Supabase Realtime subscription — changes by any org member appear instantly for all
+- [x] **REALTIME-02**: Deals table has Realtime subscription
+- [x] **REALTIME-03**: Activities table has Realtime subscription
+- [x] **REALTIME-04**: Notifications table has Realtime subscription
 
 ### Users & Assignment
 
-- [ ] **USERS-01**: MOCK_USERS replaced — all "assigned to" dropdowns pull from real org members via `useAuthStore`
-- [ ] **USERS-02**: Leaderboard analytics computed from real org members, not hardcoded names
-- [ ] **USERS-03**: Reports module computes performance metrics from real user list
+- [x] **USERS-01**: MOCK_USERS replaced — all "assigned to" dropdowns pull from real org members via `useAuthStore`
+- [x] **USERS-02**: Leaderboard analytics computed from real org members, not hardcoded names
+- [x] **USERS-03**: Reports module computes performance metrics from real user list
 
 ### Security Fixes
 
 - [x] **SEC-01**: `authStore` weak djb2 hash replaced by Supabase Auth — passwords never stored locally
-- [ ] **SEC-02**: Anthropic API key removed from localStorage — stored only in Supabase Edge Function env vars
-- [ ] **SEC-03**: `dangerouslySetInnerHTML` in `AIAgent.tsx` replaced with `react-markdown` + `rehype-sanitize`
-- [ ] **SEC-04**: `dangerouslyAllowBrowser: true` removed from `aiService.ts` — all Claude calls go through Edge Function proxy
+- [x] **SEC-02**: Anthropic API key removed from localStorage — stored only in Supabase Edge Function env vars
+- [x] **SEC-03**: `dangerouslySetInnerHTML` in `AIAgent.tsx` replaced with `react-markdown` + `rehype-sanitize`
+- [x] **SEC-04**: `dangerouslyAllowBrowser: true` removed from `aiService.ts` — all Claude calls go through Edge Function proxy
 - [x] **SEC-05**: Gmail access token stored in memory only (not localStorage); refresh token stored in `gmail_tokens` Supabase table
 - [x] **SEC-06**: Dev-mode console warning when Supabase env vars are absent (currently silent no-op)
 
@@ -159,16 +159,16 @@
 | SCHEMA-01–05 | Phase 1 | Complete |
 | AUTH-01–05 | Phase 2 | Complete |
 | AUTH-06–10 | Phase 3 | Complete |
-| SEC-01–06 | Phase 4 | Pending |
-| DATA-01–08 | Phase 5 | Pending |
-| REALTIME-01–04 | Phase 5 | Pending |
-| DATA-09–15 | Phase 6 | Pending |
-| USERS-01–03 | Phase 6 | Pending |
-| AI-01–05 | Phase 7 | Pending |
-| GMAIL-01–06 | Phase 8 | Pending |
-| I18N-01–02 | Phase 9 | Pending |
-| TEST-01–05 | Phase 10 | Pending |
-| DEPLOY-01–05 | Phase 11 | Pending |
+| SEC-01–06 | Phase 4 | Complete |
+| DATA-01–08 | Phase 5 | Complete |
+| REALTIME-01–04 | Phase 5 | Complete |
+| DATA-09–15 | Phase 6 | Complete |
+| USERS-01–03 | Phase 6 | Complete |
+| AI-01–05 | Post-v1 | Deferred |
+| GMAIL-01–06 | Phase 7 | Complete |
+| I18N-01–02 | Phase 8 | Complete |
+| TEST-01–05 | Phase 9 | Complete |
+| DEPLOY-01–05 | Phase 10 | Pending Deploy |
 
 **Coverage:**
 - v1 requirements: 57 total
@@ -177,4 +177,4 @@
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-04-10 after phase-status reconciliation and post-phase UX/UI + inbox collaboration updates*

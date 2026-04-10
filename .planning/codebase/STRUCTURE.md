@@ -74,7 +74,7 @@ CRM/
   - `src/store/companiesStore.ts` — companies with linked contacts/deals
   - `src/store/aiStore.ts` — model selection, conversations, enrichment cache
   - `src/store/settingsStore.ts` — pipeline stages, tags, currency
-  - `src/store/auditStore.ts` — audit log (max 500 entries, FIFO)
+- `src/store/auditStore.ts` — audit log entries with Supabase-backed persistence
   - `src/store/notificationsStore.ts` — in-app notifications with type-level mute preferences
   - `src/store/toastStore.ts` — ephemeral UI toasts (not persisted)
   - `src/store/automationsStore.ts` — automation rules; `executeRulesForTrigger()` called by dealsStore
@@ -171,7 +171,7 @@ CRM/
   - `src/constants/aiModels.ts` — list of available AI model IDs and labels; `isOpenRouterModel()` helper
 
 **`supabase/`:**
-- Purpose: Database schema for future Supabase migration
+- Purpose: Active database schema, migrations, and Edge Functions for runtime Supabase integration
 - Key files: `supabase/schema.sql` — full SQL schema for all CRM tables
 
 ## Key File Locations

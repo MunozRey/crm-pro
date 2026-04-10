@@ -13,6 +13,10 @@ A production-grade, full-featured CRM single-page application built with React 1
 | **Deals** | Kanban drag & drop + list view, deal detail panel, mark Won/Lost, quote builder (save/export/send) |
 | **Activities** | Unified feed, overdue highlighting, quick complete/delete |
 | **Reports** | Revenue forecast, Won/Lost donut, activities by type, contacts by source, conversion funnel |
+| **Inbox Collaboration** | Gmail Inbox, real thread sync, pinned thread-to-CRM links, workspace-aware thread linking |
+| **Pipeline Timeline** | Timeline view for stage progression and pipeline activity context |
+| **Products** | Product catalog for quote line items and deal quoting workflows |
+| **Audit Log** | Organization activity audit trail with filters and chronology |
 | **Settings** | Tags management, pipeline stages, language (en/es/pt/fr/de/it), JSON export/import, data reset |
 | **Authentication** | Supabase Auth (register/login/reset), protected routes, org bootstrap (`/org-setup`) |
 | **Multi-tenancy** | Organization-scoped data via `organization_id` + RLS policies |
@@ -60,12 +64,11 @@ src/
 │   ├── deals/          # DealCard, DealForm, KanbanColumn
 │   ├── activities/     # ActivityForm, ActivityItem
 │   └── shared/         # SearchBar, EmptyState
-├── pages/              # Dashboard, Contacts, ContactDetail, Companies, CompanyDetail,
-│                       # Deals, Activities, Reports, Settings
-├── store/              # Zustand stores: contacts, companies, deals, activities, settings, toast
+├── pages/              # Route containers (27 pages): CRM modules, auth, inbox, timeline, audit, products
+├── store/              # Zustand stores (19): auth, CRM domains, inbox, settings, templates, products, audit
 ├── types/              # All TypeScript interfaces (index.ts)
 ├── hooks/              # useLocalStorage, useSearch, useFilters
-└── utils/              # formatters, constants, seedData
+└── utils/              # formatters, constants, seedData, scoring/health engines
 ```
 
 ## Architecture Decisions
@@ -90,8 +93,9 @@ All components are kept under 200 lines. Large pages (Contacts, Deals) delegate 
 - Supabase Auth, org onboarding, and RLS multi-tenancy are implemented.
 - Core CRM stores are wired to Supabase and realtime subscriptions are active.
 - i18n coverage exists for English, Spanish, Portuguese, French, German, and Italian.
-- Test suite is passing (`101` tests).
-- Gmail integration is hardened (PKCE + server refresh + resilient inbox load + persisted thread links).
+- Test suite is passing (`105` tests).
+- Gmail integration is hardened (PKCE + server refresh + resilient inbox load + persisted thread links + workspace-aware thread-link migration `20260410195500_gmail_thread_workspace.sql`).
+- Post-phase UX/UI upgrades are shipped (quote export/email polish, localized inbox timestamps, language-aware calendar labels, lazy-loaded chart-heavy routes).
 - Quote workflow now supports save, print-to-PDF export, and email send from deal detail.
 - Build hardening is applied: chart-heavy routes are lazy-loaded (`Dashboard`, `Reports`, `Forecast`) and the production build no longer triggers chunk-size warnings at the configured threshold.
 - Next major milestone: deployment/release hardening (Phase 10).

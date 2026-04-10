@@ -161,7 +161,7 @@ export function Settings() {
     const trimmed = newTag.trim()
     if (!trimmed) return
     if (settings.tags.includes(trimmed)) {
-      toast.error('Duplicate tag')
+      toast.error(t.errors.duplicateTag)
       return
     }
     addTag(trimmed)
@@ -240,7 +240,7 @@ export function Settings() {
       // Browser will redirect — no further action needed here
     } catch (err) {
       setConnectingGmail(false)
-      toast.error(err instanceof Error ? err.message : 'Error al conectar Gmail')
+      toast.error(err instanceof Error ? err.message : t.errors.gmailConnectionError)
     }
   }
 
@@ -299,7 +299,7 @@ export function Settings() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-white">{t.settings.gmailIntegration}</h2>
-            <p className="text-xs text-slate-500">Gmail API</p>
+            <p className="text-xs text-slate-500">{t.email.gmailApiLabel}</p>
           </div>
         </div>
 
@@ -321,7 +321,7 @@ export function Settings() {
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-slate-300 block mb-1.5">Google OAuth Client ID</label>
+              <label className="text-sm font-medium text-slate-300 block mb-1.5">{t.email.googleClientIdLabel}</label>
               <input
                 value={googleClientId}
                 onChange={(e) => setGoogleClientId(e.target.value)}

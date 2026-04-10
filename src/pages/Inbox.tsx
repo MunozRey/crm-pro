@@ -10,7 +10,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { EmailComposer } from '../components/email/EmailComposer'
 import { toast } from '../store/toastStore'
 import { PermissionGate } from '../components/auth/PermissionGate'
-import { useTranslations } from '../i18n'
+import { useTranslations, useI18nStore } from '../i18n'
 import type { GmailThread, CRMEmail, Contact } from '../types'
 import { formatRelativeDate } from '../utils/formatters'
 
@@ -177,6 +177,7 @@ function ThreadView({
   onReply: (to: string, subject: string) => void
 }) {
   const t = useTranslations()
+  const language = useI18nStore((s) => s.language)
   if (!thread) return (
     <div className="flex items-center justify-center h-full text-slate-600 text-sm">
       {t.inbox.noMessages}
@@ -204,7 +205,7 @@ function ThreadView({
               </div>
               <div className="flex items-center gap-3 text-slate-500">
                 <Clock size={12} />
-                <span className="text-xs">{msg.date ? new Date(msg.date).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
+                <span className="text-xs">{msg.date ? new Date(msg.date).toLocaleString(language, { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
                 <button
                   onClick={() => onReply(msg.from, `Re: ${msg.subject}`)}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-white/6 hover:bg-brand-600/20 hover:text-brand-400 transition-colors"
@@ -396,7 +397,7 @@ export function Inbox() {
       // Browser will redirect — no further action needed here
     } catch (err) {
       setConnecting(false)
-      toast.error(err instanceof Error ? err.message : 'Error al conectar Gmail')
+      toast.error(err instanceof Error ? err.message : t.errors.gmailConnectionError)
     }
   }
 

@@ -60,7 +60,7 @@ export function Login() {
           {isSupabaseConfigured && (
             <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <ShieldCheck size={11} className="text-emerald-400" />
-              <span className="text-[10px] font-medium text-emerald-400">Real authentication enabled</span>
+              <span className="text-[10px] font-medium text-emerald-400">{t.auth.realAuthEnabled}</span>
             </div>
           )}
         </div>
@@ -82,7 +82,7 @@ export function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@empresa.com"
+                  placeholder={t.auth.emailPlaceholder}
                   required
                   autoFocus
                   className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/50 transition-colors"
@@ -114,7 +114,7 @@ export function Login() {
 
             <div className="text-right -mt-2">
               <Link to="/forgot-password" className="text-xs text-slate-500 hover:text-brand-400 transition-colors">
-                ¿Olvidaste tu contraseña?
+                {t.auth.forgotPassword}
               </Link>
             </div>
 

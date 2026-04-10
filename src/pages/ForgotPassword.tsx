@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Zap, Mail, Loader2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useTranslations } from '../i18n'
 
 export function ForgotPassword() {
+  const t = useTranslations()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -41,26 +43,26 @@ export function ForgotPassword() {
             <Zap size={24} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">CRM Pro</h1>
-          <p className="text-sm text-slate-500 mt-1">Recuperar contraseña</p>
+          <p className="text-sm text-slate-500 mt-1">{t.auth.forgotPasswordTitle}</p>
         </div>
 
         <div className="glass rounded-2xl shadow-float border-white/10 p-8">
           {success ? (
             <div className="text-center py-4">
               <ShieldCheck size={40} className="text-emerald-400 mx-auto mb-3" />
-              <p className="text-white font-semibold mb-1">Revisa tu correo</p>
+              <p className="text-white font-semibold mb-1">{t.auth.checkEmailTitle}</p>
               <p className="text-sm text-slate-400">
-                Hemos enviado un enlace de recuperación a{' '}
+                {t.auth.checkEmailSent}{' '}
                 <span className="text-brand-400">{email}</span>
               </p>
               <Link to="/login" className="mt-4 inline-block text-sm text-brand-400 hover:text-brand-300 transition-colors">
-                Volver al inicio de sesión
+                {t.auth.backToLogin}
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <p className="text-sm text-slate-400">
-                Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.
+                {t.auth.checkEmailInstructions}
               </p>
 
               {error && (
@@ -77,7 +79,7 @@ export function ForgotPassword() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@empresa.com"
+                    placeholder={t.auth.emailPlaceholder}
                     required
                     autoFocus
                     className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/50 transition-colors"
@@ -94,7 +96,7 @@ export function ForgotPassword() {
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <>
-                    Enviar enlace
+                    {t.auth.sendLink}
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -102,7 +104,7 @@ export function ForgotPassword() {
 
               <div className="pt-2 text-center">
                 <Link to="/login" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-                  Volver al inicio de sesión
+                  {t.auth.backToLogin}
                 </Link>
               </div>
             </form>

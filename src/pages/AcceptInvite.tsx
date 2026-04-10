@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { UserPlus, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useTranslations } from '../i18n'
 
 interface InvitationRow {
   id: string
@@ -18,6 +19,7 @@ type PageState = 'loading' | 'ready' | 'joining' | 'success' | 'error'
 export function AcceptInvite() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const t = useTranslations()
   const token = searchParams.get('token')
 
   const [pageState, setPageState] = useState<PageState>('loading')
@@ -26,12 +28,12 @@ export function AcceptInvite() {
 
   useEffect(() => {
     if (!token) {
-      setErrorMsg('Enlace de invitación inválido: falta el token.')
+      setErrorMsg(t.invitations.invalidToken)
       setPageState('error')
       return
     }
     if (!supabase) {
-      setErrorMsg('Supabase no está configurado.')
+      setErrorMsg(t.errors.supabaseNotConfigured)
       setPageState('error')
       return
     }
@@ -45,7 +47,7 @@ export function AcceptInvite() {
         .single()
 
       if (error || !data) {
-        setErrorMsg('Esta invitación no es válida o ha expirado.')
+        setErrorMsg(t.invitations.invalidOrExpired)
         setPageState('error')
         return
       }
@@ -55,15 +57,15 @@ export function AcceptInvite() {
       if (inv.status !== 'pending') {
         setErrorMsg(
           inv.status === 'accepted'
-            ? 'Esta invitación ya fue aceptada.'
-            : 'Esta invitación ha expirado.'
+            ? t.invitations.alreadyAccepted
+            : t.invitations.expired
         )
         setPageState('error')
         return
       }
 
       if (new Date(inv.expires_at) < new Date()) {
-        setErrorMsg('Esta invitación ha expirado.')
+        setErrorMsg(t.invitations.expired)
         setPageState('error')
         return
       }

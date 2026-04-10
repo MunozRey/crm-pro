@@ -74,7 +74,7 @@ export function Register() {
           {isSupabaseConfigured && (
             <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
               <ShieldCheck size={11} className="text-emerald-400" />
-              <span className="text-[10px] font-medium text-emerald-400">Real authentication enabled</span>
+              <span className="text-[10px] font-medium text-emerald-400">{t.auth.realAuthEnabled}</span>
             </div>
           )}
         </div>
@@ -83,8 +83,8 @@ export function Register() {
           {success ? (
             <div className="text-center py-4">
               <ShieldCheck size={40} className="text-emerald-400 mx-auto mb-3" />
-              <p className="text-white font-semibold mb-1">Check your email</p>
-              <p className="text-sm text-slate-400">We sent a confirmation link to <span className="text-brand-400">{email}</span></p>
+              <p className="text-white font-semibold mb-1">{t.auth.checkEmailTitle}</p>
+              <p className="text-sm text-slate-400">{t.auth.checkEmailConfirmation} <span className="text-brand-400">{email}</span></p>
             </div>
           ) : (
           <>
@@ -134,7 +134,7 @@ export function Register() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@empresa.com"
+                  placeholder={t.auth.emailPlaceholder}
                   required
                   className="w-full bg-[#0d0e1a] border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-brand-500/50 transition-colors"
                 />

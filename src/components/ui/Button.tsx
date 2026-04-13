@@ -17,7 +17,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'btn-gradient text-white font-semibold',
   secondary:
-    'bg-[#111220] hover:bg-[#161727] border border-white/10 hover:border-white/15 text-slate-200',
+    'bg-navy-800/60 hover:bg-white/6 border border-white/10 hover:border-white/15 text-slate-200',
   ghost:
     'hover:bg-white/6 text-slate-400 hover:text-slate-100',
   danger:

@@ -124,7 +124,7 @@ export function PipelineTimeline() {
   const getCompany = (id: string) => companies.find((c) => c.id === id)
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
+    <div className="p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -191,7 +191,7 @@ export function PipelineTimeline() {
         >
           <option value="">{t.deals.stage}</option>
           {(['lead', 'qualified', 'proposal', 'negotiation', 'closed_won'] as DealStage[]).map((s) => (
-            <option key={s} value={s}>{t.deals.stageLabels[s]}</option>
+            <option key={s} value={s}>{t.deals.stageLabels[s as keyof typeof t.deals.stageLabels] ?? s}</option>
           ))}
         </select>
         <select
@@ -268,7 +268,7 @@ export function PipelineTimeline() {
                     </p>
                     <div className="flex items-center gap-1 mt-1">
                       <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full" style={{ backgroundColor: stageColor + '25', color: stageColor }}>
-                        {t.deals.stageLabels[deal.stage]}
+                        {t.deals.stageLabels[deal.stage as keyof typeof t.deals.stageLabels] ?? deal.stage}
                       </span>
                     </div>
                   </div>
@@ -341,7 +341,7 @@ export function PipelineTimeline() {
         {(['lead', 'qualified', 'proposal', 'negotiation', 'closed_won'] as DealStage[]).map((s) => (
           <div key={s} className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: STAGE_HEX[s] }} />
-            <span className="text-[11px] text-slate-500">{t.deals.stageLabels[s]}</span>
+            <span className="text-[11px] text-slate-500">{t.deals.stageLabels[s as keyof typeof t.deals.stageLabels] ?? s}</span>
           </div>
         ))}
       </div>

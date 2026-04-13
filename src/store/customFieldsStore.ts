@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import type { CustomFieldDefinition, CustomFieldEntityType, CustomFieldValue } from '../types'
+import type { CustomFieldDefinition, CustomFieldDefinitionI18n, CustomFieldEntityType, CustomFieldValue } from '../types'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getOrgId } from '../lib/supabaseHelpers'
+import { useI18nStore } from '../i18n'
+import type { Language } from '../i18n'
 
 // ─── Seed Definitions ────────────────────────────────────────────────────────
 
@@ -26,6 +28,7 @@ const SEED_DEFINITIONS: CustomFieldDefinition[] = [
 
 interface CustomFieldsStore {
   definitions: CustomFieldDefinition[]
+  translations: CustomFieldDefinitionI18n[]
   values: Record<string, CustomFieldValue[]>
   isLoading: boolean
   error: string | null
@@ -38,12 +41,14 @@ interface CustomFieldsStore {
   getFieldValues: (entityId: string) => CustomFieldValue[]
   getFieldValue: (entityId: string, fieldId: string) => CustomFieldValue['value']
   deleteEntityValues: (entityId: string) => void
+  upsertTranslation: (fieldId: string, languageCode: Language, updates: { label: string; placeholder?: string; options?: string[] }) => void
   getDefinitionsForEntity: (entityType: CustomFieldEntityType) => CustomFieldDefinition[]
   getActiveDefinitionsForEntity: (entityType: CustomFieldEntityType) => CustomFieldDefinition[]
 }
 
 export const useCustomFieldsStore = create<CustomFieldsStore>()((set, get) => ({
   definitions: SEED_DEFINITIONS,
+  translations: [],
   values: {},
   isLoading: false,
   error: null,
@@ -55,12 +60,14 @@ export const useCustomFieldsStore = create<CustomFieldsStore>()((set, get) => ({
     }
     set({ isLoading: true, error: null })
     try {
-      const [defRes, valRes] = await Promise.all([
+      const [defRes, valRes, i18nRes] = await Promise.all([
         (supabase as any).from('custom_field_definitions').select('*').order('order', { ascending: true }),
         (supabase as any).from('custom_field_values').select('*'),
+        (supabase as any).from('custom_field_definition_i18n').select('*'),
       ])
       if (defRes.error) throw defRes.error
       if (valRes.error) throw valRes.error
+      if (i18nRes.error) throw i18nRes.error
 
       const definitions: CustomFieldDefinition[] = (defRes.data ?? []).map((r: any) => ({
         id: r.id, entityType: r.entity_type, label: r.label, fieldType: r.field_type,
@@ -74,7 +81,20 @@ export const useCustomFieldsStore = create<CustomFieldsStore>()((set, get) => ({
         values[r.entity_id].push({ fieldId: r.field_id, value: r.value })
       }
 
-      set({ definitions: definitions.length > 0 ? definitions : SEED_DEFINITIONS, values, isLoading: false })
+      const translations: CustomFieldDefinitionI18n[] = (i18nRes.data ?? []).map((r: any) => ({
+        fieldId: r.field_id,
+        languageCode: r.language_code,
+        label: r.label,
+        placeholder: r.placeholder ?? undefined,
+        options: r.options ?? undefined,
+      }))
+
+      set({
+        definitions: definitions.length > 0 ? definitions : SEED_DEFINITIONS,
+        translations,
+        values,
+        isLoading: false,
+      })
     } catch (e: any) {
       set({ error: e.message, isLoading: false })
     }
@@ -178,9 +198,61 @@ export const useCustomFieldsStore = create<CustomFieldsStore>()((set, get) => ({
     }
   },
 
-  getDefinitionsForEntity: (entityType) =>
-    get().definitions.filter((d) => d.entityType === entityType).sort((a, b) => a.order - b.order),
+  upsertTranslation: (fieldId, languageCode, updates) => {
+    set((s) => {
+      const withoutFieldLang = s.translations.filter((t) => !(t.fieldId === fieldId && t.languageCode === languageCode))
+      return {
+        translations: [...withoutFieldLang, {
+          fieldId,
+          languageCode,
+          label: updates.label,
+          placeholder: updates.placeholder,
+          options: updates.options,
+        }],
+      }
+    })
+
+    if (isSupabaseConfigured && supabase) {
+      ;(supabase as any)
+        .from('custom_field_definition_i18n')
+        .upsert({
+          field_id: fieldId,
+          organization_id: getOrgId(),
+          language_code: languageCode,
+          label: updates.label,
+          placeholder: updates.placeholder ?? null,
+          options: updates.options ?? null,
+        }, { onConflict: 'field_id,language_code' })
+        .then(({ error }: any) => { if (error) console.error('[customFieldsStore] i18n upsert error', error) })
+    }
+  },
+
+  getDefinitionsForEntity: (entityType) => {
+    const { definitions, translations } = get()
+    const lang = useI18nStore.getState().language
+    return definitions
+      .filter((d) => d.entityType === entityType)
+      .sort((a, b) => a.order - b.order)
+      .map((def) => {
+        const tx = findTranslation(translations, def.id, lang)
+        if (!tx) return def
+        return {
+          ...def,
+          label: tx.label || def.label,
+          placeholder: tx.placeholder ?? def.placeholder,
+          options: tx.options ?? def.options,
+        }
+      })
+  },
 
   getActiveDefinitionsForEntity: (entityType) =>
-    get().definitions.filter((d) => d.entityType === entityType && d.isActive).sort((a, b) => a.order - b.order),
+    get().getDefinitionsForEntity(entityType).filter((d) => d.isActive),
 }))
+
+function findTranslation(
+  translations: CustomFieldDefinitionI18n[],
+  fieldId: string,
+  language: Language,
+): CustomFieldDefinitionI18n | undefined {
+  return translations.find((t) => t.fieldId === fieldId && t.languageCode === language)
+}

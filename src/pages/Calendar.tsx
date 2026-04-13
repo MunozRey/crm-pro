@@ -90,13 +90,16 @@ function formatWeekRange(days: Date[], locale: string): string {
   if (days.length === 0) return ''
   const first = days[0]
   const last = days[days.length - 1]
-  if (first.getMonth() === last.getMonth()) {
-    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(first)
-      .replace(/(\d+) de (\w+) de (\d+)/, `$1–${last.getDate()} de $2 de $3`)
+  const formatter = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
+  const rangeFormatter = formatter as Intl.DateTimeFormat & {
+    formatRange?: (startDate: Date, endDate: Date) => string
   }
-  const f = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(first)
-  const l = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(last)
-  return `${f} – ${l}`
+  if (typeof rangeFormatter.formatRange === 'function') {
+    return rangeFormatter.formatRange(first, last)
+  }
+  const f = formatter.format(first)
+  const l = formatter.format(last)
+  return `${f} - ${l}`
 }
 
 function getActivityDate(activity: Activity): Date | null {
@@ -631,25 +634,9 @@ export function Calendar() {
     de: 'de-DE',
     it: 'it-IT',
   }
-  const hourLabelByLanguage: Record<typeof language, string> = {
-    en: 'hour',
-    es: 'hora',
-    pt: 'hora',
-    fr: 'heure',
-    de: 'Stunde',
-    it: 'ora',
-  }
-  const allDayLabelByLanguage: Record<typeof language, string> = {
-    en: 'all day',
-    es: 'todo el dia',
-    pt: 'todo o dia',
-    fr: 'toute la journee',
-    de: 'ganztagig',
-    it: 'tutto il giorno',
-  }
   const locale = localeByLanguage[language]
-  const hourLabel = hourLabelByLanguage[language]
-  const allDayLabel = allDayLabelByLanguage[language]
+  const hourLabel = t.calendar.hour
+  const allDayLabel = t.calendar.allDay
 
   // Dynamic labels from translations
   const typeLabels: Record<ActivityType, string> = t.activities.typeLabels

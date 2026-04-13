@@ -64,12 +64,12 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg' }: Sl
     <div className="fixed inset-0 z-50 overflow-hidden" aria-modal="true" role="dialog">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-navy-950/80 backdrop-blur-md animate-fade-in"
+        className="absolute inset-0 bg-navy-950/80 backdrop-blur-md animate-fade-in modal-backdrop"
         onClick={onClose}
       />
       {/* Panel */}
       <div ref={panelRef} className={`absolute inset-y-0 right-0 flex w-full ${widthClasses[width]} animate-slide-in`}>
-        <div className="flex flex-col w-full bg-[#111220] border-l border-white/8 shadow-float">
+        <div className="slide-panel flex flex-col w-full bg-navy-800/60 border-l border-white/8 shadow-float">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/6 flex-shrink-0">
             <h2 className="text-base font-semibold text-white">{title}</h2>
@@ -151,7 +151,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'lg' }: ModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
       <div
-        className="absolute inset-0 bg-navy-950/80 backdrop-blur-md animate-fade-in"
+        className="absolute inset-0 bg-navy-950/80 backdrop-blur-md animate-fade-in modal-backdrop"
         onClick={onClose}
       />
       <div

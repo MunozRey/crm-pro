@@ -37,6 +37,24 @@ npm run build
 
 The app runs at `http://localhost:5173`. In mock mode it auto-seeds demo data; in Supabase mode data is fetched from your project.
 
+## Lead Score Maintenance Runner
+
+For backend/scheduler execution without user sessions:
+
+```bash
+# Single organization (requires LEAD_MAINTENANCE_ORG_ID)
+npm run maintenance:lead:org
+
+# All organizations
+npm run maintenance:lead:all
+
+# Health / last runs (optional LEAD_MAINTENANCE_ORG_ID filter)
+npm run maintenance:lead:health
+```
+
+Contract and headers are documented in:
+- `docs/lead-score-maintenance-backend.md`
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -99,6 +117,43 @@ All components are kept under 200 lines. Large pages (Contacts, Deals) delegate 
 - Quote workflow now supports save, print-to-PDF export, and email send from deal detail.
 - Build hardening is applied: chart-heavy routes are lazy-loaded (`Dashboard`, `Reports`, `Forecast`) and the production build no longer triggers chunk-size warnings at the configured threshold.
 - Next major milestone: deployment/release hardening (Phase 10).
+
+## Documentation Index
+
+- Full implementation history and technical handoff:
+  - `docs/implementation-history.md`
+- PRO roadmap (30/60/90) with execution priorities:
+  - `docs/pro-roadmap-30-60-90.md`
+- Execution backlog (operational checklist):
+  - `docs/pro-backlog.md`
+- SSO backend integration contract and provider handoff:
+  - `docs/auth-sso-backend-handoff.md`
+- Lead scoring backend maintenance scheduler contract:
+  - `docs/lead-score-maintenance-backend.md`
+- Lead maintenance Ops dashboard (Settings) behavior:
+  - `docs/lead-maintenance-ops-dashboard.md`
+- Lead maintenance incident/run operations runbook:
+  - `docs/lead-maintenance-runbook.md`
+- Theme system (system/light/dark):
+  - `docs/theme-system.md`
+- Email mailbox privacy runbook (support/ops):
+  - `docs/email-mailbox-privacy-runbook.md`
+- Email release readiness checklist:
+  - `docs/email-release-checklist.md`
+- Email 15-minute smoke test script (QA/support):
+  - `docs/email-smoke-test-15min.md`
+- Sell-ready release checklist:
+  - `docs/sell-ready-release-checklist.md`
+- Sell-ready QA evidence (current baseline):
+  - `docs/qa-evidence-sell-ready-baseline.md`
+- Sell-ready Go/No-Go review:
+  - `docs/go-no-go-sell-ready-baseline.md`
+- Production handoff and go-live checklist:
+  - `docs/production-handoff-checklist.md`
+- Audit-ready hardening matrix:
+  - `docs/hardening-matrix.md`
+- SOC2 / GDPR-lite compliance mapping:
+  - `docs/compliance-mapping.md`
 
 ## Seed Data
 In mock mode, the app ships with realistic Spanish/European B2B seed data:

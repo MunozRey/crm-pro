@@ -9,6 +9,7 @@ import { useContactsStore } from '../store/contactsStore'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { toast } from '../store/toastStore'
 import { useTranslations } from '../i18n'
+import { formatDateShort } from '../utils/formatters'
 import type {
   EmailSequence,
   SequenceStep,
@@ -434,7 +435,7 @@ function SequenceDetail({ sequence, enrollments, onEnroll }: SequenceDetailProps
 
   function formatDate(iso?: string) {
     if (!iso) return '—'
-    return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+    return formatDateShort(iso)
   }
 
   return (

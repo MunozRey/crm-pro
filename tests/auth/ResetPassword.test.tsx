@@ -31,9 +31,8 @@ describe('ResetPassword', () => {
   it('AUTH-03: calls updateUser with new password on submit', async () => {
     mockUpdateUser.mockResolvedValue({ error: null })
     renderResetPassword()
-    const inputs = screen.getAllByPlaceholderText('••••••••')
-    fireEvent.change(inputs[0], { target: { value: 'newpassword123' } })
-    fireEvent.change(inputs[1], { target: { value: 'newpassword123' } })
+    fireEvent.change(screen.getByPlaceholderText(/^password$|^contraseña$|^senha$/i), { target: { value: 'newpassword123' } })
+    fireEvent.change(screen.getByPlaceholderText(/confirm password|confirmar contraseña|confirmar senha/i), { target: { value: 'newpassword123' } })
     fireEvent.click(screen.getByRole('button', { name: /save password|guardar contraseña/i }))
     await waitFor(() => {
       expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'newpassword123' })
@@ -42,9 +41,8 @@ describe('ResetPassword', () => {
 
   it('AUTH-03: shows error when passwords do not match', async () => {
     renderResetPassword()
-    const inputs = screen.getAllByPlaceholderText('••••••••')
-    fireEvent.change(inputs[0], { target: { value: 'password1' } })
-    fireEvent.change(inputs[1], { target: { value: 'password2' } })
+    fireEvent.change(screen.getByPlaceholderText(/^password$|^contraseña$|^senha$/i), { target: { value: 'password1' } })
+    fireEvent.change(screen.getByPlaceholderText(/confirm password|confirmar contraseña|confirmar senha/i), { target: { value: 'password2' } })
     fireEvent.click(screen.getByRole('button', { name: /save password|guardar contraseña/i }))
     await waitFor(() => {
       expect(screen.getByText(/passwords do not match|contraseñas no coinciden/i)).toBeInTheDocument()

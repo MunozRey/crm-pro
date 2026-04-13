@@ -8,6 +8,7 @@ import { useGoalsStore } from '../store/goalsStore'
 import { useDealsStore } from '../store/dealsStore'
 import { useActivitiesStore } from '../store/activitiesStore'
 import { useContactsStore } from '../store/contactsStore'
+import { useAuthStore } from '../store/authStore'
 import { formatCurrency } from '../utils/formatters'
 import { toast } from '../store/toastStore'
 import type { SalesGoal } from '../types'
@@ -64,6 +65,7 @@ export function SalesGoals() {
   }
 
   const { goals, addGoal, updateGoal, deleteGoal } = useGoalsStore()
+  const currentUser = useAuthStore((s) => s.currentUser)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<GoalFormData>({
@@ -104,9 +106,13 @@ export function SalesGoals() {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (form.target <= 0) {
       toast.error(`${t.goals.title} > 0`)
+      return
+    }
+    if (form.endDate < form.startDate) {
+      toast.error(`${t.common.to} >= ${t.common.from}`)
       return
     }
     if (editingId) {
@@ -114,7 +120,11 @@ export function SalesGoals() {
       toast.success(`${t.common.save} ✓`)
       setEditingId(null)
     } else {
-      addGoal({ ...form, userId: 'user-001', current: 0 })
+      const result = await addGoal({ ...form, userId: currentUser?.id ?? '', current: 0 })
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
       toast.success(`${t.common.create} ✓`)
     }
     setShowForm(false)
@@ -142,7 +152,7 @@ export function SalesGoals() {
     : 0
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

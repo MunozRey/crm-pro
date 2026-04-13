@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useTranslations } from '../i18n'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Plus, Download, Trash2, LayoutGrid, LayoutList,
+  Plus, Download, Trash2, LayoutGrid, LayoutList, Edit2,
   Filter, X, Search,
 } from 'lucide-react'
 import { useContactsStore } from '../store/contactsStore'
@@ -414,7 +414,7 @@ export function Contacts() {
         <div className="glass overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/6 bg-navy-800/40">
+              <tr className="contacts-table-head border-b border-white/8">
                 <th className="px-4 py-3 text-left w-10">
                   <input
                     type="checkbox"
@@ -473,19 +473,20 @@ export function Contacts() {
                     <div className="flex gap-1">
                       <PermissionGate permission="contacts:update">
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="xs"
                           onClick={() => { setEditContact(contact); setIsFormOpen(true) }}
+                          leftIcon={<Edit2 size={12} />}
                         >
                           {t.common.edit}
                         </Button>
                       </PermissionGate>
                       <PermissionGate permission="contacts:delete">
                         <Button
-                          variant="ghost"
+                          variant="danger"
                           size="xs"
                           onClick={() => setDeleteId(contact.id)}
-                          className="text-red-400 hover:text-red-300"
+                          leftIcon={<Trash2 size={12} />}
                         >
                           {t.common.delete}
                         </Button>

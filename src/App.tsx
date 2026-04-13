@@ -5,6 +5,7 @@ import { Layout } from './components/layout/Layout'
 import { ErrorBoundary } from './components/layout/ErrorBoundary'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { Contacts } from './pages/Contacts'
+import { Leads } from './pages/Leads'
 import { ContactDetail } from './pages/ContactDetail'
 import { Companies } from './pages/Companies'
 import { CompanyDetail } from './pages/CompanyDetail'
@@ -21,6 +22,7 @@ import { Register } from './pages/Register'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
 import { OrgSetup } from './pages/OrgSetup'
+import { OrgAccessRequired } from './pages/OrgAccessRequired'
 import { AcceptInvite } from './pages/AcceptInvite'
 import { TeamManagement } from './pages/TeamManagement'
 import { UserProfile } from './pages/UserProfile'
@@ -34,6 +36,8 @@ import { useTranslations } from './i18n'
 import { useDataInit } from './hooks/useDataInit'
 import { GmailTokenProvider } from './contexts/GmailTokenContext'
 import { GmailCallback } from './pages/GmailCallback'
+import { useSettingsStore } from './store/settingsStore'
+import { applyTheme } from './lib/theme'
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })))
 const Reports = lazy(() => import('./pages/Reports').then((m) => ({ default: m.Reports })))
@@ -61,6 +65,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/org-setup" element={<OrgSetup />} />
+      <Route path="/org-access-required" element={<OrgAccessRequired />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
       <Route path="/auth/gmail/callback" element={<GmailCallback />} />
 
@@ -76,6 +81,7 @@ function AppRoutes() {
         }
       />
       <Route path="/contacts" element={<ProtectedPage title={t.nav.contacts} requiredPermission="contacts:read"><Contacts /></ProtectedPage>} />
+      <Route path="/leads" element={<ProtectedPage title={t.nav.leads} requiredPermission="contacts:read"><Leads /></ProtectedPage>} />
       <Route path="/contacts/:id" element={<ProtectedPage title={t.nav.contacts} requiredPermission="contacts:read"><ContactDetail /></ProtectedPage>} />
       <Route path="/companies" element={<ProtectedPage title={t.nav.companies} requiredPermission="companies:read"><Companies /></ProtectedPage>} />
       <Route path="/companies/:id" element={<ProtectedPage title={t.nav.companies} requiredPermission="companies:read"><CompanyDetail /></ProtectedPage>} />
@@ -124,6 +130,30 @@ export default function App() {
     const cleanup = initSupabaseAuth()
     return cleanup
   }, [])
+
+  useEffect(() => {
+    const applyCurrentTheme = () => {
+      const { settings } = useSettingsStore.getState()
+      applyTheme(settings.themePreference ?? 'system')
+    }
+
+    applyCurrentTheme()
+    const unsubscribe = useSettingsStore.subscribe(applyCurrentTheme)
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemThemeChange = () => {
+      if (useSettingsStore.getState().settings.themePreference === 'system') {
+        applyCurrentTheme()
+      }
+    }
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+
+    return () => {
+      unsubscribe()
+      mediaQuery.removeEventListener('change', handleSystemThemeChange)
+    }
+  }, [])
+
   return (
     <BrowserRouter>
       <GmailTokenProvider>

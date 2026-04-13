@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
-import type { SmartView, SmartViewFilter, CustomFieldEntityType } from '../types'
+import type { SmartView, SmartViewFilter, CustomFieldEntityType, InboxSavedView, InboxAdvancedFilters } from '../types'
 
 // ─── Seed Views ──────────────────────────────────────────────────────────────
 
@@ -45,10 +45,65 @@ const SEED_VIEWS: SmartView[] = [
   },
 ]
 
+const LEGACY_NAMEKEY_BY_ID: Record<string, NonNullable<SmartView['nameKey']>> = {
+  'sv-01': 'sv01',
+  'sv-02': 'sv02',
+  'sv-03': 'sv03',
+  'sv-04': 'sv04',
+  'sv-05': 'sv05',
+}
+
+const LEGACY_NAMEKEY_BY_NAME: Record<string, NonNullable<SmartView['nameKey']>> = {
+  'prospectos activos': 'sv01',
+  'prospectos ativos': 'sv01',
+  'active prospects': 'sv01',
+  'prospects actifs': 'sv01',
+  'aktive interessenten': 'sv01',
+  'prospetti attivi': 'sv01',
+  'clientes activos': 'sv02',
+  'clientes ativos': 'sv02',
+  'active customers': 'sv02',
+  'clients actifs': 'sv02',
+  'aktive kunden': 'sv02',
+  'clienti attivi': 'sv02',
+  'deals en negociación': 'sv03',
+  'negócios em negociação': 'sv03',
+  'deals in negotiation': 'sv03',
+  'deals en négociation': 'sv03',
+  'deals in verhandlung': 'sv03',
+  'deals in negoziazione': 'sv03',
+  'deals alto valor (>20k)': 'sv04',
+  'negócios alto valor (>20k)': 'sv04',
+  'high-value deals (>20k)': 'sv04',
+  'deals de grande valeur (>20k)': 'sv04',
+  'hochwertige deals (>20k)': 'sv04',
+  'deal di alto valore (>20k)': 'sv04',
+  'empresas saas': 'sv05',
+  'saas companies': 'sv05',
+  'entreprises saas': 'sv05',
+  'saas-unternehmen': 'sv05',
+  'aziende saas': 'sv05',
+}
+
+function normalizeViewName(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function normalizeSeedViewLocalization(views: SmartView[]): SmartView[] {
+  return views.map((view) => {
+    if (view.nameKey) return view
+    const migratedKey = LEGACY_NAMEKEY_BY_ID[view.id]
+      ?? LEGACY_NAMEKEY_BY_NAME[normalizeViewName(view.name)]
+    if (!migratedKey) return view
+    return { ...view, nameKey: migratedKey }
+  })
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 interface ViewsStore {
   views: SmartView[]
+  inboxViews: InboxSavedView[]
   activeViewId: Record<CustomFieldEntityType, string | null>
 
   addView: (view: Omit<SmartView, 'id' | 'createdAt' | 'updatedAt'>) => SmartView
@@ -60,12 +115,16 @@ interface ViewsStore {
   getViewsForEntity: (entityType: CustomFieldEntityType) => SmartView[]
   getPinnedViews: (entityType: CustomFieldEntityType) => SmartView[]
   getActiveView: (entityType: CustomFieldEntityType) => SmartView | null
+  addInboxView: (name: string, query: string, filters: InboxAdvancedFilters) => InboxSavedView
+  updateInboxView: (id: string, updates: Partial<Pick<InboxSavedView, 'name' | 'query' | 'filters'>>) => void
+  deleteInboxView: (id: string) => void
 }
 
 export const useViewsStore = create<ViewsStore>()(
   persist(
     (set, get) => ({
       views: [],
+      inboxViews: [],
       activeViewId: { contact: null, company: null, deal: null },
 
       addView: (viewData) => {
@@ -118,13 +177,42 @@ export const useViewsStore = create<ViewsStore>()(
         const id = get().activeViewId[entityType]
         return id ? get().views.find((v) => v.id === id) ?? null : null
       },
+
+      addInboxView: (name, query, filters) => {
+        const ts = new Date().toISOString()
+        const view: InboxSavedView = {
+          id: uuidv4(),
+          name: name.trim(),
+          query,
+          filters,
+          createdAt: ts,
+          updatedAt: ts,
+        }
+        set((s) => ({ inboxViews: [...s.inboxViews, view] }))
+        return view
+      },
+
+      updateInboxView: (id, updates) => {
+        set((s) => ({
+          inboxViews: s.inboxViews.map((view) => (
+            view.id === id ? { ...view, ...updates, updatedAt: new Date().toISOString() } : view
+          )),
+        }))
+      },
+
+      deleteInboxView: (id) => {
+        set((s) => ({ inboxViews: s.inboxViews.filter((view) => view.id !== id) }))
+      },
     }),
     {
       name: 'crm_views',
       onRehydrateStorage: () => (state) => {
-        if (state && state.views.length === 0) {
+        if (!state) return
+        if (state.views.length === 0) {
           state.views = SEED_VIEWS
+          return
         }
+        state.views = normalizeSeedViewLocalization(state.views)
       },
     }
   )

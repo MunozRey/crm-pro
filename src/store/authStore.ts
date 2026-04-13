@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
 import type { AuthUser, Organization, Invitation, UserRole, Session } from '../types/auth'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useAuditStore } from './auditStore'
+import { toast } from './toastStore'
 
 // Simple hash for demo purposes (in production, use bcrypt + backend)
 function simpleHash(str: string): string {
@@ -27,6 +29,8 @@ export interface AuthState {
 
   // Derived from currentUser.organizationId (not persisted — re-derived from JWT on load)
   organizationId: string | null
+  tenantResolutionStatus: 'idle' | 'resolving' | 'ready' | 'needs_invitation' | 'error'
+  tenantResolutionMessage: string | null
 
   // All users in the org
   users: AuthUser[]
@@ -47,7 +51,9 @@ export interface AuthState {
   setCurrentUser: (user: AuthUser | null) => void
   setSupabaseSession: (session: unknown | null) => void
   setIsLoadingAuth: (v: boolean) => void
+  setTenantResolution: (status: AuthState['tenantResolutionStatus'], message?: string | null) => void
   fetchOrgUsers: (organizationId: string) => Promise<void>
+  ensureTenantForCurrentUser: () => Promise<void>
 
   // User management
   addUser: (data: {
@@ -143,6 +149,8 @@ export const useAuthStore = create<AuthState>()(
       supabaseSession: null,
       isLoadingAuth: true,
       organizationId: null,
+      tenantResolutionStatus: 'idle',
+      tenantResolutionMessage: null,
       users: isSupabaseConfigured ? [] : SEED_USERS,
       passwords: isSupabaseConfigured ? {} : SEED_PASSWORDS,
       invitations: [],
@@ -153,15 +161,32 @@ export const useAuthStore = create<AuthState>()(
         if (isSupabaseConfigured) {
           set((state) => {
             if (!user) {
-              return { currentUser: null, organizationId: null, users: [] }
+              return {
+                currentUser: null,
+                organizationId: null,
+                users: [],
+                tenantResolutionStatus: 'idle',
+                tenantResolutionMessage: null,
+              }
             }
             const nextUsers = state.users.filter((u) => u.id !== user.id)
             nextUsers.unshift(user)
-            return { currentUser: user, organizationId: user.organizationId ?? null, users: nextUsers }
+            return {
+              currentUser: user,
+              organizationId: user.organizationId ?? null,
+              users: nextUsers,
+              tenantResolutionStatus: user.organizationId ? 'ready' : state.tenantResolutionStatus,
+              tenantResolutionMessage: user.organizationId ? null : state.tenantResolutionMessage,
+            }
           })
           return
         }
-        set({ currentUser: user, organizationId: user?.organizationId ?? null })
+        set({
+          currentUser: user,
+          organizationId: user?.organizationId ?? null,
+          tenantResolutionStatus: user?.organizationId ? 'ready' : 'idle',
+          tenantResolutionMessage: null,
+        })
       },
 
       setSupabaseSession: (session) => {
@@ -170,6 +195,10 @@ export const useAuthStore = create<AuthState>()(
 
       setIsLoadingAuth: (v) => {
         set({ isLoadingAuth: v })
+      },
+
+      setTenantResolution: (status, message = null) => {
+        set({ tenantResolutionStatus: status, tenantResolutionMessage: message })
       },
 
       fetchOrgUsers: async (organizationId) => {
@@ -210,6 +239,46 @@ export const useAuthStore = create<AuthState>()(
         }
 
         set({ users })
+      },
+
+      ensureTenantForCurrentUser: async () => {
+        if (!isSupabaseConfigured || !supabase) return
+        if (!(supabase as any).functions?.invoke) return
+        const state = get()
+        if (!state.currentUser || state.organizationId) {
+          if (state.organizationId) set({ tenantResolutionStatus: 'ready', tenantResolutionMessage: null })
+          return
+        }
+
+        set({ tenantResolutionStatus: 'resolving', tenantResolutionMessage: null })
+
+        const { data, error } = await supabase.functions.invoke('ensure-tenant')
+        if (error) {
+          set({ tenantResolutionStatus: 'error', tenantResolutionMessage: error.message })
+          return
+        }
+
+        const payload = data as {
+          status?: 'already_member' | 'created' | 'requires_invitation'
+          organizationName?: string | null
+          domain?: string
+        }
+
+        if (payload.status === 'requires_invitation') {
+          const message = payload.organizationName
+            ? `Domain already belongs to ${payload.organizationName}. Ask for an invitation to join that workspace.`
+            : 'Your email domain already belongs to an existing workspace. Ask for an invitation to join.'
+          set({ tenantResolutionStatus: 'needs_invitation', tenantResolutionMessage: message })
+          return
+        }
+
+        // If tenant was created/already exists for the user, refresh the JWT claims.
+        const { error: refreshErr } = await supabase.auth.refreshSession()
+        if (refreshErr) {
+          set({ tenantResolutionStatus: 'error', tenantResolutionMessage: refreshErr.message })
+          return
+        }
+        set({ tenantResolutionStatus: 'ready', tenantResolutionMessage: null })
       },
 
       login: (email, password) => {
@@ -254,6 +323,9 @@ export const useAuthStore = create<AuthState>()(
           session: null,
           supabaseSession: null,
           organization: null,
+          organizationId: null,
+          tenantResolutionStatus: 'idle',
+          tenantResolutionMessage: null,
         })
       },
 
@@ -341,17 +413,94 @@ export const useAuthStore = create<AuthState>()(
       },
 
       updateUser: (id, updates) => {
-        set((state) => ({
-          users: state.users.map((u) =>
-            u.id === id ? { ...u, ...updates, updatedAt: new Date().toISOString() } : u
-          ),
-          currentUser: state.currentUser?.id === id
-            ? { ...state.currentUser, ...updates, updatedAt: new Date().toISOString() }
-            : state.currentUser,
-        }))
+        const state = get()
+        const prevUser = state.users.find((u) => u.id === id)
+        const isSelf = state.currentUser?.id === id
+
+        const applyLocal = () => {
+          set((s) => ({
+            users: s.users.map((u) =>
+              u.id === id ? { ...u, ...updates, updatedAt: new Date().toISOString() } : u
+            ),
+            currentUser: s.currentUser?.id === id
+              ? { ...s.currentUser, ...updates, updatedAt: new Date().toISOString() }
+              : s.currentUser,
+          }))
+        }
+
+        const hasProfileMetadata =
+          updates.name !== undefined ||
+          updates.jobTitle !== undefined ||
+          updates.phone !== undefined ||
+          updates.avatar !== undefined
+
+        // Supabase: display name and profile fields live in auth.users.raw_user_meta_data.
+        // On login we read user_metadata.full_name (see initSupabaseAuth); if we only update
+        // Zustand, the next session still shows email local-part (e.g. "david").
+        if (isSupabaseConfigured && supabase && isSelf && hasProfileMetadata) {
+          const data: Record<string, unknown> = {}
+          if (updates.name !== undefined) data.full_name = updates.name
+          if (updates.jobTitle !== undefined) data.job_title = updates.jobTitle
+          if (updates.phone !== undefined) data.phone = updates.phone
+          if (updates.avatar !== undefined) data.avatar_url = updates.avatar
+
+          void supabase.auth.updateUser({ data }).then(({ data: res, error }) => {
+            if (error) {
+              console.error('[authStore] supabase.auth.updateUser', error)
+              toast.error(error.message)
+              return
+            }
+            const u = res.user
+            if (u) {
+              const meta = u.user_metadata ?? {}
+              const name = (meta.full_name as string | undefined) ?? updates.name ?? prevUser?.name ?? ''
+              const jobTitle = (meta.job_title as string | undefined) ?? updates.jobTitle ?? prevUser?.jobTitle ?? ''
+              const phone = (meta.phone as string | undefined) ?? updates.phone ?? prevUser?.phone
+              const avatar = (meta.avatar_url as string | undefined) ?? updates.avatar ?? prevUser?.avatar
+              set((s) => ({
+                users: s.users.map((user) =>
+                  user.id === id
+                    ? {
+                        ...user,
+                        name,
+                        jobTitle,
+                        phone,
+                        avatar,
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : user
+                ),
+                currentUser:
+                  s.currentUser?.id === id
+                    ? {
+                        ...s.currentUser,
+                        name,
+                        jobTitle,
+                        phone,
+                        avatar,
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : s.currentUser,
+              }))
+            } else {
+              applyLocal()
+            }
+
+            const orgId = get().currentUser?.organizationId
+            if (orgId) {
+              void get().fetchOrgUsers(orgId).catch(() => {
+                /* non-critical */
+              })
+            }
+          })
+          return
+        }
+
+        applyLocal()
       },
 
       changeUserRole: (id, role) => {
+        const target = get().users.find((u) => u.id === id)
         set((state) => ({
           users: state.users.map((u) =>
             u.id === id ? { ...u, role, updatedAt: new Date().toISOString() } : u
@@ -360,6 +509,15 @@ export const useAuthStore = create<AuthState>()(
             ? { ...state.currentUser, role, updatedAt: new Date().toISOString() }
             : state.currentUser,
         }))
+        if (target) {
+          useAuditStore.getState().logAction(
+            'user_role_changed',
+            'user',
+            target.id,
+            target.name,
+            `Role changed to ${role}`
+          )
+        }
       },
 
       deactivateUser: (id) => {
@@ -548,7 +706,12 @@ export function initSupabaseAuth(): (() => void) | undefined {
         updatedAt: sbUser.updated_at ?? sbUser.created_at,
       })
       if (organizationId) {
+        useAuthStore.getState().setTenantResolution('ready', null)
         useAuthStore.getState().fetchOrgUsers(organizationId).catch(() => {
+          /* non-critical */
+        })
+      } else {
+        useAuthStore.getState().ensureTenantForCurrentUser().catch(() => {
           /* non-critical */
         })
       }

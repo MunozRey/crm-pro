@@ -16,6 +16,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
   const currentUser = useAuthStore((s) => s.currentUser)
   const organizationId = useAuthStore((s) => s.organizationId)
+  const tenantResolutionStatus = useAuthStore((s) => s.tenantResolutionStatus)
 
   // AUTH-04: Do NOT redirect until Supabase has fired the first auth event.
   // isLoadingAuth starts as true and is set to false inside onAuthStateChange.
@@ -31,6 +32,12 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   // AUTH-06: Authenticated users without an org must create one before accessing the CRM.
   // Skip this check for Supabase mock mode (isSupabaseConfigured = false) so demo/dev still works.
   if (isAuthenticated && !organizationId && isSupabaseConfigured) {
+    if (tenantResolutionStatus === 'resolving' || tenantResolutionStatus === 'idle') {
+      return null
+    }
+    if (tenantResolutionStatus === 'needs_invitation') {
+      return <Navigate to="/org-access-required" replace />
+    }
     return <Navigate to="/org-setup" replace />
   }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   hasPermission,
   hasAnyPermission,
@@ -6,6 +6,17 @@ import {
   canAccessRoute,
   getPermissionsForRole,
 } from '../../src/utils/permissions'
+import { useSettingsStore } from '../../src/store/settingsStore'
+import { DEFAULT_ROLE_PERMISSIONS } from '../../src/utils/permissionProfiles'
+
+beforeEach(() => {
+  useSettingsStore.setState((state) => ({
+    settings: {
+      ...state.settings,
+      permissionProfiles: DEFAULT_ROLE_PERMISSIONS,
+    },
+  }))
+})
 
 describe('hasPermission', () => {
   it('admin has users:delete (admin-only permission)', () => {
@@ -72,6 +83,19 @@ describe('getPermissionsForRole', () => {
   it('viewer permissions are all read-only', () => {
     const viewerPerms = getPermissionsForRole('viewer')
     expect(viewerPerms.every((p) => p.endsWith(':read'))).toBe(true)
+  })
+
+  it('uses tenant-customized permission profile when available', () => {
+    useSettingsStore.setState((state) => ({
+      settings: {
+        ...state.settings,
+        permissionProfiles: {
+          ...state.settings.permissionProfiles,
+          viewer: ['contacts:read', 'users:read'],
+        },
+      },
+    }))
+    expect(getPermissionsForRole('viewer')).toContain('users:read')
   })
 })
 

@@ -42,6 +42,14 @@ const TOOLTIP_STYLE = {
   color: '#e2e8f0',
 }
 
+const HEATMAP_LEVEL_CLASSES = [
+  'crm-heat-0',
+  'crm-heat-1',
+  'crm-heat-2',
+  'crm-heat-3',
+  'crm-heat-4',
+] as const
+
 export function Dashboard() {
   const navigate = useNavigate()
   const t = useTranslations()
@@ -175,17 +183,17 @@ export function Dashboard() {
   const getContact = (id: string) => contacts.find((c) => c.id === id)
   const getCompany = (id: string) => companies.find((c) => c.id === id)
 
-  const getHeatColor = (count: number, maxCount: number): string => {
-    if (count === 0) return 'bg-navy-800/40'
+  const getHeatLevelClass = (count: number, maxCount: number): string => {
+    if (count === 0) return HEATMAP_LEVEL_CLASSES[0]
     const intensity = count / maxCount
-    if (intensity < 0.25) return 'bg-brand-500/20'
-    if (intensity < 0.5) return 'bg-brand-500/40'
-    if (intensity < 0.75) return 'bg-brand-500/60'
-    return 'bg-brand-500/90'
+    if (intensity < 0.25) return HEATMAP_LEVEL_CLASSES[1]
+    if (intensity < 0.5) return HEATMAP_LEVEL_CLASSES[2]
+    if (intensity < 0.75) return HEATMAP_LEVEL_CLASSES[3]
+    return HEATMAP_LEVEL_CLASSES[4]
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-6 space-y-6">
       {/* ── Row 1: Quick actions ──────────────────────────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">
         <PermissionGate permission="contacts:create">
@@ -413,8 +421,8 @@ export function Dashboard() {
                     <span className="text-xs font-semibold text-emerald-400">
                       {formatCurrency(deal.value, deal.currency)}
                     </span>
-                    <Badge variant={STAGE_BADGE_MAP[deal.stage]}>
-                      {t.deals.stageLabels[deal.stage]}
+                    <Badge variant={STAGE_BADGE_MAP[deal.stage] ?? 'gray'}>
+                      {t.deals.stageLabels[deal.stage as keyof typeof t.deals.stageLabels] ?? deal.stage}
                     </Badge>
                   </div>
                 </div>
@@ -449,6 +457,7 @@ export function Dashboard() {
                 onClick={() => {
                   useNotificationsStore.getState().markAsRead(n.id)
                   if (n.entityType === 'deal') navigate('/deals')
+                  else if (n.entityType === 'lead' && n.entityId) navigate(`/leads/${n.entityId}`)
                   else if (n.entityType === 'contact' && n.entityId) navigate(`/contacts/${n.entityId}`)
                   else navigate('/notifications')
                 }}
@@ -488,11 +497,11 @@ export function Dashboard() {
               {week.map((count, dayIdx) => (
                 <div
                   key={`${weekIdx}-${dayIdx}`}
-                  className={`h-8 rounded-lg ${getHeatColor(count, heatmapData.maxCount)} flex items-center justify-center transition-colors`}
+                  className={`h-8 rounded-lg ${getHeatLevelClass(count, heatmapData.maxCount)} flex items-center justify-center transition-colors`}
                   title={`${count} ${t.activities.title.toLowerCase()}`}
                 >
                   {count > 0 && (
-                    <span className="text-[10px] font-medium text-white/70">{count}</span>
+                    <span className="text-[10px] font-semibold text-white/85">{count}</span>
                   )}
                 </div>
               ))}
@@ -501,11 +510,11 @@ export function Dashboard() {
           {/* Legend */}
           <div className="flex items-center justify-end gap-2 pt-2">
             <span className="text-[10px] text-slate-500">{t.dashboard.heatmapLess}</span>
-            <div className="w-4 h-4 rounded bg-navy-800/40" />
-            <div className="w-4 h-4 rounded bg-brand-500/20" />
-            <div className="w-4 h-4 rounded bg-brand-500/40" />
-            <div className="w-4 h-4 rounded bg-brand-500/60" />
-            <div className="w-4 h-4 rounded bg-brand-500/90" />
+            <div className="w-4 h-4 rounded crm-heat-0" />
+            <div className="w-4 h-4 rounded crm-heat-1" />
+            <div className="w-4 h-4 rounded crm-heat-2" />
+            <div className="w-4 h-4 rounded crm-heat-3" />
+            <div className="w-4 h-4 rounded crm-heat-4" />
             <span className="text-[10px] text-slate-500">{t.dashboard.heatmapMore}</span>
           </div>
         </div>

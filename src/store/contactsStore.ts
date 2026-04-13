@@ -5,6 +5,7 @@ import { seedContacts } from '../utils/seedData'
 import { useAuditStore } from './auditStore'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getOrgId, sbDelete, sbBulkDelete } from '../lib/supabaseHelpers'
+import { toast } from './toastStore'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = () => supabase as any
@@ -115,16 +116,23 @@ export const useContactsStore = create<ContactsState>()(
       useAuditStore.getState().logAction('contact_created', 'contact', tempId, contactData.firstName + ' ' + contactData.lastName, 'Contacto creado')
 
       if (isSupabaseConfigured && supabase) {
-        const row = contactToRow(contactData)
-        sb().from('contacts').insert({ ...row, organization_id: getOrgId() }).select().single()
-          .then(({ data, error }: any) => {
-            if (error) {
-              set((s) => ({ contacts: s.contacts.filter((c) => c.id !== tempId), error: error.message }))
-              return
-            }
-            const real = rowToContact(data as Record<string, unknown>)
-            set((s) => ({ contacts: s.contacts.map((c) => c.id === tempId ? real : c) }))
-          })
+        try {
+          const row = contactToRow(contactData)
+          sb().from('contacts').insert({ ...row, organization_id: getOrgId() }).select().single()
+            .then(({ data, error }: any) => {
+              if (error) {
+                set({ error: error.message })
+                toast.error(error.message)
+                return
+              }
+              const real = rowToContact(data as Record<string, unknown>)
+              set((s) => ({ contacts: s.contacts.map((c) => c.id === tempId ? real : c) }))
+            })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unable to save contact'
+          set({ error: message })
+          toast.error(message)
+        }
       }
 
       return optimistic

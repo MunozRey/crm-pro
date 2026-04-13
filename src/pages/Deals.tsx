@@ -24,12 +24,9 @@ import { SlideOver, ConfirmDialog } from '../components/ui/Modal'
 import { Select } from '../components/ui/Select'
 import { EmptyState } from '../components/shared/EmptyState'
 import { toast } from '../store/toastStore'
-import { formatCurrency, formatDate, formatRelativeDate } from '../utils/formatters'
+import { formatCurrency, formatDate, formatDateShort, formatRelativeDate } from '../utils/formatters'
 import { computeDealHealth, healthStatusColor } from '../utils/dealHealth'
-import {
-  DEAL_STAGE_COLORS, DEAL_STAGES_ORDER,
-  DEAL_PRIORITY_LABELS, DEAL_PRIORITY_COLORS,
-} from '../utils/constants'
+import { DEAL_PRIORITY_COLORS } from '../utils/constants'
 
 import type { Deal, DealStage, QuoteItem, SmartViewFilter } from '../types'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -37,21 +34,16 @@ import { EmailComposer } from '../components/email/EmailComposer'
 import { useEmailStore } from '../store/emailStore'
 import { useAuthStore } from '../store/authStore'
 import { useProductsStore } from '../store/productsStore'
+import { useSettingsStore } from '../store/settingsStore'
 import { CustomFieldsForm } from '../components/shared/CustomFieldRenderer'
 
-type StageColorMap = Record<DealStage, string>
-const STAGE_HEX: StageColorMap = {
-  lead: '#3b82f6',
-  qualified: '#f59e0b',
-  proposal: '#8b5cf6',
-  negotiation: '#f97316',
-  closed_won: '#10b981',
-  closed_lost: '#ef4444',
-}
-
-const STAGE_BADGE_MAP: Record<DealStage, 'blue' | 'yellow' | 'purple' | 'orange' | 'emerald' | 'rose'> = {
-  lead: 'blue', qualified: 'yellow', proposal: 'purple',
-  negotiation: 'orange', closed_won: 'emerald', closed_lost: 'rose',
+const STAGE_BADGE_MAP: Record<string, 'blue' | 'yellow' | 'purple' | 'orange' | 'emerald' | 'rose' | 'gray'> = {
+  lead: 'blue',
+  qualified: 'yellow',
+  proposal: 'purple',
+  negotiation: 'orange',
+  closed_won: 'emerald',
+  closed_lost: 'rose',
 }
 
 function getDealAgeDays(createdAt: string): number {
@@ -146,6 +138,7 @@ function QuoteBuilder({
     it: 'it-IT',
   }
   const fmt = (n: number) => new Intl.NumberFormat(localeByLanguage[language], { style: 'currency', currency }).format(n)
+  const formatDateForQuote = (value: Date) => formatDateShort(value.toISOString())
 
   const handleSave = () => {
     useDealsStore.getState().updateQuote(dealId, items)
@@ -175,33 +168,33 @@ function QuoteBuilder({
         <body style="font-family:Arial,sans-serif;padding:24px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
             <div>
-              <h2 style="margin:0 0 6px">CRM Pro Quote</h2>
-              <p style="margin:0;color:#555">${companyName || 'Company'}</p>
+              <h2 style="margin:0 0 6px">${t.deals.quoteBuilder}</h2>
+              <p style="margin:0;color:#555">${companyName || t.deals.company}</p>
             </div>
             <div style="text-align:right;color:#444;font-size:12px">
               <div><strong>${quoteNumber}</strong></div>
-              <div>Date: ${new Date().toLocaleDateString()}</div>
-              <div>Valid until: ${new Date(Date.now() + validityDays * 86400000).toLocaleDateString()}</div>
+              <div>${t.common.date}: ${formatDateForQuote(new Date())}</div>
+              <div>${t.deals.expectedClose}: ${formatDateForQuote(new Date(Date.now() + validityDays * 86400000))}</div>
             </div>
           </div>
           <p style="margin:0 0 18px;color:#555">${dealTitle}</p>
           <table style="width:100%;border-collapse:collapse">
             <thead>
               <tr>
-                <th style="padding:8px;text-align:left;border-bottom:2px solid #111">Item</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Qty</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Unit</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Disc.</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">Total</th>
+                <th style="padding:8px;text-align:left;border-bottom:2px solid #111">${t.common.description}</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.common.total}</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.common.value}</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.deals.discount}</th>
+                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.common.total}</th>
               </tr>
             </thead>
             <tbody>${lines}</tbody>
           </table>
           <div style="margin-top:16px;text-align:right">
-            <div>Subtotal: ${fmt(subtotal)}</div>
-            <div>Discount: -${fmt(totalDiscount)}</div>
-            <div>VAT (${vatPercent}%): ${fmt(vatAmount)}</div>
-            <div style="font-weight:700;margin-top:4px">Grand Total: ${fmt(grandTotal)}</div>
+            <div>${t.deals.subtotal}: ${fmt(subtotal)}</div>
+            <div>${t.deals.discount}: -${fmt(totalDiscount)}</div>
+            <div>${t.deals.vatPercent} (${vatPercent}%): ${fmt(vatAmount)}</div>
+            <div style="font-weight:700;margin-top:4px">${t.common.total}: ${fmt(grandTotal)}</div>
           </div>
         </body>
       </html>
@@ -231,14 +224,14 @@ function QuoteBuilder({
       `Please find below the quote summary for "${dealTitle}":`,
       '',
       `Quote number: ${quoteNumber}`,
-      `Valid until: ${new Date(Date.now() + validityDays * 86400000).toLocaleDateString()}`,
+      `${t.deals.expectedClose}: ${formatDateForQuote(new Date(Date.now() + validityDays * 86400000))}`,
       '',
-      ...items.map((item) => `- ${item.name || 'Item'}: ${item.quantity} x ${fmt(item.unitPrice)} (${item.discount}% off) = ${fmt(item.total)}`),
+      ...items.map((item) => `- ${item.name || t.common.description}: ${item.quantity} x ${fmt(item.unitPrice)} (${item.discount}%) = ${fmt(item.total)}`),
       '',
-      `Subtotal: ${fmt(subtotal)}`,
-      `Discount: -${fmt(totalDiscount)}`,
-      `VAT (${vatPercent}%): ${fmt(vatAmount)}`,
-      `Grand Total: ${fmt(grandTotal)}`,
+      `${t.deals.subtotal}: ${fmt(subtotal)}`,
+      `${t.deals.discount}: -${fmt(totalDiscount)}`,
+      `${t.deals.vatPercent} (${vatPercent}%): ${fmt(vatAmount)}`,
+      `${t.common.total}: ${fmt(grandTotal)}`,
       '',
       'Best regards,',
     ].join('\n')
@@ -374,10 +367,10 @@ function QuoteBuilder({
             <span>{t.common.total}</span><span>{fmt(total)}</span>
           </div>
           <div className="flex justify-between text-slate-400">
-            <span>VAT ({vatPercent}%)</span><span>{fmt(vatAmount)}</span>
+            <span>{t.deals.vatPercent} ({vatPercent}%)</span><span>{fmt(vatAmount)}</span>
           </div>
           <div className="flex justify-between text-emerald-400 font-semibold text-sm">
-            <span>Grand Total</span><span>{fmt(grandTotal)}</span>
+            <span>{t.common.total}</span><span>{fmt(grandTotal)}</span>
           </div>
         </div>
       )}
@@ -430,7 +423,7 @@ function QuoteBuilder({
           disabled={items.length === 0 || sendingQuote}
           className="px-4 py-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 disabled:opacity-40 text-xs text-brand-300 font-medium transition-colors"
         >
-          {sendingQuote ? `${t.inbox.compose}...` : 'Send by Email'}
+          {sendingQuote ? `${t.inbox.compose}...` : t.inbox.compose}
         </button>
         <button
           onClick={handleSave}
@@ -451,6 +444,7 @@ export function Deals() {
   const contacts = useContactsStore((s) => s.contacts)
   const companies = useCompaniesStore((s) => s.companies)
   const { activities, addActivity, completeActivity, deleteActivity } = useActivitiesStore()
+  const pipelineStages = useSettingsStore((s) => s.settings.pipelineStages)
 
   const currentUser = useAuthStore((s) => s.currentUser)
   const orgUsers = useAuthStore((s) => s.users)
@@ -523,6 +517,18 @@ export function Deals() {
 
   const getContact = useCallback((id: string) => contacts.find((c) => c.id === id), [contacts])
   const getCompany = useCallback((id: string) => companies.find((c) => c.id === id), [companies])
+  const stageLabelById = useMemo(
+    () => Object.fromEntries(pipelineStages.map((stage) => [stage.id, stage.name])) as Record<DealStage, string>,
+    [pipelineStages]
+  )
+  const sortedPipelineStages = useMemo(
+    () => pipelineStages.slice().sort((a, b) => a.order - b.order),
+    [pipelineStages]
+  )
+  const getStageLabel = useCallback(
+    (stage: DealStage) => stageLabelById[stage] || stage,
+    [stageLabelById]
+  )
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
@@ -531,7 +537,7 @@ export function Deals() {
     const deal = deals.find((d) => d.id === draggableId)
     if (deal && deal.stage !== newStage) {
       moveDeal(draggableId, newStage)
-      toast.success(`${t.deals.title} → ${t.deals.stageLabels[newStage]}`)
+      toast.success(`${t.deals.title} → ${getStageLabel(newStage)}`)
     }
   }
 
@@ -601,7 +607,7 @@ export function Deals() {
 
   const handleBulkStageChange = (stage: DealStage) => {
     selectedDealIds.forEach((id) => moveDeal(id, stage))
-    toast.success(`${selectedDealIds.size} ${t.deals.title} → ${t.deals.stageLabels[stage]}`)
+    toast.success(`${selectedDealIds.size} ${t.deals.title} → ${getStageLabel(stage)}`)
     setSelectedDealIds(new Set())
   }
 
@@ -711,14 +717,14 @@ export function Deals() {
       {viewMode === 'kanban' && (
         <div className="flex-1 overflow-x-auto p-4">
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex gap-4 h-full min-h-[500px]" style={{ minWidth: `${DEAL_STAGES_ORDER.length * 296}px` }}>
-              {DEAL_STAGES_ORDER.map((stage) => (
+            <div className="flex gap-4 h-full min-h-[500px]" style={{ minWidth: `${sortedPipelineStages.length * 296}px` }}>
+              {sortedPipelineStages.map((pipelineStage) => (
                 <KanbanColumn
-                  key={stage}
-                  stage={stage}
-                  deals={filtered.filter((d) => d.stage === stage)}
+                  key={pipelineStage.id}
+                  stage={pipelineStage.id}
+                  deals={filtered.filter((d) => d.stage === pipelineStage.id)}
                   onDealClick={handleDealClick}
-                  color={STAGE_HEX[stage]}
+                  color={pipelineStage.color}
                 />
               ))}
             </div>
@@ -745,7 +751,7 @@ export function Deals() {
                 }}
               />
               <Select
-                options={DEAL_STAGES_ORDER.map((s) => ({ value: s, label: t.deals.stageLabels[s] }))}
+                options={sortedPipelineStages.map((s) => ({ value: s.id, label: s.name }))}
                 placeholder={t.deals.stage}
                 value=""
                 onChange={(e) => {
@@ -815,8 +821,8 @@ export function Deals() {
                             type="checkbox"
                             checked={selectedDealIds.has(deal.id)}
                             onChange={() => toggleDealSelect(deal.id)}
-                            aria-label={`Select deal ${deal.title}`}
-                            title={`Select deal ${deal.title}`}
+                            aria-label={`${t.common.select} ${deal.title}`}
+                            title={`${t.common.select} ${deal.title}`}
                             className="rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500"
                           />
                         </td>
@@ -831,7 +837,7 @@ export function Deals() {
                               />
                             )}
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${aging.bg} ${aging.text}`}>
-                              {ageDays}d
+                              {ageDays}{t.dashboard.days}
                             </span>
                           </div>
                         </td>
@@ -840,9 +846,9 @@ export function Deals() {
                           {formatCurrency(deal.value, deal.currency)}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={STAGE_BADGE_MAP[deal.stage]}>{t.deals.stageLabels[deal.stage]}</Badge>
+                          <Badge variant={STAGE_BADGE_MAP[deal.stage] ?? 'gray'}>{getStageLabel(deal.stage)}</Badge>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-400">{DEAL_PRIORITY_LABELS[deal.priority]}</td>
+                        <td className="px-4 py-3 text-xs text-slate-400">{t.deals.priorityLabels[deal.priority]}</td>
                         <td className="px-4 py-3 text-xs text-slate-500">{formatDate(deal.expectedCloseDate)}</td>
                         <td className="px-4 py-3 text-xs text-slate-400">{deal.assignedTo}</td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -911,14 +917,14 @@ export function Deals() {
               <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                 {[
                   { label: t.common.value, value: formatCurrency(selectedDeal.value, selectedDeal.currency) },
-                  { label: t.deals.stage, value: t.deals.stageLabels[selectedDeal.stage] },
+                  { label: t.deals.stage, value: getStageLabel(selectedDeal.stage) },
                   { label: t.deals.probability, value: `${selectedDeal.probability}%` },
-                  { label: t.common.priority, value: DEAL_PRIORITY_LABELS[selectedDeal.priority] },
+                  { label: t.common.priority, value: t.deals.priorityLabels[selectedDeal.priority] },
                   { label: t.deals.expectedClose, value: formatDate(selectedDeal.expectedCloseDate) },
                   { label: t.common.assignedTo, value: selectedDeal.assignedTo },
                   { label: t.deals.company, value: getCompany(selectedDeal.companyId)?.name || '—' },
                   { label: t.deals.contact, value: (() => { const c = getContact(selectedDeal.contactId); return c ? `${c.firstName} ${c.lastName}` : '—' })() },
-                  { label: t.deals.daysInStage, value: `${getStageDurationDays(selectedDeal.updatedAt)} ${t.deals.aging} ${t.deals.stageLabels[selectedDeal.stage]}` },
+                  { label: t.deals.daysInStage, value: `${getStageDurationDays(selectedDeal.updatedAt)} ${t.deals.aging} ${getStageLabel(selectedDeal.stage)}` },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <p className="text-xs text-slate-500">{label}</p>

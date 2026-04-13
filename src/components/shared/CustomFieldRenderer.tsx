@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { CustomFieldDefinition, CustomFieldValue, CustomFieldEntityType } from '../../types'
 import { useCustomFieldsStore } from '../../store/customFieldsStore'
+import { formatCurrency, formatDateShort } from '../../utils/formatters'
+import { useTranslations } from '../../i18n'
 
 // ─── Display component (read-only) ──────────────────────────────────────────
 
 export function CustomFieldsDisplay({ entityId, entityType }: { entityId: string; entityType: CustomFieldEntityType }) {
+  const t = useTranslations()
   const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([])
   const [values, setValues] = useState<CustomFieldValue[]>([])
 
@@ -34,7 +37,7 @@ export function CustomFieldsDisplay({ entityId, entityType }: { entityId: string
         <div key={def.id}>
           <p className="text-xs text-slate-500">{def.label}</p>
           <p className="text-sm text-slate-200 font-medium">
-            <FieldValueDisplay def={def} value={value} />
+            <FieldValueDisplay def={def} value={value} yesLabel={t.common.yes} noLabel={t.common.no} />
           </p>
         </div>
       ))}
@@ -42,12 +45,22 @@ export function CustomFieldsDisplay({ entityId, entityType }: { entityId: string
   )
 }
 
-function FieldValueDisplay({ def, value }: { def: CustomFieldDefinition; value: CustomFieldValue['value'] }) {
+function FieldValueDisplay({
+  def,
+  value,
+  yesLabel,
+  noLabel,
+}: {
+  def: CustomFieldDefinition
+  value: CustomFieldValue['value']
+  yesLabel: string
+  noLabel: string
+}) {
   if (value === null || value === '') return <span className="text-slate-600">—</span>
 
   switch (def.fieldType) {
     case 'checkbox':
-      return <span>{value ? 'Sí' : 'No'}</span>
+      return <span>{value ? yesLabel : noLabel}</span>
     case 'url':
       return (
         <a href={String(value)} target="_blank" rel="noopener noreferrer"
@@ -58,9 +71,9 @@ function FieldValueDisplay({ def, value }: { def: CustomFieldDefinition; value: 
     case 'email':
       return <span className="text-brand-400">{String(value)}</span>
     case 'currency':
-      return <span>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(value))}</span>
+      return <span>{formatCurrency(Number(value))}</span>
     case 'date':
-      return <span>{new Date(String(value)).toLocaleDateString('es-ES')}</span>
+      return <span>{formatDateShort(String(value))}</span>
     case 'multiselect':
       return (
         <span className="flex flex-wrap gap-1">
@@ -77,6 +90,7 @@ function FieldValueDisplay({ def, value }: { def: CustomFieldDefinition; value: 
 // ─── Form component (editable) ──────────────────────────────────────────────
 
 export function CustomFieldsForm({ entityId, entityType }: { entityId: string; entityType: CustomFieldEntityType }) {
+  const t = useTranslations()
   const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([])
   const [fieldValues, setFieldValues] = useState<Record<string, CustomFieldValue['value']>>({})
 
@@ -104,7 +118,7 @@ export function CustomFieldsForm({ entityId, entityType }: { entityId: string; e
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Campos personalizados</p>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.settings.customFields}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {definitions.map((def) => (
           <FieldInput
@@ -130,6 +144,7 @@ function FieldInput({
   value: CustomFieldValue['value']
   onChange: (v: CustomFieldValue['value']) => void
 }) {
+  const t = useTranslations()
   const base = 'w-full bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500/50'
   const selectBase = `${base} appearance-none`
 
@@ -202,7 +217,7 @@ function FieldInput({
             onChange={(e) => onChange(e.target.value || null)}
             className={selectBase}
           >
-            <option value="">Seleccionar...</option>
+            <option value="">{t.common.select}...</option>
             {(def.options || []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
           </select>
         </div>

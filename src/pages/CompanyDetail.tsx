@@ -131,7 +131,7 @@ export function CompanyDetail() {
   ]
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-4">
+    <div className="p-6 space-y-4">
       <Button variant="ghost" size="sm" leftIcon={<ArrowLeft size={14} />} onClick={() => navigate('/companies')} className="mb-2">
         {t.nav.companies}
       </Button>
@@ -270,7 +270,7 @@ export function CompanyDetail() {
                               style={{ width: `${progress}%` }}
                             />
                           </div>
-                          <span className="text-[10px] text-slate-500 flex-shrink-0">{t.deals.stageLabels[deal.stage]}</span>
+                          <span className="text-[10px] text-slate-500 flex-shrink-0">{t.deals.stageLabels[deal.stage as keyof typeof t.deals.stageLabels] ?? deal.stage}</span>
                         </div>
                       </div>
                       <span className="text-sm font-semibold text-emerald-400 flex-shrink-0">{formatCurrency(deal.value, deal.currency)}</span>
@@ -343,7 +343,7 @@ export function CompanyDetail() {
                   <span className="text-sm font-semibold text-emerald-400">
                     {formatCurrency(deal.value, deal.currency)}
                   </span>
-                  <Badge variant={STAGE_BADGE[deal.stage]}>{t.deals.stageLabels[deal.stage]}</Badge>
+                  <Badge variant={STAGE_BADGE[deal.stage] ?? 'gray'}>{t.deals.stageLabels[deal.stage as keyof typeof t.deals.stageLabels] ?? deal.stage}</Badge>
                 </div>
               </div>
             )
@@ -412,7 +412,7 @@ export function CompanyDetail() {
                     <p className="text-sm font-medium text-white">{email.subject}</p>
                     <span className="text-[10px] text-slate-500">{formatRelativeDate(email.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-slate-400">Para: {email.to.join(', ')}</p>
+                  <p className="text-xs text-slate-400">{t.common.to}: {email.to.join(', ')}</p>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{email.body}</p>
                 </div>
               ))}

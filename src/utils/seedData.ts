@@ -1,4 +1,5 @@
 import type { Contact, Company, Deal, Activity, AppSettings, CRMEmail } from '../types'
+import { DEFAULT_ROLE_PERMISSIONS } from './permissionProfiles'
 
 // ─── Mock Users ──────────────────────────────────────────────────────────────
 
@@ -6,6 +7,13 @@ export const MOCK_USERS = ['David Muñoz', 'Sara López', 'Carlos Vega']
 
 export const seedSettings: AppSettings = {
   currency: 'EUR',
+  themePreference: 'system',
+  leadSlaHours: 8,
+  permissionProfiles: DEFAULT_ROLE_PERMISSIONS,
+  branding: {
+    appName: 'CRM Pro',
+    primaryColor: '#7c3aed',
+  },
   tags: [
     'VIP', 'Hot Lead', 'Follow Up', 'Decision Maker', 'Technical',
     'Finance', 'Enterprise', 'SMB', 'Partnership', 'Renewal',
@@ -23,6 +31,7 @@ export const seedSettings: AppSettings = {
     { id: 'u2', name: 'Sara López', email: 'sara@crmpro.es', role: 'Account Executive' },
     { id: 'u3', name: 'Carlos Vega', email: 'carlos@crmpro.es', role: 'SDR' },
   ],
+  emailIdentities: {},
 }
 
 // ─── Companies ───────────────────────────────────────────────────────────────

@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { X, Send, ChevronDown, FileText, Eye, Loader2 } from 'lucide-react'
-import { useGmailToken } from '../../contexts/GmailTokenContext'
 import { useEmailStore } from '../../store/emailStore'
 import { useActivitiesStore } from '../../store/activitiesStore'
 import { useContactsStore } from '../../store/contactsStore'
 import { useDealsStore } from '../../store/dealsStore'
 import { useCompaniesStore } from '../../store/companiesStore'
 import { useTemplateStore } from '../../store/templateStore'
+import { useSettingsStore } from '../../store/settingsStore'
+import { useAuthStore } from '../../store/authStore'
 import { formatCurrency } from '../../utils/formatters'
 import { toast } from '../../store/toastStore'
 import { useTranslations } from '../../i18n'
-import { supabase } from '../../lib/supabase'
 
 interface EmailComposerProps {
   isOpen: boolean
@@ -21,6 +21,7 @@ interface EmailComposerProps {
   contactId?: string
   dealId?: string
   companyId?: string
+  draftId?: string
 }
 
 export function EmailComposer({
@@ -32,6 +33,7 @@ export function EmailComposer({
   contactId,
   dealId,
   companyId,
+  draftId,
 }: EmailComposerProps) {
   const t = useTranslations()
   const [to, setTo] = useState(defaultTo)
@@ -55,13 +57,24 @@ export function EmailComposer({
     dataBase64: string
   }>>([])
 
-  const { sendEmail, scheduleEmail, isGmailConnected, enableTracking } = useEmailStore()
-  const { accessToken } = useGmailToken()
+  const { scheduleEmail, isGmailConnected, enableTracking } = useEmailStore()
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const settings = useSettingsStore((s) => s.settings)
+  const updateEmailIdentity = useSettingsStore((s) => s.updateEmailIdentity)
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)
   const companies = useCompaniesStore((s) => s.companies)
   const templates = useTemplateStore((s) => s.templates)
+  const quickReplies = useTemplateStore((s) => s.quickReplies)
+  const fetchQuickReplies = useTemplateStore((s) => s.fetchQuickReplies)
   const incrementUsage = useTemplateStore((s) => s.incrementUsage)
+  const currentIdentity = currentUser?.id ? settings.emailIdentities?.[currentUser.id] : undefined
+  const savedSignatures = currentIdentity?.signatures ?? []
+  const defaultSignatureId = currentIdentity?.defaultSignatureId ?? savedSignatures[0]?.id
+  const [senderName, setSenderName] = useState(currentIdentity?.senderName ?? '')
+  const [activeSignatureId, setActiveSignatureId] = useState(defaultSignatureId ?? '')
+  const [signature, setSignature] = useState(currentIdentity?.signature ?? savedSignatures[0]?.html ?? '')
+  const [useSignature, setUseSignature] = useState(currentIdentity?.useSignature ?? true)
 
   const draftKey = useMemo(
     () => `crm_email_draft:${contactId ?? 'na'}:${dealId ?? 'na'}:${companyId ?? 'na'}:${defaultTo}`,
@@ -102,6 +115,37 @@ export function EmailComposer({
     const payload = JSON.stringify({ to, cc, bcc, replyTo, subject, body, attachments })
     localStorage.setItem(draftKey, payload)
   }, [attachments, bcc, body, cc, draftKey, isOpen, replyTo, subject, to])
+
+  useEffect(() => {
+    if (!isOpen) return
+    fetchQuickReplies().catch(() => {
+      // keep fallback quick replies in local store
+    })
+  }, [fetchQuickReplies, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const nextDefault = currentIdentity?.defaultSignatureId ?? currentIdentity?.signatures?.[0]?.id ?? ''
+    const nextSignature = currentIdentity?.signatures?.find((s) => s.id === nextDefault)?.html
+    setSenderName(currentIdentity?.senderName ?? '')
+    setActiveSignatureId(nextDefault)
+    setSignature(nextSignature ?? currentIdentity?.signature ?? '')
+    setUseSignature(currentIdentity?.useSignature ?? true)
+  }, [currentIdentity?.senderName, currentIdentity?.signature, currentIdentity?.useSignature, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault()
+        if (!sending) {
+          void handleSend()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isOpen, sending, to, subject, sendLater, scheduledAt, body, cc, bcc, replyTo, trackingEnabled, attachments])
 
   if (!isOpen) return null
 
@@ -148,43 +192,76 @@ export function EmailComposer({
     custom: t.emailTemplates.categoryLabels.custom,
   }
 
+  const subjectPresets = [
+    contact ? `Follow-up: ${contact.firstName} ${contact.lastName}` : '',
+    company ? `${company.name} - Next steps` : '',
+    deal ? `${deal.title} - Proposal follow-up` : '',
+  ].filter(Boolean)
+
+  const normalizeEmail = (value: string) => value.trim().toLowerCase()
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  const parseEmailList = (value: string) =>
+    value
+      .split(',')
+      .map((e) => normalizeEmail(e))
+      .filter(Boolean)
+
   const handleSend = async () => {
     if (!to.trim() || !subject.trim()) {
       toast.error(`${t.common.email} & ${t.activities.subject}`)
       return
     }
+    const toList = parseEmailList(to)
+    const ccList = parseEmailList(cc)
+    const bccList = parseEmailList(bcc)
+    const replyToValue = normalizeEmail(replyTo)
+
+    const allRecipients = [...toList, ...ccList, ...bccList]
+    if (allRecipients.some((email) => !isValidEmail(email))) {
+      toast.error(`Invalid recipient email format`)
+      return
+    }
+    if (replyToValue && !isValidEmail(replyToValue)) {
+      toast.error(`Invalid reply-to email format`)
+      return
+    }
+
     setSending(true)
     try {
-      const getFreshAccessToken = async (): Promise<string | undefined> => {
-        if (accessToken) return accessToken
-        if (!supabase) return undefined
-        const { data, error } = await supabase.functions.invoke('gmail-refresh-token')
-        if (error || !data?.access_token) return undefined
-        return data.access_token as string
-      }
-
-      const toList = to.split(',').map((e) => e.trim()).filter(Boolean)
-      const tokenForSend = connected ? await getFreshAccessToken() : undefined
+      const signatureText = signature.replace(/<[^>]+>/g, '').trim()
+      const signatureBlock = useSignature && signatureText ? `\n\n--\n${signatureText}` : ''
+      const finalBody = `${body}${signatureBlock}`
+      const escapeHtml = (value: string) => value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+      const htmlMain = escapeHtml(body).replaceAll('\n', '<br/>')
+      const signatureHtmlBlock = useSignature && signature.trim() ? `<br/><br/>${signature.trim()}` : ''
       const payload = {
         to: toList,
-        cc: cc ? cc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
-        bcc: bcc ? bcc.split(',').map((e) => e.trim()).filter(Boolean) : undefined,
-        replyTo: replyTo.trim() || undefined,
+        cc: ccList.length ? ccList : undefined,
+        bcc: bccList.length ? bccList : undefined,
+        replyTo: replyToValue || undefined,
         attachments,
         subject,
-        body,
+        body: finalBody,
+        htmlBody: `${htmlMain}${signatureHtmlBlock}`,
         contactId,
         dealId,
         companyId,
+        senderName: senderName.trim() || undefined,
+        trackingEnabled,
       }
 
       const sent = sendLater && scheduledAt
         ? scheduleEmail({ ...payload, runAt: new Date(scheduledAt).toISOString() })
-        : await sendEmail({ ...payload, accessToken: tokenForSend })
+        : scheduleEmail({
+            ...payload,
+            runAt: new Date(Date.now() + 10_000).toISOString(),
+            undoableUntil: new Date(Date.now() + 10_000).toISOString(),
+          })
       localStorage.removeItem(draftKey)
-      if (trackingEnabled) {
-        enableTracking(sent.id)
-      }
+      if (trackingEnabled) enableTracking(sent.id)
       // Log email as activity
       useActivitiesStore.getState().addActivity({
         type: 'email',
@@ -197,7 +274,19 @@ export function EmailComposer({
         dealId,
         createdBy: '',
       })
-      toast.success(sendLater && scheduledAt ? t.email.emailScheduled : `${t.common.email} ✓`)
+      if (!sendLater) {
+        toast.info(t.email.undoSendHint)
+      } else {
+        toast.success(sendLater && scheduledAt ? t.email.emailScheduled : `${t.common.email} ✓`)
+      }
+      if (currentUser?.id) {
+        updateEmailIdentity(currentUser.id, {
+          senderName: senderName.trim() || undefined,
+          signature: signature.trim() || undefined,
+          useSignature,
+          defaultSignatureId: activeSignatureId || undefined,
+        })
+      }
       onClose()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.common.noResults)
@@ -343,6 +432,19 @@ export function EmailComposer({
               className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-600 outline-none font-medium"
             />
           </div>
+          {subjectPresets.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {subjectPresets.map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => setSubject(preset)}
+                  className="text-[10px] px-2 py-1 rounded-full bg-white/6 border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-colors"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          )}
 
           <textarea
             value={body}
@@ -351,6 +453,62 @@ export function EmailComposer({
             rows={10}
             className="w-full bg-[#0d0e1a]/45 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none resize-none leading-relaxed"
           />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              placeholder={t.email.senderNamePlaceholder}
+              className="bg-[#0d0e1a]/45 border border-white/8 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none"
+            />
+            <label className="inline-flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={useSignature}
+                onChange={(e) => setUseSignature(e.target.checked)}
+                className="rounded border-white/20 bg-white/5 text-brand-500 focus:ring-brand-500"
+              />
+              {t.email.useSignature}
+            </label>
+          </div>
+          {savedSignatures.length > 0 && (
+            <select
+              value={activeSignatureId}
+              onChange={(e) => {
+                const nextId = e.target.value
+                setActiveSignatureId(nextId)
+                const next = savedSignatures.find((s) => s.id === nextId)
+                setSignature(next?.html ?? '')
+              }}
+              className="w-full bg-[#0d0e1a]/45 border border-white/8 rounded-xl px-3 py-2 text-xs text-white outline-none"
+              aria-label={t.email.signatureSelectLabel}
+              title={t.email.signatureSelectLabel}
+            >
+              {savedSignatures.map((sig) => (
+                <option key={sig.id} value={sig.id} className="bg-[#111220] text-white">
+                  {sig.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <textarea
+            value={signature}
+            onChange={(e) => setSignature(e.target.value)}
+            placeholder={t.email.signaturePlaceholder}
+            rows={3}
+            className="w-full bg-[#0d0e1a]/45 border border-white/8 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 outline-none resize-y leading-relaxed"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {quickReplies.map((snippet) => (
+              <button
+                key={snippet.id}
+                onClick={() => setBody((prev) => (prev.trim() ? `${prev}\n\n${snippet.body}` : snippet.body))}
+                className="text-[10px] px-2 py-1 rounded-full bg-white/6 border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-colors"
+                title={snippet.title}
+              >
+                {snippet.title}
+              </button>
+            ))}
+          </div>
           <div className="border-t border-white/6 pt-3 space-y-2">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500">{t.inbox.attachments}</span>
@@ -456,6 +614,30 @@ export function EmailComposer({
           >
             {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             {t.inbox.compose}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const toList = to.split(',').map((s) => s.trim()).filter(Boolean)
+              const draft = useEmailStore.getState().saveDraft({
+                draftId,
+                to: toList,
+                cc: cc.split(',').map((s) => s.trim()).filter(Boolean),
+                bcc: bcc.split(',').map((s) => s.trim()).filter(Boolean),
+                replyTo: replyTo.trim() || undefined,
+                subject,
+                body,
+                contactId,
+                dealId,
+                companyId,
+              })
+              toast.success(t.email.draftSaved)
+              onClose()
+              return draft
+            }}
+            className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/6 transition-colors"
+          >
+            {t.inbox.drafts}
           </button>
         </div>
       </div>

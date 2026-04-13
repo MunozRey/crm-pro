@@ -23,6 +23,33 @@ export interface Contact {
   avatar?: string
 }
 
+export type LeadLifecycleStage = 'subscriber' | 'lead' | 'mql' | 'sql' | 'opportunity' | 'customer'
+export type LeadStatus = 'open' | 'working' | 'qualified' | 'unqualified' | 'converted'
+
+export interface Lead {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  companyName?: string
+  jobTitle?: string
+  source: string
+  status: LeadStatus
+  lifecycleStage: LeadLifecycleStage
+  score: number
+  assignedTo?: string
+  ownerUserId?: string
+  tags: string[]
+  notes?: string
+  createdAt: string
+  updatedAt: string
+  lastEngagedAt?: string
+  convertedContactId?: string
+  convertedCompanyId?: string
+  convertedDealId?: string
+}
+
 // ─── Company ─────────────────────────────────────────────────────────────────
 
 export type CompanyStatus = 'prospect' | 'customer' | 'partner' | 'churned'
@@ -58,13 +85,7 @@ export interface Company {
 
 // ─── Deal ────────────────────────────────────────────────────────────────────
 
-export type DealStage =
-  | 'lead'
-  | 'qualified'
-  | 'proposal'
-  | 'negotiation'
-  | 'closed_won'
-  | 'closed_lost'
+export type DealStage = string
 
 export type DealCurrency = 'EUR' | 'USD' | 'GBP'
 export type DealPriority = 'low' | 'medium' | 'high'
@@ -130,10 +151,34 @@ export interface User {
 
 export interface AppSettings {
   currency: DealCurrency
+  themePreference: 'system' | 'light' | 'dark'
   pipelineStages: PipelineStage[]
+  leadSlaHours: number
+  permissionProfiles: Record<import('./auth').UserRole, import('./auth').Permission[]>
+  branding: {
+    appName: string
+    primaryColor: string
+    logoUrl?: string
+    customDomain?: string
+    privacyUrl?: string
+    termsUrl?: string
+  }
   tags: string[]
   users: User[]
   googleClientId?: string
+  emailIdentities?: Record<string, {
+    senderName?: string
+    signature?: string
+    useSignature: boolean
+    defaultSignatureId?: string
+    signatures?: Array<{
+      id: string
+      name: string
+      html: string
+      createdAt: string
+      updatedAt: string
+    }>
+  }>
 }
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
@@ -217,10 +262,11 @@ export interface AIConversation {
 
 // ─── Email ───────────────────────────────────────────────────────────────────
 
-export type EmailStatus = 'draft' | 'scheduled' | 'sent' | 'received'
+export type EmailStatus = 'draft' | 'scheduled' | 'sent' | 'received' | 'snoozed'
 
 export interface CRMEmail {
   id: string
+  ownerUserId?: string
   gmailMessageId?: string
   gmailThreadId?: string
   from: string
@@ -249,6 +295,8 @@ export interface CRMEmail {
   lastOpenedAt?: string
   clickCount?: number
   lastClickedAt?: string
+  undoableUntil?: string
+  isRead?: boolean
 }
 
 export interface GmailTokens {
@@ -284,6 +332,25 @@ export interface GmailAttachment {
   filename: string
   mimeType: string
   size: number
+}
+
+export type InboxTrackingFilter = 'all' | 'tracked' | 'opened' | 'clicked'
+
+export interface InboxAdvancedFilters {
+  unreadOnly: boolean
+  linkedOnly: boolean
+  mineOnly: boolean
+  hasAttachments: boolean
+  tracking: InboxTrackingFilter
+}
+
+export interface InboxSavedView {
+  id: string
+  name: string
+  query: string
+  filters: InboxAdvancedFilters
+  createdAt: string
+  updatedAt: string
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
@@ -329,11 +396,13 @@ export type AuditAction =
   | 'activity_created' | 'activity_completed' | 'activity_deleted'
   | 'email_sent' | 'enrichment_completed'
   | 'company_created' | 'company_updated'
+  | 'lead_score_recomputed'
+  | 'user_role_changed' | 'permission_profile_updated'
 
 export interface AuditEntry {
   id: string
   action: AuditAction
-  entityType: 'contact' | 'deal' | 'activity' | 'email' | 'company'
+  entityType: 'contact' | 'deal' | 'activity' | 'email' | 'company' | 'lead' | 'user' | 'settings'
   entityId: string
   entityName: string
   details: string
@@ -387,7 +456,7 @@ export interface CRMNotification {
   type: NotificationType
   title: string
   message: string
-  entityType?: 'contact' | 'deal' | 'activity' | 'company' | 'goal'
+  entityType?: 'contact' | 'deal' | 'activity' | 'company' | 'goal' | 'lead'
   entityId?: string
   userId: string        // recipient
   triggeredBy?: string  // who caused it
@@ -497,6 +566,17 @@ export interface AutomationRule {
   updatedAt: string
 }
 
+export interface AutomationExecutionLog {
+  id: string
+  ruleId: string
+  triggerType: AutomationTriggerType
+  status: 'success' | 'error'
+  context: Record<string, unknown>
+  result: Record<string, unknown>
+  errorMessage?: string
+  createdAt: string
+}
+
 // ─── Products & Quotes ───────────────────────────────────────────────────────
 
 export type ProductCategory = 'software' | 'hardware' | 'service' | 'consulting' | 'support' | 'other'
@@ -553,6 +633,14 @@ export interface CustomFieldDefinition {
   isActive: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface CustomFieldDefinitionI18n {
+  fieldId: string
+  languageCode: 'en' | 'es' | 'pt' | 'fr' | 'de' | 'it'
+  label: string
+  placeholder?: string
+  options?: string[]
 }
 
 export interface CustomFieldValue {

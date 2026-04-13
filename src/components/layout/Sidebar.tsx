@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Building2, KanbanSquare,
   Activity, BarChart3, Settings, ChevronLeft, ChevronRight,
   Zap, Mail, Sparkles, UserCheck, FileText, ScrollText, Target, UsersRound, BellRing, GanttChart,
-  LineChart, ListOrdered, Workflow, Package,
+  LineChart, ListOrdered, Workflow, Package, FunnelPlus,
   Bookmark, Flame, Handshake, Cloud, TrendingUp, CalendarDays,
 } from 'lucide-react'
 import { useViewsStore } from '../../store/viewsStore'
@@ -14,6 +14,7 @@ import { useCompaniesStore } from '../../store/companiesStore'
 import { useContactsStore } from '../../store/contactsStore'
 import { useAuthStore } from '../../store/authStore'
 import { useNotificationsStore } from '../../store/notificationsStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { getFollowUpReminders } from '../../utils/followUpEngine'
 import { canAccessRoute } from '../../utils/permissions'
 import { useTranslations } from '../../i18n'
@@ -31,6 +32,7 @@ interface NavItem {
 function buildMainItems(t: Translations): NavItem[] {
   return [
     { to: '/', icon: <LayoutDashboard size={17} />, label: t.nav.dashboard },
+    { to: '/leads', icon: <FunnelPlus size={17} />, label: t.nav.leads },
     { to: '/contacts', icon: <Users size={17} />, label: t.nav.contacts },
     { to: '/companies', icon: <Building2 size={17} />, label: t.nav.companies },
     { to: '/deals', icon: <KanbanSquare size={17} />, label: t.nav.deals },
@@ -84,8 +86,8 @@ function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
         flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
         transition-all duration-150 group relative
         ${isActive
-          ? 'nav-active text-white'
-          : 'text-slate-500 hover:text-slate-100 hover:bg-white/5 border-l-2 border-transparent'
+          ? 'nav-active sidebar-active text-white'
+          : 'sidebar-inactive text-slate-500 hover:text-slate-100 hover:bg-white/5 border-l-2 border-transparent'
         }
         ${collapsed ? 'justify-center' : ''}
       `}
@@ -139,6 +141,7 @@ export function Sidebar() {
   const t = useTranslations()
   const [collapsed, setCollapsed] = useState(false)
   const [userRole, setUserRole] = useState<UserRole>('viewer')
+  const [branding, setBranding] = useState(useSettingsStore.getState().settings.branding)
 
   const [overdueCount, setOverdueCount] = useState(0)
   const [isGmailConnected, setGmailConnected] = useState(false)
@@ -150,6 +153,11 @@ export function Sidebar() {
   useEffect(() => {
     setUserRole(useAuthStore.getState().currentUser?.role || 'viewer')
     const unsub = useAuthStore.subscribe((s) => setUserRole(s.currentUser?.role || 'viewer'))
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    const unsub = useSettingsStore.subscribe((s) => setBranding(s.settings.branding))
     return unsub
   }, [])
 
@@ -230,20 +238,24 @@ export function Sidebar() {
   return (
     <aside
       className={`
-        flex flex-col h-screen bg-navy-900 border-r border-white/6
+        app-sidebar flex flex-col h-screen bg-navy-900 border-r border-white/6
         transition-all duration-200 ease-out flex-shrink-0
         ${collapsed ? 'w-[60px]' : 'w-[220px]'}
       `}
     >
       {/* Logo */}
       <div className={`flex items-center h-16 border-b border-white/6 flex-shrink-0 ${collapsed ? 'justify-center px-3' : 'px-4 gap-3'}`}>
-        <div className="w-8 h-8 rounded-xl btn-gradient flex items-center justify-center flex-shrink-0 shadow-brand-sm">
-          <Zap size={15} className="text-white" />
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-brand-sm overflow-hidden" style={{ backgroundColor: branding.primaryColor }}>
+          {branding.logoUrl ? (
+            <img src={branding.logoUrl} alt={branding.appName} className="w-full h-full object-cover" />
+          ) : (
+            <Zap size={15} className="text-white" />
+          )}
         </div>
         {!collapsed && (
           <div>
-            <span className="text-sm font-bold text-white tracking-tight">CRM Pro</span>
-            <p className="text-[10px] text-slate-500 font-medium">{t.navSections.sales}</p>
+            <span className="text-sm font-bold text-white tracking-tight">{branding.appName}</span>
+            <p className="text-[10px] text-slate-500 font-medium">{branding.customDomain || t.navSections.sales}</p>
           </div>
         )}
       </div>

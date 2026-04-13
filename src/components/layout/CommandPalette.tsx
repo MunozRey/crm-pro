@@ -5,6 +5,7 @@ import { useContactsStore } from '../../store/contactsStore'
 import { useCompaniesStore } from '../../store/companiesStore'
 import { useDealsStore } from '../../store/dealsStore'
 import { useTranslations } from '../../i18n'
+import { formatCurrency } from '../../utils/formatters'
 
 interface CommandItem {
   id: string
@@ -74,7 +75,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       results.push({
         id: `deal-${d.id}`,
         label: d.title,
-        sublabel: `€${d.value.toLocaleString()}`,
+        sublabel: formatCurrency(d.value, d.currency),
         icon: <KanbanSquare size={15} />,
         action: () => go('/deals'),
         category: t.commandPalette.dealsCategory,

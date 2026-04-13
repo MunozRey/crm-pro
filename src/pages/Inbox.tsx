@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Mail, Send, Inbox as InboxIcon, Loader2, RefreshCw, Wifi, WifiOff, User, Clock, Reply, Trash2, Plus, Eye, MousePointerClick, Paperclip, Download, Search } from 'lucide-react'
+import { Mail, Send, Inbox as InboxIcon, Loader2, RefreshCw, Wifi, WifiOff, User, Clock, Reply, Plus, Eye, MousePointerClick, Paperclip, Download, Search, ChevronDown } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useEmailStore } from '../store/emailStore'
 import { useContactsStore } from '../store/contactsStore'
@@ -11,14 +11,16 @@ import { initiateGmailOAuth, GmailApiError, downloadGmailAttachment, modifyGmail
 import { useGmailToken } from '../contexts/GmailTokenContext'
 import { supabase } from '../lib/supabase'
 import { useSettingsStore } from '../store/settingsStore'
+import { useViewsStore } from '../store/viewsStore'
 import { EmailComposer } from '../components/email/EmailComposer'
 import { toast } from '../store/toastStore'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { hasPermission } from '../utils/permissions'
-import { useTranslations, useI18nStore } from '../i18n'
-import type { GmailThread, CRMEmail, Contact } from '../types'
-import { formatRelativeDate } from '../utils/formatters'
+import { useTranslations } from '../i18n'
+import type { GmailThread, CRMEmail, Contact, InboxAdvancedFilters } from '../types'
+import { formatDateTime, formatRelativeDate } from '../utils/formatters'
 import { trackUxAction } from '../lib/uxMetrics'
+import { buildInboxQueryMatcher } from '../utils/inboxQuery'
 
 // ─── Thread item ──────────────────────────────────────────────────────────────
 function extractEmail(from: string): string {
@@ -153,14 +155,20 @@ function TrackingBadges({ email }: { email: CRMEmail }) {
 function LocalEmailItem({
   email,
   selected,
+  bulkSelected,
   onClick,
+  onToggleBulk,
+  onAction,
   contacts,
   onTrackOpen,
   onTrackClick,
 }: {
   email: CRMEmail
   selected: boolean
+  bulkSelected: boolean
   onClick: () => void
+  onToggleBulk: () => void
+  onAction: (action: 'mark_read' | 'mark_unread' | 'delete' | 'snooze_1h' | 'snooze_1d' | 'snooze_1w', email: CRMEmail) => void
   contacts: Contact[]
   onTrackOpen: (id: string) => void
   onTrackClick: (id: string) => void
@@ -168,32 +176,48 @@ function LocalEmailItem({
   const t = useTranslations()
   const contact = email.contactId ? contacts.find((c) => c.id === email.contactId) : undefined
 
+  const unread = email.isRead === false
+
   return (
     <div
       onClick={onClick}
-      className={`px-4 py-3 border-b border-white/4 cursor-pointer transition-colors ${
+      className={`group px-4 py-3 border-b border-white/4 cursor-pointer transition-colors ${
         selected ? 'bg-brand-600/10 border-l-2 border-l-brand-500' : 'hover:bg-white/4'
       }`}
     >
       <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={bulkSelected}
+          onChange={(e) => {
+            e.stopPropagation()
+            onToggleBulk()
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className={`mt-1 rounded border-white/12 bg-white/6 text-brand-500 focus:ring-brand-500 transition-opacity ${
+            bulkSelected ? 'opacity-100' : 'opacity-35 group-hover:opacity-100'
+          }`}
+          aria-label={t.inbox.selectMessage}
+          title={t.inbox.selectMessage}
+        />
         <div className="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center flex-shrink-0">
           <User size={14} className="text-slate-400" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-0.5">
-            <p className="text-sm text-slate-300 truncate">
+            <p className={`text-sm truncate ${unread ? 'text-white font-semibold' : 'text-slate-300'}`}>
               {contact ? `${contact.firstName} ${contact.lastName}` : email.to.join(', ')}
             </p>
             <span className="text-[10px] text-slate-500 flex-shrink-0">
               {formatRelativeDate(email.sentAt ?? email.createdAt)}
             </span>
           </div>
-          <p className="text-xs text-white truncate">{email.subject || ''}</p>
+          <p className={`text-xs truncate ${unread ? 'text-white font-semibold' : 'text-white'}`}>{email.subject || ''}</p>
           <p className="text-[10px] text-slate-600 truncate mt-0.5">{email.body.slice(0, 80)}</p>
           {email.status === 'scheduled' && (
             <span className="inline-flex items-center gap-1 mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">
               <Clock size={9} />
-              {email.scheduledFor ? new Date(email.scheduledFor).toLocaleString() : t.inbox.scheduled}
+              {email.scheduledFor ? formatDateTime(email.scheduledFor) : t.inbox.scheduled}
             </span>
           )}
           <TrackingBadges email={email} />
@@ -213,6 +237,28 @@ function LocalEmailItem({
               </button>
             </div>
           )}
+          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+            <select
+              value=""
+              onChange={(e) => {
+                const action = e.target.value as 'mark_read' | 'mark_unread' | 'delete' | 'snooze_1h' | 'snooze_1d' | 'snooze_1w'
+                if (!action) return
+                onAction(action, email)
+                e.currentTarget.value = ''
+              }}
+              className="text-[10px] px-2 py-1 rounded-lg bg-white/6 border border-white/10 text-slate-300"
+              aria-label={t.common.actions}
+              title={t.common.actions}
+            >
+              <option value="">{t.common.actions}</option>
+              <option value="mark_read">{t.inbox.markRead}</option>
+              <option value="mark_unread">{t.inbox.markUnread}</option>
+              <option value="snooze_1h">Snooze 1h</option>
+              <option value="snooze_1d">{t.inbox.snoozeOneDay}</option>
+              <option value="snooze_1w">Snooze 1w</option>
+              <option value="delete">{t.common.delete}</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -258,7 +304,6 @@ function ThreadView({
   canCreateFollowUp: boolean
 }) {
   const t = useTranslations()
-  const language = useI18nStore((s) => s.language)
   const [manualContactId, setManualContactId] = useState(match?.contact?.id ?? '')
   const [manualDealId, setManualDealId] = useState(match?.dealId ?? '')
 
@@ -416,7 +461,7 @@ function ThreadView({
               </div>
               <div className="flex items-center gap-3 text-slate-500">
                 <Clock size={12} />
-                <span className="text-xs">{msg.date ? new Date(msg.date).toLocaleString(language, { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
+                <span className="text-xs">{msg.date ? formatDateTime(msg.date) : ''}</span>
                 <button
                   onClick={() => onReply(msg.from, `Re: ${msg.subject}`)}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-white/6 hover:bg-brand-600/20 hover:text-brand-400 transition-colors"
@@ -476,17 +521,24 @@ function ThreadView({
 }
 
 // ─── LocalEmailView ────────────────────────────────────────────────────────────
-function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTrackClick, canDeleteEmails }: {
+function LocalEmailView({
+  email,
+  contacts,
+  onReply,
+  onEmailAction,
+  onTrackOpen,
+  onTrackClick,
+  canDeleteEmails,
+}: {
   email: CRMEmail | null
   contacts: Contact[]
   onReply: (to: string, subject: string) => void
-  onDelete: (id: string) => void
+  onEmailAction: (action: 'mark_read' | 'mark_unread' | 'delete' | 'snooze_1h' | 'snooze_1d' | 'snooze_1w', email: CRMEmail) => void
   onTrackOpen: (id: string) => void
   onTrackClick: (id: string) => void
   canDeleteEmails: boolean
 }) {
   const t = useTranslations()
-  const language = useI18nStore((s) => s.language)
   if (!email) return (
     <div className="flex items-center justify-center h-full text-slate-600 text-sm">
       {t.inbox.noMessages}
@@ -504,24 +556,39 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
             {t.common.to}: {contact ? `${contact.firstName} ${contact.lastName}` : email.to.join(', ')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            type="button"
             onClick={() => onReply(email.to[0] ?? '', `Re: ${email.subject}`)}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/6 hover:bg-brand-600/15 hover:text-brand-400 text-slate-400 transition-colors"
           >
             <Reply size={12} />
             {t.common.back}
           </button>
-          {canDeleteEmails && (
-            <button
-              onClick={() => onDelete(email.id)}
-              title={t.common.delete}
-              aria-label={t.common.delete}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/6 hover:bg-red-500/15 hover:text-red-400 text-slate-500 transition-colors"
+          <div className="relative inline-flex items-center">
+            <select
+              value=""
+              onChange={(e) => {
+                const action = e.target.value as 'mark_read' | 'mark_unread' | 'delete' | 'snooze_1h' | 'snooze_1d' | 'snooze_1w'
+                if (!action) return
+                if (action === 'delete' && !canDeleteEmails) return
+                onEmailAction(action, email)
+                e.currentTarget.value = ''
+              }}
+              className="appearance-none cursor-pointer text-xs pl-3 pr-9 py-1.5 rounded-full bg-white/6 border border-white/10 text-slate-200 hover:bg-white/10 hover:border-white/15 outline-none focus:ring-2 focus:ring-brand-500/30 min-w-[7.5rem]"
+              aria-label={t.common.actions}
+              title={t.common.actions}
             >
-              <Trash2 size={12} />
-            </button>
-          )}
+              <option value="">{t.common.actions}</option>
+              <option value="mark_read">{t.inbox.markRead}</option>
+              <option value="mark_unread">{t.inbox.markUnread}</option>
+              <option value="snooze_1h">Snooze 1h</option>
+              <option value="snooze_1d">{t.inbox.snoozeOneDay}</option>
+              <option value="snooze_1w">Snooze 1w</option>
+              {canDeleteEmails ? <option value="delete">{t.common.delete}</option> : null}
+            </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
+          </div>
         </div>
       </div>
 
@@ -534,7 +601,7 @@ function LocalEmailView({ email, contacts, onReply, onDelete, onTrackOpen, onTra
             <div>
               <p className="text-sm font-medium text-white">{email.from}</p>
               <p className="text-[10px] text-slate-500">
-                {email.sentAt ? new Date(email.sentAt).toLocaleString(language, { dateStyle: 'medium', timeStyle: 'short' }) : ''}
+                {email.sentAt ? formatDateTime(email.sentAt) : ''}
                 {email.gmailMessageId && (
                   <span className="ml-2 text-emerald-400">{t.settings.connected} Gmail</span>
                 )}
@@ -573,9 +640,10 @@ export function Inbox() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const {
     emails, threads, threadsLoading, isGmailConnected,
-    gmailAddress, threadLinks, threadWorkspace, threadsError, threadsLastSyncedAt, threadsNextPageToken, threadsHistoryId, loadThreads, fetchThreadLinks, fetchThreadWorkspace, setThreadLink, clearThreadLink, setThreadOwner, setThreadNote, deleteEmail, disconnectGmail,
-    trackEmailOpen, trackEmailClick, processScheduledEmails,
+    gmailAddress, threadLinks, threadWorkspace, threadsError, threadsLastSyncedAt, threadsNextPageToken, threadsHistoryId, syncState, lastSyncErrorAt, lastSyncErrorMessage, loadThreads, fetchThreadLinks, fetchThreadWorkspace, setThreadLink, clearThreadLink, setThreadOwner, setThreadNote, deleteEmail, disconnectGmail,
+    trackEmailOpen, trackEmailClick, processScheduledEmails, refreshTrackingMetrics, wakeDueSnoozedEmails, snoozeEmail,
   } = useEmailStore()
+  const { inboxViews, addInboxView, deleteInboxView } = useViewsStore()
   const { accessToken, setGmailToken, clearGmailToken, isTokenValid } = useGmailToken()
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)
@@ -584,7 +652,7 @@ export function Inbox() {
   const addActivity = useActivitiesStore((s) => s.addActivity)
   const { settings } = useSettingsStore()
 
-  const [folder, setFolder] = useState<'inbox' | 'sent' | 'scheduled'>('inbox')
+  const [folder, setFolder] = useState<'inbox' | 'sent' | 'scheduled' | 'drafts' | 'snoozed'>('inbox')
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
@@ -593,6 +661,18 @@ export function Inbox() {
   const [connecting, setConnecting] = useState(false)
   const [listQuery, setListQuery] = useState('')
   const [selectedThreadIds, setSelectedThreadIds] = useState<Set<string>>(new Set())
+  const [selectedLocalEmailIds, setSelectedLocalEmailIds] = useState<Set<string>>(new Set())
+  const [inboxQuickFilter, setInboxQuickFilter] = useState<'all' | 'unread' | 'linked' | 'mine'>('all')
+  const [emailQuickFilter, setEmailQuickFilter] = useState<'all' | 'tracked' | 'opened' | 'clicked'>('all')
+  const [advancedFilters, setAdvancedFilters] = useState<InboxAdvancedFilters>({
+    unreadOnly: false,
+    linkedOnly: false,
+    mineOnly: false,
+    hasAttachments: false,
+    tracking: 'all',
+  })
+  const [selectedInboxViewId, setSelectedInboxViewId] = useState('')
+  const [newInboxViewName, setNewInboxViewName] = useState('')
 
   const canCreateActivities = !!currentUser && hasPermission(currentUser.role, 'activities:create')
   const canLinkEmails = !!currentUser && hasPermission(currentUser.role, 'email:link')
@@ -608,6 +688,12 @@ export function Inbox() {
     }
     return map
   }, [contacts])
+
+  useEffect(() => {
+    refreshTrackingMetrics().catch(() => {
+      // Non-blocking: tracking counters are best-effort.
+    })
+  }, [refreshTrackingMetrics, emails.length])
 
   async function refreshAccessToken(): Promise<string> {
     const { data, error } = await supabase!.functions.invoke('gmail-refresh-token')
@@ -657,11 +743,37 @@ export function Inbox() {
     }
   }
 
+  const handleLocalEmailAction = (action: 'mark_read' | 'mark_unread' | 'delete' | 'snooze_1h' | 'snooze_1d' | 'snooze_1w', email: CRMEmail) => {
+    if (action === 'mark_read') {
+      useEmailStore.getState().updateEmail(email.id, { isRead: true })
+      return
+    }
+    if (action === 'mark_unread') {
+      useEmailStore.getState().updateEmail(email.id, { isRead: false })
+      return
+    }
+    if (action === 'snooze_1h' || action === 'snooze_1d' || action === 'snooze_1w') {
+      const ms = action === 'snooze_1h'
+        ? 60 * 60 * 1000
+        : action === 'snooze_1d'
+          ? 24 * 60 * 60 * 1000
+          : 7 * 24 * 60 * 60 * 1000
+      snoozeEmail(email.id, new Date(Date.now() + ms).toISOString())
+      toast.success(t.inbox.snoozed)
+      return
+    }
+    deleteEmail(email.id)
+    if (selectedEmailId === email.id) setSelectedEmailId(null)
+    toast.success(t.common.delete)
+  }
+
   // Folder list built with translations
   const FOLDERS = [
     { id: 'inbox', label: t.inbox.title, icon: <InboxIcon size={15} /> },
     { id: 'sent', label: t.inbox.sent, icon: <Send size={15} /> },
-    { id: 'scheduled', label: t.inbox.drafts, icon: <Clock size={15} /> },
+    { id: 'scheduled', label: t.email.sendLater, icon: <Clock size={15} /> },
+    { id: 'drafts', label: t.inbox.drafts, icon: <Mail size={15} /> },
+    { id: 'snoozed', label: t.inbox.snoozed, icon: <Clock size={15} /> },
   ]
 
   // Load Gmail threads when connected (token can be refreshed on-demand)
@@ -716,38 +828,95 @@ export function Inbox() {
     return () => window.clearInterval(id)
   }, [connected, processScheduledEmails, accessToken])
 
-  const sentEmails = useMemo(() => emails.filter((e) => e.status === 'sent'), [emails])
-  const scheduledEmails = useMemo(() => emails.filter((e) => e.status === 'scheduled'), [emails])
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      wakeDueSnoozedEmails()
+    }, 5000)
+    return () => window.clearInterval(id)
+  }, [wakeDueSnoozedEmails])
+
+  const mailboxEmails = useMemo(
+    () => {
+      if (!currentUser?.id) return emails
+      return emails.filter((e) => !e.ownerUserId || e.ownerUserId === currentUser.id)
+    },
+    [emails, currentUser?.id],
+  )
+  const sentEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'sent'), [mailboxEmails])
+  const scheduledEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'scheduled'), [mailboxEmails])
+  const draftEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'draft'), [mailboxEmails])
+  const snoozedEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'snoozed'), [mailboxEmails])
+  const queryMatcher = useMemo(() => buildInboxQueryMatcher(listQuery), [listQuery])
   const filteredThreads = threads.filter((thread) => {
-    const q = listQuery.trim().toLowerCase()
-    if (!q) return true
     const lastMsg = thread.messages[thread.messages.length - 1]
-    return [
-      thread.snippet,
-      lastMsg?.subject ?? '',
-      lastMsg?.from ?? '',
-    ].some((text) => text.toLowerCase().includes(q))
+    return queryMatcher({
+      from: lastMsg?.from ?? '',
+      to: parseEmails(lastMsg?.to ?? ''),
+      subject: lastMsg?.subject ?? '',
+      snippet: thread.snippet ?? '',
+      body: thread.messages.map((msg) => msg.body ?? msg.snippet ?? '').join('\n'),
+      unread: Boolean(lastMsg?.labelIds?.includes('UNREAD')),
+      hasAttachment: thread.messages.some((message) => (message.attachments?.length ?? 0) > 0),
+      tracked: false,
+      opened: false,
+      clicked: false,
+      mine: (threadWorkspace[thread.id]?.ownerUserId ?? '') === (currentUser?.id ?? ''),
+    })
   })
-  const filteredSentEmails = sentEmails.filter((email) => {
-    const q = listQuery.trim().toLowerCase()
-    if (!q) return true
-    return [
-      email.subject,
-      email.body,
-      email.to.join(', '),
-    ].some((text) => text.toLowerCase().includes(q))
-  })
-  const filteredScheduledEmails = scheduledEmails.filter((email) => {
-    const q = listQuery.trim().toLowerCase()
-    if (!q) return true
-    return [
-      email.subject,
-      email.body,
-      email.to.join(', '),
-    ].some((text) => text.toLowerCase().includes(q))
-  })
+  const filteredSentEmails = sentEmails.filter((email) => queryMatcher({
+    from: email.from,
+    to: email.to,
+    subject: email.subject,
+    snippet: email.body.slice(0, 200),
+    body: email.body,
+    unread: email.isRead === false,
+    hasAttachment: (email.attachments?.length ?? 0) > 0,
+    tracked: Boolean(email.trackingEnabled),
+    opened: (email.openCount ?? 0) > 0,
+    clicked: (email.clickCount ?? 0) > 0,
+    mine: (email.ownerUserId ?? '') === (currentUser?.id ?? ''),
+  }))
+  const filteredScheduledEmails = scheduledEmails.filter((email) => queryMatcher({
+    from: email.from,
+    to: email.to,
+    subject: email.subject,
+    snippet: email.body.slice(0, 200),
+    body: email.body,
+    unread: email.isRead === false,
+    hasAttachment: (email.attachments?.length ?? 0) > 0,
+    tracked: Boolean(email.trackingEnabled),
+    opened: (email.openCount ?? 0) > 0,
+    clicked: (email.clickCount ?? 0) > 0,
+    mine: (email.ownerUserId ?? '') === (currentUser?.id ?? ''),
+  }))
+  const filteredDraftEmails = draftEmails.filter((email) => queryMatcher({
+    from: email.from,
+    to: email.to,
+    subject: email.subject,
+    snippet: email.body.slice(0, 200),
+    body: email.body,
+    unread: email.isRead === false,
+    hasAttachment: (email.attachments?.length ?? 0) > 0,
+    tracked: false,
+    opened: false,
+    clicked: false,
+    mine: (email.ownerUserId ?? '') === (currentUser?.id ?? ''),
+  }))
+  const filteredSnoozedEmails = snoozedEmails.filter((email) => queryMatcher({
+    from: email.from,
+    to: email.to,
+    subject: email.subject,
+    snippet: email.body.slice(0, 200),
+    body: email.body,
+    unread: email.isRead === false,
+    hasAttachment: (email.attachments?.length ?? 0) > 0,
+    tracked: Boolean(email.trackingEnabled),
+    opened: (email.openCount ?? 0) > 0,
+    clicked: (email.clickCount ?? 0) > 0,
+    mine: (email.ownerUserId ?? '') === (currentUser?.id ?? ''),
+  }))
   const selectedThread = threads.find((th) => th.id === selectedThreadId) ?? null
-  const selectedEmail = emails.find((e) => e.id === selectedEmailId) ?? null
+  const selectedEmail = mailboxEmails.find((e) => e.id === selectedEmailId) ?? null
 
   const threadMatchById = useMemo(() => {
     const byId = new Map<string, ThreadMatch>()
@@ -809,8 +978,84 @@ export function Inbox() {
   const selectedThreadLink = selectedThread ? (threadLinks[selectedThread.id] ?? null) : null
   const selectedWorkspace = selectedThread ? (threadWorkspace[selectedThread.id] ?? null) : null
   const selectedThreadLinkedEmails = selectedThread
-    ? emails.filter((e) => e.gmailThreadId === selectedThread.id)
+    ? mailboxEmails.filter((e) => e.gmailThreadId === selectedThread.id)
     : []
+
+  const inboxThreadsVisible = filteredThreads.filter((thread) => {
+    if (inboxQuickFilter === 'all') return true
+    if (inboxQuickFilter === 'unread') {
+      const lastMsg = thread.messages[thread.messages.length - 1]
+      return Boolean(lastMsg?.labelIds?.includes('UNREAD'))
+    }
+    if (inboxQuickFilter === 'mine') {
+      return (threadWorkspace[thread.id]?.ownerUserId ?? '') === (currentUser?.id ?? '')
+    }
+    const match = persistedThreadMatchById.get(thread.id) ?? threadMatchById.get(thread.id)
+    if (!Boolean(match?.contact || match?.companyId || match?.dealId)) return false
+    return true
+  }).filter((thread) => {
+    const lastMsg = thread.messages[thread.messages.length - 1]
+    const hasAttachment = thread.messages.some((message) => (message.attachments?.length ?? 0) > 0)
+    const linked = Boolean((persistedThreadMatchById.get(thread.id) ?? threadMatchById.get(thread.id))?.contact
+      || (persistedThreadMatchById.get(thread.id) ?? threadMatchById.get(thread.id))?.companyId
+      || (persistedThreadMatchById.get(thread.id) ?? threadMatchById.get(thread.id))?.dealId)
+    const mine = (threadWorkspace[thread.id]?.ownerUserId ?? '') === (currentUser?.id ?? '')
+    if (advancedFilters.unreadOnly && !lastMsg?.labelIds?.includes('UNREAD')) return false
+    if (advancedFilters.linkedOnly && !linked) return false
+    if (advancedFilters.mineOnly && !mine) return false
+    if (advancedFilters.hasAttachments && !hasAttachment) return false
+    return true
+  })
+
+  const applyEmailQuickFilter = (items: CRMEmail[]) => items.filter((email) => {
+    if (emailQuickFilter === 'all') return true
+    if (emailQuickFilter === 'tracked') return Boolean(email.trackingEnabled)
+    if (emailQuickFilter === 'opened') return (email.openCount ?? 0) > 0
+    if ((email.clickCount ?? 0) <= 0) return false
+    return true
+  }).filter((email) => {
+    if (advancedFilters.tracking === 'tracked' && !email.trackingEnabled) return false
+    if (advancedFilters.tracking === 'opened' && (email.openCount ?? 0) <= 0) return false
+    if (advancedFilters.tracking === 'clicked' && (email.clickCount ?? 0) <= 0) return false
+    return true
+  })
+
+  const sentEmailsVisible = applyEmailQuickFilter(filteredSentEmails)
+  const scheduledEmailsVisible = applyEmailQuickFilter(filteredScheduledEmails)
+  const draftEmailsVisible = filteredDraftEmails
+  const snoozedEmailsVisible = applyEmailQuickFilter(filteredSnoozedEmails)
+  const localFolderVisibleEmails = useMemo(() => {
+    if (folder === 'sent') return sentEmailsVisible
+    if (folder === 'scheduled') return scheduledEmailsVisible
+    if (folder === 'drafts') return draftEmailsVisible
+    if (folder === 'snoozed') return snoozedEmailsVisible
+    return []
+  }, [folder, sentEmailsVisible, scheduledEmailsVisible, draftEmailsVisible, snoozedEmailsVisible])
+  const isSyncStale = !!threadsLastSyncedAt && Date.now() - new Date(threadsLastSyncedAt).getTime() > 10 * 60 * 1000
+  const syncVisualState = syncState === 'error' ? 'error' : (syncState === 'syncing' ? 'syncing' : (isSyncStale ? 'stale' : 'healthy'))
+  const syncText = syncVisualState === 'syncing'
+    ? t.inbox.syncSyncing
+    : syncVisualState === 'error'
+      ? t.inbox.syncError
+      : syncVisualState === 'stale'
+        ? t.inbox.syncStale
+        : t.inbox.syncHealthy
+
+  const applyInboxSavedView = (viewId: string) => {
+    setSelectedInboxViewId(viewId)
+    const view = inboxViews.find((item) => item.id === viewId)
+    if (!view) return
+    setListQuery(view.query)
+    setAdvancedFilters(view.filters)
+  }
+
+  const saveCurrentInboxView = () => {
+    if (!newInboxViewName.trim()) return
+    const created = addInboxView(newInboxViewName, listQuery, advancedFilters)
+    setSelectedInboxViewId(created.id)
+    setNewInboxViewName('')
+    toast.success(t.inbox.savedViewCreated)
+  }
 
   const openReply = (to: string, subject: string) => {
     setReplyTo({ to, subject })
@@ -824,6 +1069,55 @@ export function Inbox() {
       else next.add(threadId)
       return next
     })
+  }
+
+  const toggleBulkLocalEmail = (emailId: string) => {
+    setSelectedLocalEmailIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(emailId)) next.delete(emailId)
+      else next.add(emailId)
+      return next
+    })
+  }
+
+  const selectAllVisibleLocalEmails = () => {
+    setSelectedLocalEmailIds(new Set(localFolderVisibleEmails.map((e) => e.id)))
+  }
+
+  const clearLocalBulkSelection = () => setSelectedLocalEmailIds(new Set())
+
+  const applyBulkLocalEmailAction = (
+    action: 'mark_read' | 'mark_unread' | 'delete' | 'snooze_1h' | 'snooze_1d' | 'snooze_1w',
+  ) => {
+    if (!selectedLocalEmailIds.size) return
+    const ids = [...selectedLocalEmailIds]
+    const store = useEmailStore.getState()
+    let applied = 0
+    for (const id of ids) {
+      const email = mailboxEmails.find((e) => e.id === id)
+      if (!email) continue
+      if (action === 'delete' && !canDeleteEmails) continue
+      applied += 1
+      if (action === 'mark_read') {
+        store.updateEmail(id, { isRead: true })
+      } else if (action === 'mark_unread') {
+        store.updateEmail(id, { isRead: false })
+      } else if (action === 'delete') {
+        deleteEmail(id)
+        if (selectedEmailId === id) setSelectedEmailId(null)
+      } else {
+        const ms =
+          action === 'snooze_1h'
+            ? 60 * 60 * 1000
+            : action === 'snooze_1d'
+              ? 24 * 60 * 60 * 1000
+              : 7 * 24 * 60 * 60 * 1000
+        snoozeEmail(id, new Date(Date.now() + ms).toISOString())
+      }
+    }
+    setSelectedLocalEmailIds(new Set())
+    if (!applied) return
+    toast.success(t.inbox.appliedToMessages.replace('{n}', String(applied)))
   }
 
   const applyBulkThreadAction = async (action: 'mark_read' | 'mark_unread' | 'archive' | 'trash') => {
@@ -986,7 +1280,12 @@ export function Inbox() {
         <div className="p-3 border-b border-white/6">
           <PermissionGate permission="email:send">
             <button
-              onClick={() => { setComposerOpen(true); setReplyTo(null) }}
+              onClick={() => {
+                setSelectedEmailId(null)
+                setSelectedThreadId(null)
+                setComposerOpen(true)
+                setReplyTo(null)
+              }}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl btn-gradient text-white text-xs font-semibold"
             >
               <Plus size={13} />
@@ -1030,10 +1329,11 @@ export function Inbox() {
             <button
               key={f.id}
               onClick={() => {
-                setFolder(f.id as 'inbox' | 'sent' | 'scheduled')
+                setFolder(f.id as 'inbox' | 'sent' | 'scheduled' | 'drafts' | 'snoozed')
                 setSelectedThreadId(null)
                 setSelectedEmailId(null)
                 setSelectedThreadIds(new Set())
+                setSelectedLocalEmailIds(new Set())
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                 folder === f.id
@@ -1055,7 +1355,7 @@ export function Inbox() {
             <span className="text-sm font-semibold text-white capitalize">{FOLDERS.find((f) => f.id === folder)?.label}</span>
             {folder === 'inbox' && threadsLastSyncedAt && (
               <p className="text-[10px] text-slate-600 mt-0.5">
-                {t.common.updatedAt}: {new Date(threadsLastSyncedAt).toLocaleTimeString()}
+                {t.common.updatedAt}: {formatDateTime(threadsLastSyncedAt)}
                 {threadsHistoryId ? ` · h:${threadsHistoryId}` : ''}
               </p>
             )}
@@ -1101,6 +1401,70 @@ export function Inbox() {
             </button>
           </div>
         )}
+        {(folder === 'sent' || folder === 'scheduled' || folder === 'drafts' || folder === 'snoozed') && selectedLocalEmailIds.size > 0 && (
+          <div className="px-3 py-2 border-b border-white/6 flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-slate-500 mr-1">{t.inbox.selectedCount.replace('{n}', String(selectedLocalEmailIds.size))}</span>
+            <button
+              type="button"
+              onClick={() => applyBulkLocalEmailAction('mark_read')}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors"
+            >
+              {t.inbox.markRead}
+            </button>
+            <button
+              type="button"
+              onClick={() => applyBulkLocalEmailAction('mark_unread')}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors"
+            >
+              {t.inbox.markUnread}
+            </button>
+            <button
+              type="button"
+              onClick={() => applyBulkLocalEmailAction('snooze_1h')}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
+            >
+              Snooze 1h
+            </button>
+            <button
+              type="button"
+              onClick={() => applyBulkLocalEmailAction('snooze_1d')}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
+            >
+              {t.inbox.snoozeOneDay}
+            </button>
+            <button
+              type="button"
+              onClick={() => applyBulkLocalEmailAction('snooze_1w')}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
+            >
+              Snooze 1w
+            </button>
+            {canDeleteEmails && (
+              <button
+                type="button"
+                onClick={() => applyBulkLocalEmailAction('delete')}
+                className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+              >
+                {t.common.bulkDelete}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={selectAllVisibleLocalEmails}
+              disabled={localFolderVisibleEmails.length === 0}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-white/10 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            >
+              {t.common.selectAll}
+            </button>
+            <button
+              type="button"
+              onClick={clearLocalBulkSelection}
+              className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-white/10 transition-colors"
+            >
+              {t.common.clear}
+            </button>
+          </div>
+        )}
         <div className="px-3 py-2 border-b border-white/6">
           <div className="relative">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-600" />
@@ -1111,7 +1475,113 @@ export function Inbox() {
               className="w-full bg-[#0d0e1a] border border-white/8 rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-brand-500/40"
             />
           </div>
+          <p className="mt-1 text-[10px] text-slate-600">{t.inbox.searchOperatorsHint}</p>
         </div>
+        {folder === 'inbox' && (
+          <div className="px-3 py-2 border-b border-white/6 flex flex-wrap gap-1.5">
+            {([
+              ['all', t.common.all],
+              ['unread', t.notifications.unread],
+              ['linked', t.inbox.pinnedLink],
+              ['mine', t.common.assignedTo],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setInboxQuickFilter(id)}
+                className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                  inboxQuickFilter === id
+                    ? 'bg-brand-500/15 text-brand-300 border-brand-500/30'
+                    : 'bg-white/5 text-slate-500 border-white/10 hover:text-slate-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={() => setAdvancedFilters((prev) => ({ ...prev, hasAttachments: !prev.hasAttachments }))}
+              className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                advancedFilters.hasAttachments
+                  ? 'bg-brand-500/15 text-brand-300 border-brand-500/30'
+                  : 'bg-white/5 text-slate-500 border-white/10 hover:text-slate-300'
+              }`}
+            >
+              {t.inbox.hasAttachments}
+            </button>
+            <button
+              onClick={() => setAdvancedFilters((prev) => ({ ...prev, mineOnly: !prev.mineOnly }))}
+              className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                advancedFilters.mineOnly
+                  ? 'bg-brand-500/15 text-brand-300 border-brand-500/30'
+                  : 'bg-white/5 text-slate-500 border-white/10 hover:text-slate-300'
+              }`}
+            >
+              {t.inbox.onlyMine}
+            </button>
+          </div>
+        )}
+        {folder === 'inbox' && (
+          <div className="px-3 py-2 border-b border-white/6 space-y-2">
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedInboxViewId}
+                onChange={(e) => applyInboxSavedView(e.target.value)}
+                className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-200"
+              >
+                <option value="">{t.inbox.savedViews}</option>
+                {inboxViews.map((view) => (
+                  <option key={view.id} value={view.id}>{view.name}</option>
+                ))}
+              </select>
+              {selectedInboxViewId && (
+                <button
+                  onClick={() => {
+                    deleteInboxView(selectedInboxViewId)
+                    setSelectedInboxViewId('')
+                  }}
+                  className="text-[10px] px-2 py-1 rounded-lg bg-red-500/15 text-red-300 border border-red-500/30"
+                >
+                  {t.common.delete}
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                value={newInboxViewName}
+                onChange={(e) => setNewInboxViewName(e.target.value)}
+                placeholder={t.inbox.savedViewNamePlaceholder}
+                className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-200"
+              />
+              <button
+                onClick={saveCurrentInboxView}
+                className="text-[10px] px-2 py-1 rounded-lg bg-brand-500/15 text-brand-300 border border-brand-500/30"
+              >
+                {t.common.save}
+              </button>
+            </div>
+          </div>
+        )}
+        {(folder === 'sent' || folder === 'scheduled') && (
+          <div className="px-3 py-2 border-b border-white/6 flex flex-wrap gap-1.5">
+            {([
+              ['all', t.common.all],
+              ['tracked', t.followUps.title],
+              ['opened', t.common.view],
+              ['clicked', t.inbox.clicks],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setEmailQuickFilter(id)}
+                className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                  emailQuickFilter === id
+                    ? 'bg-brand-500/15 text-brand-300 border-brand-500/30'
+                    : 'bg-white/5 text-slate-500 border-white/10 hover:text-slate-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto">
           {/* Inbox: Gmail threads */}
@@ -1129,15 +1599,32 @@ export function Inbox() {
                   <Loader2 size={20} className="text-brand-400 animate-spin" />
                 </div>
               )}
-              {connected && !threadsLoading && filteredThreads.length === 0 && (
+              {connected && !threadsLoading && inboxThreadsVisible.length === 0 && (
                 <div className="p-6 text-center text-slate-600 text-sm">{t.inbox.noMessages}</div>
+              )}
+              {connected && (
+                <div className="mx-3 mt-3 p-2 rounded-lg border border-white/8 bg-white/4 text-[11px] text-slate-300">
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full mr-2 ${
+                    syncVisualState === 'healthy'
+                      ? 'bg-emerald-500/15 text-emerald-300'
+                      : syncVisualState === 'syncing'
+                        ? 'bg-brand-500/15 text-brand-300'
+                        : syncVisualState === 'stale'
+                          ? 'bg-amber-500/15 text-amber-300'
+                          : 'bg-red-500/15 text-red-300'
+                  }`}>
+                    {syncText}
+                  </span>
+                  {lastSyncErrorMessage && syncVisualState === 'error' ? `${lastSyncErrorMessage}` : null}
+                  {lastSyncErrorAt && syncVisualState === 'error' ? ` · ${formatDateTime(lastSyncErrorAt)}` : null}
+                </div>
               )}
               {connected && threadsError && !threadsLoading && (
                 <div className="mx-3 my-3 p-2 rounded-lg border border-red-500/20 bg-red-500/10 text-[11px] text-red-300">
                   {threadsError}
                 </div>
               )}
-              {connected && filteredThreads.map((thread) => (
+              {connected && inboxThreadsVisible.map((thread) => (
                 <ThreadItem
                   key={thread.id}
                   thread={thread}
@@ -1164,18 +1651,25 @@ export function Inbox() {
           {/* Sent: local emails */}
           {folder === 'sent' && (
             <>
-              {filteredSentEmails.length === 0 && (
+              {sentEmailsVisible.length === 0 && (
                 <div className="p-6 text-center">
                   <Send size={28} className="mx-auto text-slate-600 mb-3" />
                   <p className="text-sm text-slate-500">{t.inbox.noMessages}</p>
                 </div>
               )}
-              {filteredSentEmails.map((email) => (
+              {sentEmailsVisible.map((email) => (
                 <LocalEmailItem
                   key={email.id}
                   email={email}
                   selected={selectedEmailId === email.id}
-                  onClick={() => { setSelectedEmailId(email.id); setSelectedThreadId(null) }}
+                  bulkSelected={selectedLocalEmailIds.has(email.id)}
+                  onToggleBulk={() => toggleBulkLocalEmail(email.id)}
+                  onClick={() => {
+                    useEmailStore.getState().updateEmail(email.id, { isRead: true })
+                    setSelectedEmailId(email.id)
+                    setSelectedThreadId(null)
+                  }}
+                  onAction={handleLocalEmailAction}
                   contacts={contacts}
                   onTrackOpen={trackEmailOpen}
                   onTrackClick={trackEmailClick}
@@ -1185,18 +1679,81 @@ export function Inbox() {
           )}
           {folder === 'scheduled' && (
             <>
-              {filteredScheduledEmails.length === 0 && (
+              {scheduledEmailsVisible.length === 0 && (
                 <div className="p-6 text-center">
                   <Clock size={28} className="mx-auto text-slate-600 mb-3" />
                   <p className="text-sm text-slate-500">{t.inbox.noMessages}</p>
                 </div>
               )}
-              {filteredScheduledEmails.map((email) => (
+              {scheduledEmailsVisible.map((email) => (
                 <LocalEmailItem
                   key={email.id}
                   email={email}
                   selected={selectedEmailId === email.id}
-                  onClick={() => { setSelectedEmailId(email.id); setSelectedThreadId(null) }}
+                  bulkSelected={selectedLocalEmailIds.has(email.id)}
+                  onToggleBulk={() => toggleBulkLocalEmail(email.id)}
+                  onClick={() => {
+                    useEmailStore.getState().updateEmail(email.id, { isRead: true })
+                    setSelectedEmailId(email.id)
+                    setSelectedThreadId(null)
+                  }}
+                  onAction={handleLocalEmailAction}
+                  contacts={contacts}
+                  onTrackOpen={trackEmailOpen}
+                  onTrackClick={trackEmailClick}
+                />
+              ))}
+            </>
+          )}
+          {folder === 'drafts' && (
+            <>
+              {draftEmailsVisible.length === 0 && (
+                <div className="p-6 text-center">
+                  <Mail size={28} className="mx-auto text-slate-600 mb-3" />
+                  <p className="text-sm text-slate-500">{t.inbox.noMessages}</p>
+                </div>
+              )}
+              {draftEmailsVisible.map((email) => (
+                <LocalEmailItem
+                  key={email.id}
+                  email={email}
+                  selected={selectedEmailId === email.id}
+                  bulkSelected={selectedLocalEmailIds.has(email.id)}
+                  onToggleBulk={() => toggleBulkLocalEmail(email.id)}
+                  onClick={() => {
+                    useEmailStore.getState().updateEmail(email.id, { isRead: true })
+                    setSelectedEmailId(email.id)
+                    setSelectedThreadId(null)
+                  }}
+                  onAction={handleLocalEmailAction}
+                  contacts={contacts}
+                  onTrackOpen={trackEmailOpen}
+                  onTrackClick={trackEmailClick}
+                />
+              ))}
+            </>
+          )}
+          {folder === 'snoozed' && (
+            <>
+              {snoozedEmailsVisible.length === 0 && (
+                <div className="p-6 text-center">
+                  <Clock size={28} className="mx-auto text-slate-600 mb-3" />
+                  <p className="text-sm text-slate-500">{t.inbox.noMessages}</p>
+                </div>
+              )}
+              {snoozedEmailsVisible.map((email) => (
+                <LocalEmailItem
+                  key={email.id}
+                  email={email}
+                  selected={selectedEmailId === email.id}
+                  bulkSelected={selectedLocalEmailIds.has(email.id)}
+                  onToggleBulk={() => toggleBulkLocalEmail(email.id)}
+                  onClick={() => {
+                    useEmailStore.getState().updateEmail(email.id, { isRead: true })
+                    setSelectedEmailId(email.id)
+                    setSelectedThreadId(null)
+                  }}
+                  onAction={handleLocalEmailAction}
                   contacts={contacts}
                   onTrackOpen={trackEmailOpen}
                   onTrackClick={trackEmailClick}
@@ -1251,15 +1808,43 @@ export function Inbox() {
             canCreateFollowUp={canCreateActivities}
           />
         ) : (
-          <LocalEmailView
-            email={selectedEmail}
-            contacts={contacts}
-            onReply={openReply}
-            onDelete={(id) => { deleteEmail(id); setSelectedEmailId(null); toast.success(t.common.delete) }}
-            onTrackOpen={trackEmailOpen}
-            onTrackClick={trackEmailClick}
-            canDeleteEmails={canDeleteEmails}
-          />
+          <>
+            <LocalEmailView
+              email={selectedEmail}
+              contacts={contacts}
+              onReply={openReply}
+              onEmailAction={handleLocalEmailAction}
+              onTrackOpen={trackEmailOpen}
+              onTrackClick={trackEmailClick}
+              canDeleteEmails={canDeleteEmails}
+            />
+            {selectedEmail && folder !== 'snoozed' && (
+              <div className="px-3 py-2 border-t border-white/6">
+                {folder === 'scheduled' && selectedEmail.undoableUntil && new Date(selectedEmail.undoableUntil).getTime() > Date.now() && (
+                  <button
+                    onClick={() => {
+                      deleteEmail(selectedEmail.id)
+                      setSelectedEmailId(null)
+                      toast.success(t.email.undoSendSuccess)
+                    }}
+                    className="mr-2 text-xs px-3 py-1.5 rounded-lg border border-amber-400/40 bg-amber-500/12 text-amber-200 hover:bg-amber-500/20 transition-colors"
+                  >
+                    {t.email.undoSend}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    snoozeEmail(selectedEmail.id, new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
+                    toast.success(t.inbox.snoozed)
+                    setFolder('snoozed')
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white/6 text-slate-300 hover:bg-white/10 transition-colors"
+                >
+                  {t.inbox.snoozeOneDay}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1269,6 +1854,8 @@ export function Inbox() {
         onClose={() => { setComposerOpen(false); setReplyTo(null) }}
         defaultTo={replyTo?.to ?? ''}
         defaultSubject={replyTo?.subject ?? ''}
+        draftId={folder === 'drafts' ? selectedEmail?.id : undefined}
+        defaultBody={folder === 'drafts' ? selectedEmail?.body ?? '' : ''}
       />
     </div>
   )

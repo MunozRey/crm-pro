@@ -1,12 +1,25 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   formatCurrency,
   formatDate,
   formatDateShort,
+  formatDateTime,
   formatNumber,
   getInitials,
   truncate,
 } from '../../src/utils/formatters'
+import { useI18nStore } from '../../src/i18n'
+import { useSettingsStore } from '../../src/store/settingsStore'
+
+beforeEach(() => {
+  useI18nStore.setState({ language: 'es' })
+  useSettingsStore.setState((state) => ({
+    settings: {
+      ...state.settings,
+      currency: 'EUR',
+    },
+  }))
+})
 
 describe('formatCurrency', () => {
   it('formats EUR value with euro symbol', () => {
@@ -31,6 +44,17 @@ describe('formatCurrency', () => {
   it('defaults to EUR when no currency provided', () => {
     const result = formatCurrency(250)
     expect(result).toMatch(/€|EUR/)
+  })
+
+  it('falls back to tenant currency when input currency is empty', () => {
+    useSettingsStore.setState((state) => ({
+      settings: {
+        ...state.settings,
+        currency: 'GBP',
+      },
+    }))
+    const result = formatCurrency(250, '')
+    expect(result).toMatch(/£|GBP/)
   })
 })
 
@@ -66,6 +90,17 @@ describe('formatDateShort', () => {
 
   it('returns original string on invalid input', () => {
     expect(formatDateShort('bad')).toBe('bad')
+  })
+})
+
+describe('formatDateTime', () => {
+  it('returns localized date-time for valid input', () => {
+    const result = formatDateTime('2026-01-15T10:30:00.000Z')
+    expect(result).toContain('2026')
+  })
+
+  it('returns original string on invalid input', () => {
+    expect(formatDateTime('bad-datetime')).toBe('bad-datetime')
   })
 })
 

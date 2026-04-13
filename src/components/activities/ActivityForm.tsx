@@ -10,6 +10,7 @@ import type { Activity } from '../../types'
 import { useContactsStore } from '../../store/contactsStore'
 import { useDealsStore } from '../../store/dealsStore'
 import { useAuthStore } from '../../store/authStore'
+import { useTranslations } from '../../i18n'
 
 type FormValues = z.infer<typeof activitySchema>
 
@@ -22,6 +23,7 @@ interface ActivityFormProps {
 }
 
 export function ActivityForm({ activity, defaultContactId, defaultDealId, onSubmit, onCancel }: ActivityFormProps) {
+  const t = useTranslations()
   const contacts = useContactsStore((s) => s.contacts)
   const deals = useDealsStore((s) => s.deals)
   const orgUsers = useAuthStore((s) => s.users)
@@ -59,56 +61,56 @@ export function ActivityForm({ activity, defaultContactId, defaultDealId, onSubm
     <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <Select
-          label="Tipo"
+          label={t.common.type}
           required
           options={[
-            { value: 'call', label: 'Llamada' },
-            { value: 'email', label: 'Email' },
-            { value: 'meeting', label: 'Reunión' },
-            { value: 'note', label: 'Nota' },
-            { value: 'task', label: 'Tarea' },
-            { value: 'linkedin', label: 'LinkedIn' },
+            { value: 'call', label: t.activities.typeLabels.call },
+            { value: 'email', label: t.activities.typeLabels.email },
+            { value: 'meeting', label: t.activities.typeLabels.meeting },
+            { value: 'note', label: t.activities.typeLabels.note },
+            { value: 'task', label: t.activities.typeLabels.task },
+            { value: 'linkedin', label: t.activities.typeLabels.linkedin },
           ]}
           error={errors.type?.message}
           {...register('type')}
         />
         <Select
-          label="Estado"
+          label={t.common.status}
           required
           options={[
-            { value: 'pending', label: 'Pendiente' },
-            { value: 'completed', label: 'Completada' },
-            { value: 'cancelled', label: 'Cancelada' },
+            { value: 'pending', label: t.activities.statusLabels.pending },
+            { value: 'completed', label: t.activities.statusLabels.completed },
+            { value: 'cancelled', label: t.activities.statusLabels.cancelled },
           ]}
           {...register('status')}
         />
       </div>
 
-      <Input label="Asunto" required error={errors.subject?.message} {...register('subject')} />
-      <Textarea label="Descripción" rows={3} {...register('description')} />
-      <Input label="Resultado / Outcome" {...register('outcome')} />
-      <Input label="Fecha límite" type="date" {...register('dueDate')} />
+      <Input label={t.activities.subject} required error={errors.subject?.message} {...register('subject')} />
+      <Textarea label={t.common.description} rows={3} {...register('description')} />
+      <Input label={t.activities.outcome} {...register('outcome')} />
+      <Input label={t.activities.dueDate} type="date" {...register('dueDate')} />
 
       <Select
-        label="Contacto"
+        label={t.contacts.title}
         options={[
-          { value: '', label: 'Sin contacto' },
+          { value: '', label: t.common.noResults },
           ...contacts.map((c) => ({ value: c.id, label: `${c.firstName} ${c.lastName}` })),
         ]}
         {...register('contactId')}
       />
 
       <Select
-        label="Deal"
+        label={t.deals.title}
         options={[
-          { value: '', label: 'Sin deal' },
+          { value: '', label: t.common.noResults },
           ...deals.map((d) => ({ value: d.id, label: d.title })),
         ]}
         {...register('dealId')}
       />
 
       <Select
-        label="Creado por"
+        label={t.common.assignedTo}
         required
         options={orgUsers.map((u) => ({ value: u.name, label: u.name }))}
         {...register('createdBy')}
@@ -116,9 +118,9 @@ export function ActivityForm({ activity, defaultContactId, defaultDealId, onSubm
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" className="flex-1">
-          {activity ? 'Guardar cambios' : 'Crear actividad'}
+          {activity ? t.common.save : t.activities.newActivity}
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>{t.common.cancel}</Button>
       </div>
     </form>
   )

@@ -51,7 +51,7 @@ export const useAuditStore = create<AuditStore>()((set, get) => ({
   logAction: (action, entityType, entityId, entityName, details) => {
     const entry: AuditEntry = {
       id: uuidv4(), action, entityType, entityId, entityName, details,
-      userId: useAuthStore.getState().currentUser?.name || 'Sistema',
+      userId: useAuthStore.getState().currentUser?.name || 'system',
       timestamp: new Date().toISOString(),
     }
     set((s) => {

@@ -8,6 +8,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getErrorMessage, getOrgId, runSupabaseWrite, sbDelete } from '../lib/supabaseHelpers'
 import { useAuthStore } from './authStore'
 import { useAutomationsStore } from './automationsStore'
+import { toast } from './toastStore'
 
 // ── Snake ↔ Camel mappers ───────────────────────────────────────────────────
 
@@ -136,24 +137,35 @@ export const useDealsStore = create<DealsState>()(
       useAuditStore.getState().logAction('deal_created', 'deal', deal.id, deal.title, 'Deal creado')
 
       if (isSupabaseConfigured && supabase) {
-        const row = dealToRow(dealData)
-        const currentUserId = useAuthStore.getState().currentUser?.id
-        const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
-        ;(supabase.from('deals').insert({ ...row, created_by: createdBy, organization_id: getOrgId() } as never).select().single()
-        ).then(({ data, error }: { data: Record<string, unknown> | null; error: { message: string } | null }) => {
-            if (error) {
-              set((s) => ({ deals: s.deals.filter((d) => d.id !== id), error: error.message }))
-              return
-            }
-            if (!data) {
-              set((s) => ({ deals: s.deals.filter((d) => d.id !== id), error: 'Empty Supabase insert response' }))
-              return
-            }
-            const real = rowToDeal(data)
-            set((s) => ({ deals: s.deals.map((d) => d.id === id ? real : d) }))
-          }, (error: unknown) => {
-            set((s) => ({ deals: s.deals.filter((d) => d.id !== id), error: getErrorMessage(error) }))
-          })
+        try {
+          const row = dealToRow(dealData)
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
+          ;(supabase.from('deals').insert({ ...row, created_by: createdBy, organization_id: getOrgId() } as never).select().single()
+          ).then(({ data, error }: { data: Record<string, unknown> | null; error: { message: string } | null }) => {
+              if (error) {
+                set({ error: error.message })
+                toast.error(error.message)
+                return
+              }
+              if (!data) {
+                const message = 'Empty Supabase insert response'
+                set({ error: message })
+                toast.error(message)
+                return
+              }
+              const real = rowToDeal(data)
+              set((s) => ({ deals: s.deals.map((d) => d.id === id ? real : d) }))
+            }, (error: unknown) => {
+              const message = getErrorMessage(error)
+              set({ error: message })
+              toast.error(message)
+            })
+        } catch (error) {
+          const message = getErrorMessage(error)
+          set({ error: message })
+          toast.error(message)
+        }
       }
 
       return deal

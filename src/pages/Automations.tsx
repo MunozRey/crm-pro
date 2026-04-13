@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Workflow, Plus, Trash2, ToggleLeft, ToggleRight, Zap, Bell,
   ArrowRight, CheckCircle2, Clock, ChevronDown, ChevronUp, X,
@@ -160,7 +160,7 @@ function ActionEditor({
           className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
         >
           {STAGE_OPTIONS.map((s) => (
-            <option key={s} value={s}>{t.deals.stageLabels[s]}</option>
+            <option key={s} value={s}>{t.deals.stageLabels[s as keyof typeof t.deals.stageLabels] ?? s}</option>
           ))}
         </select>
       )}
@@ -263,7 +263,7 @@ function RuleModal({
                       className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
                     >
                       <option value="">{t.common.all}</option>
-                      {STAGE_OPTIONS.map((s) => <option key={s} value={s}>{t.deals.stageLabels[s]}</option>)}
+                      {STAGE_OPTIONS.map((s) => <option key={s} value={s}>{t.deals.stageLabels[s as keyof typeof t.deals.stageLabels] ?? s}</option>)}
                     </select>
                   </div>
                   <div>
@@ -276,7 +276,7 @@ function RuleModal({
                       className="w-full bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500/50"
                     >
                       <option value="">{t.common.all}</option>
-                      {STAGE_OPTIONS.map((s) => <option key={s} value={s}>{t.deals.stageLabels[s]}</option>)}
+                      {STAGE_OPTIONS.map((s) => <option key={s} value={s}>{t.deals.stageLabels[s as keyof typeof t.deals.stageLabels] ?? s}</option>)}
                     </select>
                   </div>
                 </div>
@@ -446,7 +446,7 @@ function RuleCard({ rule }: { rule: AutomationRule }) {
                 <Zap size={11} className="text-amber-400" />
                 <span className="text-slate-300">{triggerLabels[rule.trigger.type]}</span>
                 {rule.trigger.toStage && (
-                  <><ArrowRight size={10} className="text-slate-600" /><span className="text-brand-400">{t.deals.stageLabels[rule.trigger.toStage]}</span></>
+                  <><ArrowRight size={10} className="text-slate-600" /><span className="text-brand-400">{t.deals.stageLabels[rule.trigger.toStage as keyof typeof t.deals.stageLabels] ?? rule.trigger.toStage}</span></>
                 )}
               </div>
               <ArrowRight size={12} className="text-slate-600" />
@@ -470,8 +470,14 @@ function RuleCard({ rule }: { rule: AutomationRule }) {
 export function Automations() {
   const t = useTranslations()
   const rules = useAutomationsStore((s) => s.rules)
+  const recentExecutions = useAutomationsStore((s) => s.recentExecutions)
+  const fetchRecentExecutions = useAutomationsStore((s) => s.fetchRecentExecutions)
   const addRule = useAutomationsStore((s) => s.addRule)
   const [showNew, setShowNew] = useState(false)
+
+  useEffect(() => {
+    fetchRecentExecutions()
+  }, [fetchRecentExecutions])
 
   const active = rules.filter((r) => r.isActive).length
   const totalExecutions = rules.reduce((s, r) => s + r.executionCount, 0)
@@ -534,6 +540,33 @@ export function Automations() {
           ))}
         </div>
       )}
+
+      <div className="glass rounded-xl p-4 border border-white/6">
+        <p className="text-xs text-slate-500 mb-3 uppercase tracking-wide">{t.audit.title}</p>
+        {recentExecutions.length === 0 ? (
+          <p className="text-xs text-slate-600">{t.common.noResults}</p>
+        ) : (
+          <div className="space-y-2">
+            {recentExecutions.slice(0, 10).map((exec) => (
+              <div key={exec.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/6 bg-white/[0.02] px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-200 truncate">{exec.triggerType}</p>
+                  <p className="text-[10px] text-slate-500 truncate">
+                    {formatRelativeDate(exec.createdAt)} · {exec.ruleId}
+                  </p>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                  exec.status === 'success'
+                    ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                    : 'text-red-300 border-red-500/30 bg-red-500/10'
+                }`}>
+                  {exec.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Users, Briefcase, Activity, Mail, Building2, Filter, Calendar } from 'lucide-react'
+import { Users, Briefcase, Activity, Mail, Building2, Filter, Calendar, Flame, Shield, UserCog } from 'lucide-react'
 import { useAuditStore } from '../store/auditStore'
 import { format, parseISO, isToday } from 'date-fns'
 import { es, enUS, ptBR, fr, de, it } from 'date-fns/locale'
@@ -7,7 +7,7 @@ import type { AuditEntry, AuditAction } from '../types'
 import { useTranslations } from '../i18n'
 import { useI18nStore } from '../i18n'
 
-type EntityFilter = 'all' | 'contact' | 'deal' | 'activity' | 'email' | 'company'
+type EntityFilter = 'all' | 'contact' | 'deal' | 'activity' | 'email' | 'company' | 'lead'
 
 const ENTITY_ICONS: Record<AuditEntry['entityType'], typeof Users> = {
   contact: Users,
@@ -15,6 +15,9 @@ const ENTITY_ICONS: Record<AuditEntry['entityType'], typeof Users> = {
   activity: Activity,
   email: Mail,
   company: Building2,
+  lead: Flame,
+  settings: Shield,
+  user: UserCog,
 }
 
 type ActionCategory = 'created' | 'updated' | 'deleted' | 'stage_changed' | 'completed'
@@ -47,23 +50,29 @@ export function AuditLog() {
     activity: t.activities.title,
     email: t.inbox.title,
     company: t.companies.title,
+    lead: t.leads.title,
+    settings: t.settings.title,
+    user: t.team.title,
   }
 
   const ACTION_LABELS: Record<AuditAction, string> = {
-    contact_created: `${t.contacts.title} ${t.activities.statusLabels.completed}`,
-    contact_updated: `${t.contacts.title} ${t.common.updatedAt}`,
-    contact_deleted: `${t.contacts.deleted}`,
-    deal_created: `${t.deals.title} ${t.common.createdAt}`,
-    deal_updated: `${t.deals.updated}`,
-    deal_deleted: `${t.deals.deleted}`,
+    contact_created: t.common.create,
+    contact_updated: t.common.edit,
+    contact_deleted: t.common.delete,
+    deal_created: t.common.create,
+    deal_updated: t.common.edit,
+    deal_deleted: t.common.delete,
     deal_stage_changed: t.deals.stage,
-    activity_created: `${t.activities.title} ${t.common.createdAt}`,
+    activity_created: t.common.create,
     activity_completed: t.activities.completed,
-    activity_deleted: `${t.activities.title} ${t.common.delete}`,
+    activity_deleted: t.common.delete,
     email_sent: t.inbox.sent,
     enrichment_completed: t.activities.completed,
-    company_created: `${t.companies.title} ${t.common.createdAt}`,
-    company_updated: `${t.companies.updated}`,
+    company_created: t.common.create,
+    company_updated: t.common.edit,
+    lead_score_recomputed: t.leads.scoreBreakdownAction,
+    user_role_changed: t.team.changeRole,
+    permission_profile_updated: t.settings.permissionProfiles,
   }
 
   function formatAuditTimestamp(timestamp: string): string {
@@ -123,6 +132,7 @@ export function AuditLog() {
     { value: 'activity', label: t.activities.title },
     { value: 'email', label: t.inbox.title },
     { value: 'company', label: t.companies.title },
+    { value: 'lead', label: t.leads.title },
   ]
 
   return (
@@ -130,7 +140,7 @@ export function AuditLog() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">{t.audit.title}</h1>
-        <p className="text-slate-400 mt-1">{t.common.description}</p>
+        <p className="text-slate-400 mt-1">{t.audit.subtitle}</p>
       </div>
 
       {/* Stats Cards */}
@@ -217,8 +227,8 @@ export function AuditLog() {
             <h3 className="text-lg font-semibold text-white mb-2">{t.common.noResults}</h3>
             <p className="text-slate-400">
               {entries.length === 0
-                ? t.common.description
-                : t.common.noResults}
+                ? t.audit.empty
+                : t.audit.emptyFiltered}
             </p>
           </div>
         ) : (
@@ -253,16 +263,14 @@ export function AuditLog() {
                             {ENTITY_LABELS[entry.entityType]}
                           </span>
                         </div>
-                        <p className="text-slate-200 text-sm">
-                          {entry.details || `${ACTION_LABELS[entry.action]}: ${entry.entityName}`}
-                        </p>
+                        <p className="text-slate-200 text-sm">{`${ACTION_LABELS[entry.action]}: ${entry.entityName}`}</p>
                         <p className="text-white font-medium text-sm mt-1">{entry.entityName}</p>
                       </div>
                     </div>
 
                     <div className="text-right flex-shrink-0">
                       <p className="text-slate-500 text-xs">{formatAuditTimestamp(entry.timestamp)}</p>
-                      <p className="text-slate-400 text-xs mt-1">{entry.userId}</p>
+                      <p className="text-slate-400 text-xs mt-1">{entry.userId === 'system' || entry.userId === 'Sistema' ? t.audit.systemUser : entry.userId}</p>
                     </div>
                   </div>
                 </div>

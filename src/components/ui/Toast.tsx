@@ -11,10 +11,10 @@ const iconMap: Record<ToastType, React.ReactNode> = {
 }
 
 const bgMap: Record<ToastType, string> = {
-  success: 'border-emerald-500/30 bg-emerald-500/10',
-  error: 'border-red-500/30 bg-red-500/10',
-  warning: 'border-yellow-500/30 bg-yellow-500/10',
-  info: 'border-blue-500/30 bg-blue-500/10',
+  success: 'toast-success',
+  error: 'toast-error',
+  warning: 'toast-warning',
+  info: 'toast-info',
 }
 
 export function ToastContainer() {
@@ -30,15 +30,15 @@ export function ToastContainer() {
             flex items-center gap-3 px-4 py-3 rounded-xl border
             shadow-xl min-w-[280px] max-w-sm
             pointer-events-auto animate-slide-in
-            bg-[#111220] ${bgMap[t.type]}
+            toast-surface ${bgMap[t.type]}
           `}
         >
           {iconMap[t.type]}
-          <p className="flex-1 text-sm text-zinc-200">{t.message}</p>
+          <p className="flex-1 text-sm text-slate-100">{t.message}</p>
           <button
             onClick={() => removeToast(t.id)}
             aria-label={tr.common.close}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="text-slate-500 hover:text-slate-200 transition-colors"
           >
             <X size={14} />
           </button>

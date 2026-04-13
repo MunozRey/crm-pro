@@ -48,6 +48,13 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
   const unpinnedViews = entityViews.filter((v) => !v.isPinned)
   const currentActiveId = activeViewId[entityType]
 
+  const getViewLabel = (view: { name: string; nameKey?: string }) => {
+    if (view.nameKey && view.nameKey in t.views) {
+      return t.views[view.nameKey as keyof typeof t.views]
+    }
+    return view.name
+  }
+
   const handleSelectView = (viewId: string | null) => {
     useViewsStore.getState().setActiveView(entityType, viewId)
     if (viewId) {
@@ -90,7 +97,7 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
             }`}
           >
             {view.icon && ICON_MAP[view.icon]}
-            {view.name}
+            {getViewLabel(view)}
             {isActive && <X size={11} className="ml-0.5 opacity-60" />}
           </button>
         )
@@ -126,7 +133,7 @@ export function SmartViewBar({ entityType, onFiltersChange }: SmartViewBarProps)
                       className="flex-1 flex items-center gap-2 px-1 py-1 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-md transition-colors"
                     >
                       {view.icon && ICON_MAP[view.icon]}
-                      <span className="flex-1 text-left">{view.name}</span>
+                      <span className="flex-1 text-left">{getViewLabel(view)}</span>
                     </button>
                     <button
                       onClick={() => useViewsStore.getState().togglePin(view.id)}

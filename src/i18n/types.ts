@@ -4,6 +4,7 @@ export interface Translations {
   // ─── Navigation ──────────────────────────────────────────────────────────────
   nav: {
     dashboard: string
+    leads: string
     contacts: string
     companies: string
     deals: string
@@ -102,12 +103,15 @@ export interface Translations {
     bulkDeleteConfirm: string
     nSelected: string
     searchPlaceholder: string
+    continue: string
+    notAvailable: string
   }
 
   // ─── Contact ─────────────────────────────────────────────────────────────────
   contacts: {
     title: string
     newContact: string
+    createContact: string
     editContact: string
     firstName: string
     lastName: string
@@ -121,6 +125,7 @@ export interface Translations {
     noDuplicates: string
     merge: string
     myContacts: string
+    noCompany: string
     emptyTitle: string
     emptyDescription: string
     deleteConfirm: string
@@ -140,6 +145,57 @@ export interface Translations {
       event: string
       linkedin: string
       other: string
+    }
+  }
+
+  leads: {
+    title: string
+    addLead: string
+    createLead: string
+    firstName: string
+    lastName: string
+    company: string
+    leadInbox: string
+    scoringRules: string
+    noScoringRules: string
+    allowDemotion: string
+    searchPlaceholder: string
+    allStages: string
+    allScores: string
+    hot: string
+    warm: string
+    cold: string
+    noLeads: string
+    loadingLeads: string
+    scoreAction: string
+    scoreActionHint: string
+    timelineAction: string
+    convertAction: string
+    convertActionHint: string
+    scoreBreakdownAction: string
+    timelineTitle: string
+    scoreBreakdownTitle: string
+    scoreHistory: string
+    noEvents: string
+    noScoreInsight: string
+    enabled: string
+    refresh: string
+    confidence: string
+    baselineSignals: string
+    eventScore: string
+    recentSignals: string
+    confidenceLevels: {
+      high: string
+      medium: string
+      low: string
+    }
+    stageLabels: {
+      subscriber: string
+      lead: string
+      mql: string
+      sql: string
+      opportunity: string
+      customer: string
     }
   }
 
@@ -215,6 +271,7 @@ export interface Translations {
     created: string
     updated: string
     deleted: string
+    dragDealsHere: string
     stageLabels: {
       lead: string
       qualified: string
@@ -305,6 +362,8 @@ export interface Translations {
     month: string
     week: string
     day: string
+    hour: string
+    allDay: string
     newEvent: string
     noEvents: string
   }
@@ -315,6 +374,10 @@ export interface Translations {
     general: string
     currency: string
     language: string
+    theme: string
+    themeSystem: string
+    themeLight: string
+    themeDark: string
     tags: string
     addTag: string
     pipeline: string
@@ -396,12 +459,61 @@ export interface Translations {
     deleteTagAriaLabel: string
     users: string
     usersAuthHint: string
+    branding: string
+    appName: string
+    primaryColor: string
+    logoUrl: string
+    customDomain: string
+    privacyUrl: string
+    termsUrl: string
+    resetBranding: string
+    permissionProfiles: string
+    permissionProfilesHint: string
+    permissionsUpdated: string
     pipelineReorderHint: string
+    pipelineStageProtected: string
+    pipelineStageDeleteHint: string
     currencyLabels: {
       eur: string
       usd: string
       gbp: string
     }
+    leadOpsTitle: string
+    leadOpsSubtitle: string
+    leadOpsLastSuccess: string
+    leadOpsSlaLabel: string
+    leadOpsSlaHours: string
+    leadOpsRecentErrors: string
+    leadOpsNoRuns: string
+    leadOpsAllOrgs: string
+    leadOpsSingleOrg: string
+    leadOpsProcessed: string
+    leadOpsJustNow: string
+    leadOpsMinsAgo: string
+    leadOpsHoursAgo: string
+    leadOpsDaysAgo: string
+    leadOpsNotAvailable: string
+    leadOpsHealthy: string
+    leadOpsBreached: string
+    leadOpsFilterAll: string
+    leadOpsFilterSuccess: string
+    leadOpsFilterRunning: string
+    leadOpsFilterError: string
+    leadOpsMailboxScope: string
+    leadOpsMailboxPrivate: string
+    leadOpsMailboxPrivateHint: string
+    emailProviderHealth: string
+    emailSyncState: string
+    emailLastSync: string
+    emailLastError: string
+    emailSignatures: string
+    signatureName: string
+    signatureHtml: string
+    signatureDefault: string
+    signatureSetDefault: string
+    signatureSaved: string
+    signatureDeleted: string
+    signatureNamePlaceholder: string
   }
 
   // ─── Reports ─────────────────────────────────────────────────────────────────
@@ -598,10 +710,14 @@ export interface Translations {
 
   audit: {
     title: string
+    subtitle: string
     action: string
     entity: string
     user: string
     timestamp: string
+    empty: string
+    emptyFiltered: string
+    systemUser: string
   }
 
   emailTemplates: {
@@ -625,6 +741,7 @@ export interface Translations {
     compose: string
     sent: string
     drafts: string
+    snoozed: string
     noMessages: string
     markRead: string
     markUnread: string
@@ -640,9 +757,11 @@ export interface Translations {
     dealPlaceholder: string
     refreshInbox: string
     selectThread: string
+    selectMessage: string
     selectedCount: string
     threadUpdated: string
     appliedToThreads: string
+    appliedToMessages: string
     followUpCreated: string
     noEntityToPin: string
     pinnedLinkRemoved: string
@@ -654,8 +773,24 @@ export interface Translations {
     unknownSender: string
     clicks: string
     searchPlaceholder: string
+    searchOperatorsHint: string
     loadMore: string
     disconnectError: string
+    mailboxScopePrivate: string
+    mailboxOnly: string
+    mailboxOwner: string
+    mailboxPrivacyHint: string
+    mailboxVisibleCount: string
+    hasAttachments: string
+    onlyMine: string
+    savedViews: string
+    savedViewNamePlaceholder: string
+    savedViewCreated: string
+    syncHealthy: string
+    syncSyncing: string
+    syncStale: string
+    syncError: string
+    snoozeOneDay: string
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -665,6 +800,8 @@ export interface Translations {
     logout: string
     email: string
     password: string
+    currentPassword: string
+    newPassword: string
     confirmPassword: string
     forgotPassword: string
     rememberMe: string
@@ -686,6 +823,13 @@ export interface Translations {
     passwordsDoNotMatch: string
     passwordMinLength: string
     savePassword: string
+    sso: string
+    saml: string
+    samlDomainPlaceholder: string
+    useSaml: string
+    connecting: string
+    companyDomainRequired: string
+    demoLogin: string
   }
 
   // ─── Org Setup ───────────────────────────────────────────────────────────────
@@ -758,6 +902,10 @@ export interface Translations {
     ccLabel: string
     bccLabel: string
     replyToLabel: string
+    undoSendHint: string
+    undoSend: string
+    undoSendSuccess: string
+    draftSaved: string
     closeComposer: string
     discardDraftConfirm: string
     addFile: string
@@ -765,6 +913,11 @@ export interface Translations {
     scheduleSendTime: string
     attachHint: string
     emailScheduled: string
+    sentLocalFallback: string
+    senderNamePlaceholder: string
+    useSignature: string
+    signaturePlaceholder: string
+    signatureSelectLabel: string
   }
 
   // ─── Notifications page ──────────────────────────────────────────────────────
@@ -804,4 +957,7 @@ export interface Translations {
     closeLabel: string
     probabilityShort: string
   }
+
+  // Additional inbox labels used by inbox views/actions
+  // (kept here to preserve existing translation structure)
 }

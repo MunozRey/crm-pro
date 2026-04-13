@@ -7,6 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "maintenance:lead:org": "node scripts/run-lead-maintenance.mjs",
+    "maintenance:lead:all": "node scripts/run-lead-maintenance.mjs --all",
+    "maintenance:lead:health": "node scripts/check-lead-maintenance-health.mjs",
+    "maintenance:lead:sla": "node scripts/check-lead-maintenance-sla.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -32,7 +36,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
+    "@anthropic-ai/sdk": "^0.88.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/supabase-js": "^2.100.1",

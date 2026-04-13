@@ -4,6 +4,7 @@ import { useAttachmentsStore } from '../../store/attachmentsStore'
 import { toast } from '../../store/toastStore'
 import { useTranslations } from '../../i18n'
 import type { Attachment } from '../../types'
+import { formatDateShort } from '../../utils/formatters'
 
 interface AttachmentsListProps {
   entityType: 'contact' | 'company' | 'deal'
@@ -20,10 +21,6 @@ function getFileIcon(mimeType: string) {
   if (mimeType.startsWith('image/')) return <Image size={16} className="text-purple-400" />
   if (mimeType.includes('pdf')) return <FileText size={16} className="text-red-400" />
   return <File size={16} className="text-slate-400" />
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function AttachmentsList({ entityType, entityId }: AttachmentsListProps) {
@@ -143,7 +140,7 @@ export function AttachmentsList({ entityType, entityId }: AttachmentsListProps) 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-slate-200 truncate">{att.fileName}</p>
                     <p className="text-[10px] text-slate-600">
-                      {formatFileSize(att.fileSize)} · {formatDate(att.uploadedAt)} · {att.uploadedBy}
+                      {formatFileSize(att.fileSize)} · {formatDateShort(att.uploadedAt)} · {att.uploadedBy}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

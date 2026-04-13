@@ -61,7 +61,7 @@ export function Reports() {
       const totalValue = stageDeals.reduce((sum, d) => sum + d.value, 0)
       const weightedValue = stageDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0)
       return {
-        name: t.deals.stageLabels[stage],
+        name: t.deals.stageLabels[stage as keyof typeof t.deals.stageLabels] ?? stage,
         value: totalValue,
         weighted: weightedValue,
       }
@@ -104,7 +104,7 @@ export function Reports() {
   // Funnel conversion
   const funnelData = useMemo(() => {
     return DEAL_STAGES_ORDER.filter((s) => s !== 'closed_lost').map((stage) => ({
-      name: t.deals.stageLabels[stage],
+      name: t.deals.stageLabels[stage as keyof typeof t.deals.stageLabels] ?? stage,
       value: filteredDeals.filter((d) => d.stage === stage).length,
       fill: '#6366f1',
     })).filter((d) => d.value > 0)
@@ -139,7 +139,7 @@ export function Reports() {
     const rows = [
       [t.common.type, t.common.name, t.common.value, t.deals.stage, t.common.assignedTo, t.common.createdAt],
       ...filteredDeals.map((d) => [
-        'Deal', d.title, String(d.value), t.deals.stageLabels[d.stage], d.assignedTo, d.createdAt.split('T')[0],
+        'Deal', d.title, String(d.value), t.deals.stageLabels[d.stage as keyof typeof t.deals.stageLabels] ?? d.stage, d.assignedTo, d.createdAt.split('T')[0],
       ]),
     ]
     const csv = rows.map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
@@ -153,7 +153,7 @@ export function Reports() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-6 space-y-6">
       {/* Date filter */}
       <div className="flex items-center gap-4 flex-wrap">
         <p className="text-sm font-medium text-slate-400">{t.reports.periodLabel}:</p>

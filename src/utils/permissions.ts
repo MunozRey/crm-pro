@@ -1,77 +1,10 @@
 import type { UserRole, Permission } from '../types/auth'
+import { useSettingsStore } from '../store/settingsStore'
+import { DEFAULT_ROLE_PERMISSIONS } from './permissionProfiles'
 
 // ─── Role → Permission Mapping ─────────────────────────────────────────────
 
-const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  admin: [
-    // Full access
-    'contacts:read', 'contacts:create', 'contacts:update', 'contacts:delete', 'contacts:export',
-    'companies:read', 'companies:create', 'companies:update', 'companies:delete',
-    'deals:read', 'deals:create', 'deals:update', 'deals:delete', 'deals:move',
-    'activities:read', 'activities:create', 'activities:update', 'activities:delete',
-    'email:read', 'email:send', 'email:update', 'email:link',
-    'reports:read', 'reports:export',
-    'templates:read', 'templates:create', 'templates:update', 'templates:delete',
-    'products:read', 'products:create', 'products:update', 'products:delete',
-    'automations:read', 'automations:create', 'automations:update', 'automations:delete',
-    'sequences:read', 'sequences:create', 'sequences:update', 'sequences:delete', 'sequences:enroll',
-    'custom_fields:read', 'custom_fields:update',
-    'ai:use',
-    'settings:read', 'settings:update',
-    'users:read', 'users:create', 'users:update', 'users:delete', 'users:manage_roles', 'users:invite',
-    'audit:read',
-    'goals:read', 'goals:create', 'goals:update', 'goals:delete',
-    'import:csv', 'import:json',
-  ],
-  manager: [
-    'contacts:read', 'contacts:create', 'contacts:update', 'contacts:delete', 'contacts:export',
-    'companies:read', 'companies:create', 'companies:update', 'companies:delete',
-    'deals:read', 'deals:create', 'deals:update', 'deals:delete', 'deals:move',
-    'activities:read', 'activities:create', 'activities:update', 'activities:delete',
-    'email:read', 'email:send', 'email:update', 'email:link',
-    'reports:read', 'reports:export',
-    'templates:read', 'templates:create', 'templates:update', 'templates:delete',
-    'products:read', 'products:create', 'products:update',
-    'automations:read', 'automations:create', 'automations:update',
-    'sequences:read', 'sequences:create', 'sequences:update', 'sequences:enroll',
-    'custom_fields:read', 'custom_fields:update',
-    'ai:use',
-    'settings:read',
-    'users:read', 'users:invite',
-    'audit:read',
-    'goals:read', 'goals:create', 'goals:update', 'goals:delete',
-    'import:csv', 'import:json',
-  ],
-  sales_rep: [
-    'contacts:read', 'contacts:create', 'contacts:update',
-    'companies:read', 'companies:create', 'companies:update',
-    'deals:read', 'deals:create', 'deals:update', 'deals:move',
-    'activities:read', 'activities:create', 'activities:update', 'activities:delete',
-    'email:read', 'email:send', 'email:update', 'email:link',
-    'reports:read',
-    'templates:read',
-    'products:read',
-    'automations:read',
-    'sequences:read', 'sequences:enroll',
-    'custom_fields:read',
-    'ai:use',
-    'goals:read',
-  ],
-  viewer: [
-    'contacts:read',
-    'companies:read',
-    'deals:read',
-    'activities:read',
-    'email:read',
-    'reports:read',
-    'templates:read',
-    'products:read',
-    'automations:read',
-    'sequences:read',
-    'custom_fields:read',
-    'goals:read',
-  ],
-}
+const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = DEFAULT_ROLE_PERMISSIONS
 
 /**
  * Canonical role values accepted by the permission system.
@@ -81,7 +14,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 export const VALID_ROLES: readonly UserRole[] = ['admin', 'manager', 'sales_rep', 'viewer'] as const
 
 export function getPermissionsForRole(role: UserRole): Permission[] {
-  return ROLE_PERMISSIONS[role] || []
+  const dynamicProfiles = useSettingsStore.getState().settings.permissionProfiles
+  return dynamicProfiles?.[role] ?? ROLE_PERMISSIONS[role] ?? []
 }
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
@@ -130,6 +64,7 @@ export interface NavPermission {
 
 export const NAV_PERMISSIONS: NavPermission[] = [
   { path: '/', requiredPermission: 'contacts:read' },
+  { path: '/leads', requiredPermission: 'contacts:read' },
   { path: '/contacts', requiredPermission: 'contacts:read' },
   { path: '/companies', requiredPermission: 'companies:read' },
   { path: '/deals', requiredPermission: 'deals:read' },

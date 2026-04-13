@@ -38,7 +38,9 @@ export function Register() {
       if (sbError) {
         setError(sbError.message)
       } else if (data.session) {
-        // Email confirmations disabled in Supabase Dashboard — user is immediately logged in
+        // Email confirmations disabled in Supabase Dashboard — user is immediately logged in.
+        // Provision the tenant immediately when possible (fallback also runs in auth init).
+        await useAuthStore.getState().ensureTenantForCurrentUser()
         navigate('/')
       } else {
         // Email confirmation required — show "check your email" screen

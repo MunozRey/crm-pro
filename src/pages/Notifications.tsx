@@ -133,6 +133,7 @@ export function Notifications() {
     if (!notification.isRead) markAsRead(notification.id)
     if (notification.entityType && notification.entityId) {
       const path = notification.entityType === 'contact' ? `/contacts/${notification.entityId}`
+        : notification.entityType === 'lead' ? `/leads/${notification.entityId}`
         : notification.entityType === 'deal' ? `/deals`
         : notification.entityType === 'company' ? `/companies/${notification.entityId}`
         : notification.entityType === 'activity' ? `/activities`
@@ -147,7 +148,7 @@ export function Notifications() {
   const olderNotifs = filtered.filter((n) => !n.createdAt.startsWith(todayStr))
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -12,6 +12,7 @@ import { useTemplateStore } from '../store/templateStore'
 import { useProductsStore } from '../store/productsStore'
 import { useAuditStore } from '../store/auditStore'
 import { useCustomFieldsStore } from '../store/customFieldsStore'
+import { useLeadsStore } from '../store/leadsStore'
 import { initRealtimeSubscriptions } from '../lib/realtimeSubscriptions'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { useEmailStore } from '../store/emailStore'
@@ -58,10 +59,30 @@ export function useDataInit() {
     useProductsStore.getState().fetchProducts()
     useAuditStore.getState().fetchEntries()
     useCustomFieldsStore.getState().fetchCustomFields()
+    useLeadsStore.getState().fetchLeads()
 
     const cleanup = initRealtimeSubscriptions()
+    const runServerMaintenance = () => {
+      if (isSupabaseConfigured && supabase) {
+        supabase.functions.invoke('lead-score-maintenance').catch(() => {
+          // Fallback to client-side maintenance if edge function is unavailable.
+          useLeadsStore.getState().runScheduledScoreMaintenance()
+        })
+        return
+      }
+      useLeadsStore.getState().runScheduledScoreMaintenance()
+    }
+
+    const maintenanceInterval = window.setInterval(() => {
+      runServerMaintenance()
+    }, 30 * 60 * 1000)
+
+    window.setTimeout(() => {
+      runServerMaintenance()
+    }, 15000)
     return () => {
       cleanup()
+      window.clearInterval(maintenanceInterval)
       didInit.current = false
     }
   }, [currentUser])

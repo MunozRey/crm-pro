@@ -22,7 +22,6 @@ import { EmailComposer } from '../components/email/EmailComposer'
 import { Textarea } from '../components/ui/Textarea'
 import { toast } from '../store/toastStore'
 import { formatDate, formatCurrency, formatRelativeDate } from '../utils/formatters'
-import { CONTACT_SOURCE_LABELS, DEAL_STAGE_COLORS } from '../utils/constants'
 import type { Contact, DealStage, ActivityType } from '../types'
 import { CustomFieldsDisplay } from '../components/shared/CustomFieldRenderer'
 import { useTranslations, useI18nStore } from '../i18n'
@@ -150,7 +149,7 @@ export function ContactDetail() {
   ]
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       {/* Back */}
       <Button variant="ghost" size="sm" leftIcon={<ArrowLeft size={14} />} onClick={() => navigate('/contacts')} className="mb-4">
         {t.nav.contacts}
@@ -189,7 +188,7 @@ export function ContactDetail() {
             </div>
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               <ContactStatusBadge status={contact.status} />
-              <Badge variant="gray">{CONTACT_SOURCE_LABELS[contact.source]}</Badge>
+              <Badge variant="gray">{t.contacts.sourceLabels[contact.source]}</Badge>
               {contact.tags.map((tag) => (
                 <Badge key={tag} variant="indigo">{tag}</Badge>
               ))}
@@ -259,7 +258,7 @@ export function ContactDetail() {
                 { label: t.contacts.jobTitle, value: contact.jobTitle || '\u2014' },
                 { label: t.contacts.company, value: company?.name || '\u2014' },
                 { label: t.common.status, value: contact.status },
-                { label: t.contacts.source, value: CONTACT_SOURCE_LABELS[contact.source] },
+                { label: t.contacts.source, value: t.contacts.sourceLabels[contact.source] },
                 { label: t.common.assignedTo, value: contact.assignedTo },
                 { label: t.contacts.lastContacted, value: formatDate(contact.lastContactedAt) },
                 { label: t.common.createdAt, value: formatDate(contact.createdAt) },
@@ -344,8 +343,8 @@ export function ContactDetail() {
                   <span className="text-sm font-semibold text-emerald-400">
                     {formatCurrency(deal.value, deal.currency)}
                   </span>
-                  <Badge variant={STAGE_BADGE[deal.stage]}>
-                    {t.deals.stageLabels[deal.stage]}
+                  <Badge variant={STAGE_BADGE[deal.stage] ?? 'gray'}>
+                    {t.deals.stageLabels[deal.stage as keyof typeof t.deals.stageLabels] ?? deal.stage}
                   </Badge>
                 </div>
               </div>
@@ -400,7 +399,7 @@ export function ContactDetail() {
                         {(email.clickCount ?? 0) > 0 && (
                           <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20">
                             <MousePointerClick size={9} />
-                            Click {email.clickCount}x
+                            {t.inbox.clicks} {email.clickCount}x
                           </span>
                         )}
                       </div>
@@ -418,7 +417,7 @@ export function ContactDetail() {
                           onClick={() => trackEmailClick(email.id)}
                           className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 hover:bg-blue-500/15 text-slate-500 hover:text-blue-400 border border-white/8 transition-colors"
                         >
-                          Click
+                          {t.inbox.clicks}
                         </button>
                       </div>
                     )}

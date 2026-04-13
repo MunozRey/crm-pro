@@ -3,7 +3,7 @@ create extension if not exists "uuid-ossp";
 
 -- ─── Contacts ──────────────────────────────────────────────────────────────────
 create table if not exists public.contacts (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   first_name    text not null,
@@ -25,7 +25,7 @@ create table if not exists public.contacts (
 
 -- ─── Companies ─────────────────────────────────────────────────────────────────
 create table if not exists public.companies (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   name         text not null,
@@ -49,7 +49,7 @@ alter table public.contacts
 
 -- ─── Deals ─────────────────────────────────────────────────────────────────────
 create table if not exists public.deals (
-  id                  uuid primary key default uuid_generate_v4(),
+  id                  uuid primary key default gen_random_uuid(),
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
   title               text not null,
@@ -70,7 +70,7 @@ create table if not exists public.deals (
 
 -- ─── Activities ────────────────────────────────────────────────────────────────
 create table if not exists public.activities (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   type         text not null,
@@ -89,7 +89,7 @@ create table if not exists public.activities (
 
 -- ─── Notifications ─────────────────────────────────────────────────────────────
 create table if not exists public.notifications (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   created_at  timestamptz not null default now(),
   type        text not null,
   title       text not null,

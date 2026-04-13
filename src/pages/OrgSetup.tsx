@@ -26,6 +26,7 @@ export function OrgSetup() {
     if (!orgName.trim()) { setError(t.orgSetup.errorNameRequired); return }
     if (!slug.trim()) { setError(t.orgSetup.errorSlugRequired); return }
     if (!supabase) { setError(t.orgSetup.errorNotConfigured); return }
+    const sb = supabase
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) { setError(t.orgSetup.errorNotAuthenticated); return }
 
@@ -33,19 +34,20 @@ export function OrgSetup() {
     setError(null)
 
     try {
-      // Call Edge Function (uses service role to bypass RLS)
-      const { data, error: fnErr } = await supabase.functions.invoke('create-org', {
-        body: { orgName: orgName.trim(), slug: slug.trim() },
+      // Prefer RPC path to avoid edge gateway JWT parsing issues.
+      const { data, error: rpcErr } = await (sb as any).rpc('create_org_self_service', {
+        p_org_name: orgName.trim(),
+        p_slug: slug.trim(),
       })
-      if (fnErr) throw new Error(fnErr.message)
-      if (data?.error) throw new Error(data.error)
+      if (rpcErr) throw new Error(rpcErr.message)
+      if (!data || (Array.isArray(data) && data.length === 0)) throw new Error(t.errors.generic)
 
       // Refresh session so JWT carries new organization_id claim
-      const { error: refreshErr } = await supabase.auth.refreshSession()
+      const { error: refreshErr } = await sb.auth.refreshSession()
       if (refreshErr) throw new Error(refreshErr.message)
 
       // Sync current user in Zustand immediately with refreshed JWT claims
-      const { data: refreshedUserData, error: refreshedUserError } = await supabase.auth.getUser()
+      const { data: refreshedUserData, error: refreshedUserError } = await sb.auth.getUser()
       if (refreshedUserError || !refreshedUserData.user) {
         throw new Error(refreshedUserError?.message ?? t.orgSetup.errorNotAuthenticated)
       }
@@ -53,7 +55,7 @@ export function OrgSetup() {
       const u = refreshedUserData.user
       setCurrentUser({
         id: u.id,
-        name: u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? 'User',
+        name: u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? t.auth.profile,
         email: u.email ?? '',
         role: (u.app_metadata?.user_role as 'admin' | 'manager' | 'sales_rep' | 'viewer') ?? 'admin',
         jobTitle: u.user_metadata?.job_title ?? '',

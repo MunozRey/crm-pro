@@ -3,13 +3,14 @@ import { v4 as uuidv4 } from 'uuid'
 import type { SalesGoal } from '../types'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getOrgId, sbDelete } from '../lib/supabaseHelpers'
+import { useAuthStore } from './authStore'
 
 interface GoalsState {
   goals: SalesGoal[]
   isLoading: boolean
   error: string | null
   fetchGoals: () => Promise<void>
-  addGoal: (goal: Omit<SalesGoal, 'id'>) => SalesGoal
+  addGoal: (goal: Omit<SalesGoal, 'id'>) => Promise<{ goal?: SalesGoal; error?: string }>
   updateGoal: (id: string, updates: Partial<SalesGoal>) => void
   deleteGoal: (id: string) => void
   getActiveGoals: () => SalesGoal[]
@@ -55,20 +56,26 @@ export const useGoalsStore = create<GoalsState>()((set, get) => ({
     }
   },
 
-  addGoal: (goalData) => {
+  addGoal: async (goalData) => {
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    const effectiveUserId = goalData.userId || currentUserId || 'unknown-user'
     const goal: SalesGoal = { ...goalData, id: uuidv4() }
+    goal.userId = effectiveUserId
     set((s) => ({ goals: [...s.goals, goal] }))
     if (isSupabaseConfigured && supabase) {
-      ;(supabase as any).from('sales_goals').insert({
+      const { error } = await (supabase as any).from('sales_goals').insert({
         id: goal.id, user_id: goal.userId, type: goal.type,
         target: goal.target, current: goal.current, period: goal.period,
         start_date: goal.startDate, end_date: goal.endDate,
         organization_id: getOrgId(),
-      }).then(({ error }: any) => {
-        if (error) console.error('[goalsStore] insert error', error)
       })
+      if (error) {
+        console.error('[goalsStore] insert error', error)
+        set((s) => ({ goals: s.goals.filter((g) => g.id !== goal.id), error: error.message }))
+        return { error: error.message as string }
+      }
     }
-    return goal
+    return { goal }
   },
 
   updateGoal: (id, updates) => {

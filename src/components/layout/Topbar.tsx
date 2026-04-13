@@ -8,6 +8,7 @@ import { useContactsStore } from '../../store/contactsStore'
 import { useNotificationsStore } from '../../store/notificationsStore'
 import { getFollowUpReminders } from '../../utils/followUpEngine'
 import { useAuthStore } from '../../store/authStore'
+import { useSettingsStore } from '../../store/settingsStore'
 // ROLE_LABELS removed — using t.team.roleLabels instead
 import { formatRelativeDate } from '../../utils/formatters'
 import { useTranslations } from '../../i18n'
@@ -28,12 +29,17 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
   const t = useTranslations()
   const [showNotifs, setShowNotifs] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [branding, setBranding] = useState(useSettingsStore.getState().settings.branding)
   const navigate = useNavigate()
 
   // Auth – manual getState to avoid getSnapshot issues
   const [currentUser, setCurrentUser] = useState(useAuthStore.getState().currentUser)
   useEffect(() => {
     const unsub = useAuthStore.subscribe((s) => setCurrentUser(s.currentUser))
+    return unsub
+  }, [])
+  useEffect(() => {
+    const unsub = useSettingsStore.subscribe((s) => setBranding(s.settings.branding))
     return unsub
   }, [])
 
@@ -87,13 +93,15 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
   }, [])
 
   return (
-    <header className="h-16 flex items-center gap-4 px-6 border-b border-white/6 bg-[#0d0e1a] flex-shrink-0 relative z-30">
-      <h1 className="text-base font-semibold text-white mr-auto tracking-tight">{title}</h1>
+    <header className="topbar-surface h-16 flex items-center gap-4 px-6 border-b border-white/6 bg-navy-900 flex-shrink-0 relative z-30">
+      <h1 className="text-base font-semibold text-white mr-auto tracking-tight">
+        <span className="text-slate-500 mr-1">{branding.appName} ·</span> {title}
+      </h1>
 
       {/* Command palette trigger */}
       <button
         onClick={onOpenCommandPalette}
-        className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0d0e1a] border border-white/8 hover:bg-white/6 hover:border-white/12 transition-all duration-150 text-slate-500 hover:text-slate-300 text-xs"
+        className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-navy-800/60 border border-white/8 hover:bg-white/6 hover:border-white/12 transition-all duration-150 text-slate-500 hover:text-slate-300 text-xs"
       >
         <Search size={13} />
         <span>{t.common.search}...</span>
@@ -118,7 +126,7 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
         </button>
 
         {showNotifs && (
-          <div className="absolute right-0 top-full mt-2 w-96 border border-white/10 rounded-2xl shadow-float overflow-hidden animate-scale-in z-50" style={{ background: '#0d0f1e' }}>
+          <div className="popover-surface absolute right-0 top-full mt-2 w-96 border border-white/10 rounded-2xl shadow-float overflow-hidden animate-scale-in z-50 bg-navy-900">
             <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-white">{t.nav.notifications}</p>
@@ -143,6 +151,7 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
                     useNotificationsStore.getState().markAsRead(n.id)
                     setShowNotifs(false)
                     if (n.entityType === 'deal') navigate('/deals')
+                    else if (n.entityType === 'lead' && n.entityId) navigate(`/leads/${n.entityId}`)
                     else if (n.entityType === 'contact' && n.entityId) navigate(`/contacts/${n.entityId}`)
                     else if (n.entityType === 'goal') navigate('/goals')
                     else navigate('/notifications')
@@ -236,7 +245,7 @@ export function Topbar({ title, onOpenCommandPalette }: TopbarProps) {
         {showUserMenu && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-            <div className="absolute right-0 top-full mt-2 w-56 border border-white/10 rounded-xl shadow-float z-50 py-1 animate-scale-in" style={{ background: '#0d0f1e' }}>
+            <div className="popover-surface absolute right-0 top-full mt-2 w-56 border border-white/10 rounded-xl shadow-float z-50 py-1 animate-scale-in bg-navy-900">
               <div className="px-3 py-2 border-b border-white/6">
                 <p className="text-xs font-semibold text-white">{currentUser?.name}</p>
                 <p className="text-[10px] text-slate-500">{currentUser?.email}</p>

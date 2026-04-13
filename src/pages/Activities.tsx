@@ -190,7 +190,7 @@ function CalendarView({
                 >
                   <span className="font-medium truncate">{activity.subject}</span>
                   <span className="text-[10px] opacity-70 ml-auto whitespace-nowrap">
-                    {activity.type}
+                    {t.activities.typeLabels[activity.type]}
                   </span>
                 </div>
               ))}

@@ -12,6 +12,7 @@ import { toast } from '../store/toastStore'
 import type { UserRole } from '../types/auth'
 import { useTranslations } from '../i18n'
 import { supabase } from '../lib/supabase'
+import { formatDateShort } from '../utils/formatters'
 
 const ROLE_ICONS: Record<UserRole, React.ReactNode> = {
   admin: <Crown size={14} />,
@@ -145,7 +146,7 @@ export function TeamManagement() {
   })()
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -270,7 +271,7 @@ export function TeamManagement() {
               <option value="sales_rep">{t.team.roleLabels.sales_rep}</option>
               <option value="viewer">{t.team.roleLabels.viewer}</option>
             </select>
-            <button onClick={handleInvite} disabled={isInviting} className="px-4 py-2 rounded-xl btn-gradient text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">{isInviting ? '...' : t.team.invite}</button>
+            <button onClick={handleInvite} disabled={isInviting} className="px-4 py-2 rounded-xl btn-gradient text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">{isInviting ? t.common.loading : t.team.invite}</button>
           </div>
           <p className="text-[10px] text-slate-600">{t.team.invitationValidity}</p>
         </div>
@@ -288,7 +289,7 @@ export function TeamManagement() {
                   <div>
                     <p className="text-sm text-slate-200">{inv.email}</p>
                     <p className="text-[10px] text-slate-500">
-                      {t.team.roleLabels[inv.role]} · {t.team.expires} {new Date(inv.expiresAt).toLocaleDateString()}
+                      {t.team.roleLabels[inv.role]} · {t.team.expires} {formatDateShort(inv.expiresAt)}
                     </p>
                   </div>
                 </div>
@@ -358,7 +359,7 @@ export function TeamManagement() {
                 <div className="hidden md:block text-right w-28">
                   <p className="text-[10px] text-slate-600">{t.team.lastLogin}</p>
                   <p className="text-xs text-slate-400">
-                    {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : t.team.never}
+                    {user.lastLoginAt ? formatDateShort(user.lastLoginAt) : t.team.never}
                   </p>
                 </div>
 

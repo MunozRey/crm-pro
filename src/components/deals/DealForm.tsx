@@ -1,7 +1,8 @@
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { dealSchema } from '../../lib/schemas/deal'
+import { createDealSchema } from '../../lib/schemas/deal'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { Textarea } from '../ui/Textarea'
@@ -10,9 +11,10 @@ import type { Deal } from '../../types'
 import { useContactsStore } from '../../store/contactsStore'
 import { useAuthStore } from '../../store/authStore'
 import { useCompaniesStore } from '../../store/companiesStore'
+import { useSettingsStore } from '../../store/settingsStore'
 import { useTranslations } from '../../i18n'
 
-type FormValues = z.infer<typeof dealSchema>
+type FormValues = z.infer<ReturnType<typeof createDealSchema>>
 
 interface DealFormProps {
   deal?: Deal
@@ -25,14 +27,25 @@ export function DealForm({ deal, onSubmit, onCancel }: DealFormProps) {
   const contacts = useContactsStore((s) => s.contacts)
   const companies = useCompaniesStore((s) => s.companies)
   const orgUsers = useAuthStore((s) => s.users)
+  const pipelineStages = useSettingsStore((s) => s.settings.pipelineStages)
+  const stageOptions = useMemo(
+    () => pipelineStages
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((stage) => ({ value: stage.id, label: stage.name })),
+    [pipelineStages]
+  )
+  const availableStages = useMemo(() => stageOptions.map((opt) => opt.value), [stageOptions])
+  const schema = useMemo(() => createDealSchema(availableStages), [availableStages])
+  const defaultStage = stageOptions[0]?.value ?? 'lead'
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(dealSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       title: deal?.title ?? '',
       value: deal?.value?.toString() ?? '',
       currency: deal?.currency ?? 'EUR',
-      stage: deal?.stage ?? 'lead',
+      stage: deal?.stage ?? defaultStage,
       probability: deal?.probability?.toString() ?? '10',
       expectedCloseDate: deal?.expectedCloseDate ?? '',
       contactId: deal?.contactId ?? '',
@@ -75,14 +88,7 @@ export function DealForm({ deal, onSubmit, onCancel }: DealFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <Select
           label={t.deals.stage}
-          options={[
-            { value: 'lead', label: t.deals.stageLabels.lead },
-            { value: 'qualified', label: t.deals.stageLabels.qualified },
-            { value: 'proposal', label: t.deals.stageLabels.proposal },
-            { value: 'negotiation', label: t.deals.stageLabels.negotiation },
-            { value: 'closed_won', label: t.deals.stageLabels.closed_won },
-            { value: 'closed_lost', label: t.deals.stageLabels.closed_lost },
-          ]}
+          options={stageOptions}
           {...register('stage')}
         />
         <Select

@@ -111,6 +111,7 @@ function buildMimeMessage(params: {
   replyTo?: string
   subject: string
   body: string
+  htmlBody?: string
   from?: string
 }): string {
   const sanitizeHeader = (value: string) => value.replace(/[\r\n]+/g, ' ').trim()
@@ -128,10 +129,10 @@ function buildMimeMessage(params: {
     params.from ? `From: ${sanitizeHeader(params.from)}` : null,
     `Subject: ${sanitizeHeader(params.subject)}`,
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=utf-8',
+    `Content-Type: ${params.htmlBody ? 'text/html' : 'text/plain'}; charset=utf-8`,
     'Content-Transfer-Encoding: base64',
     '',
-    params.body,
+    params.htmlBody ?? params.body,
   ].filter(Boolean)
 
   const raw = lines.join('\r\n')
@@ -149,6 +150,7 @@ export async function sendGmailEmail(
     replyTo?: string
     subject: string
     body: string
+    htmlBody?: string
     attachments?: Array<{
       name: string
       mimeType: string
@@ -177,10 +179,10 @@ export async function sendGmailEmail(
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       '',
       `--${boundary}`,
-      'Content-Type: text/plain; charset="UTF-8"',
+      `Content-Type: ${params.htmlBody ? 'text/html' : 'text/plain'}; charset="UTF-8"`,
       'Content-Transfer-Encoding: base64',
       '',
-      formatBase64(encodeBody(params.body)),
+      formatBase64(encodeBody(params.htmlBody ?? params.body)),
     ].filter(Boolean)
 
     for (const attachment of params.attachments ?? []) {

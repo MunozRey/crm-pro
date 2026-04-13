@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAuthStore, initSupabaseAuth } from '../../src/store/authStore'
 import { supabase } from '../../src/lib/supabase'
 
-const { mockOnAuthStateChange } = vi.hoisted(() => ({
+const { mockOnAuthStateChange, mockInvoke, mockRefreshSession } = vi.hoisted(() => ({
   mockOnAuthStateChange: vi.fn(),
+  mockInvoke: vi.fn(),
+  mockRefreshSession: vi.fn(),
 }))
 
 vi.mock('../../src/lib/supabase', () => ({
@@ -11,6 +13,10 @@ vi.mock('../../src/lib/supabase', () => ({
     auth: {
       signOut: vi.fn().mockResolvedValue({ error: null }),
       onAuthStateChange: mockOnAuthStateChange,
+      refreshSession: mockRefreshSession,
+    },
+    functions: {
+      invoke: mockInvoke,
     },
   },
   isSupabaseConfigured: true,
@@ -19,9 +25,14 @@ vi.mock('../../src/lib/supabase', () => ({
 describe('initSupabaseAuth', () => {
   beforeEach(() => {
     mockOnAuthStateChange.mockReset()
+    mockInvoke.mockReset()
+    mockRefreshSession.mockReset()
     useAuthStore.setState({
       currentUser: null,
       isLoadingAuth: true,
+      organizationId: null,
+      tenantResolutionStatus: 'idle',
+      tenantResolutionMessage: null,
     })
   })
 
@@ -106,5 +117,44 @@ describe('initSupabaseAuth', () => {
     expect(useAuthStore.getState().currentUser).toBeNull()
     expect(useAuthStore.getState().session).toBeNull()
     expect(useAuthStore.getState().supabaseSession).toBeNull()
+  })
+
+  it('AUTH-07: marks tenant status as needs_invitation when ensure-tenant requires invite', async () => {
+    mockInvoke.mockResolvedValue({
+      data: { status: 'requires_invitation', organizationName: 'Clovr Labs' },
+      error: null,
+    })
+
+    useAuthStore.setState({
+      currentUser: { id: 'u1', email: 'david@clovrlabs.com', name: 'David', role: 'sales_rep', jobTitle: '', isActive: true, createdAt: '', updatedAt: '' },
+      organizationId: null,
+    })
+
+    await useAuthStore.getState().ensureTenantForCurrentUser()
+
+    expect(useAuthStore.getState().tenantResolutionStatus).toBe('needs_invitation')
+    expect(useAuthStore.getState().tenantResolutionMessage).toContain('Clovr Labs')
+  })
+
+  it('AUTH-07: marks tenant status as ready when ensure-tenant creates tenant', async () => {
+    mockInvoke.mockResolvedValue({
+      data: { status: 'created', organizationName: 'Acme' },
+      error: null,
+    })
+    mockRefreshSession.mockResolvedValue({ error: null })
+
+    useAuthStore.setState({
+      currentUser: { id: 'u2', email: 'owner@acme.com', name: 'Owner', role: 'admin', jobTitle: '', isActive: true, createdAt: '', updatedAt: '' },
+      organizationId: null,
+      tenantResolutionStatus: 'idle',
+      tenantResolutionMessage: null,
+    })
+
+    await useAuthStore.getState().ensureTenantForCurrentUser()
+
+    expect(supabase!.functions.invoke).toHaveBeenCalledWith('ensure-tenant')
+    expect(supabase!.auth.refreshSession).toHaveBeenCalled()
+    expect(useAuthStore.getState().tenantResolutionStatus).toBe('ready')
+    expect(useAuthStore.getState().tenantResolutionMessage).toBeNull()
   })
 })

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { formatNumber } from "../../utils/formatters";
 
 interface AnimatedCounterProps {
   value: number | string;
@@ -10,10 +11,6 @@ interface AnimatedCounterProps {
 
 function easeOutExpo(t: number): number {
   return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-}
-
-function formatNumber(n: number): string {
-  return n.toLocaleString("es-ES");
 }
 
 export default function AnimatedCounter({

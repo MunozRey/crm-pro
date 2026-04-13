@@ -223,6 +223,22 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['gmail_thread_links']['Insert']>
       }
+      quick_replies: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          title: string
+          body: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['quick_replies']['Row'], 'created_at' | 'updated_at'> & {
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['quick_replies']['Insert']>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

@@ -3,6 +3,7 @@ import type { Deal, DealStage } from '../../types'
 import { DealCard } from './DealCard'
 import { formatCurrency } from '../../utils/formatters'
 import { useTranslations } from '../../i18n'
+import { useSettingsStore } from '../../store/settingsStore'
 
 interface KanbanColumnProps {
   stage: DealStage
@@ -13,7 +14,10 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({ stage, deals, onDealClick, color }: KanbanColumnProps) {
   const t = useTranslations()
+  const pipelineStages = useSettingsStore((s) => s.settings.pipelineStages)
   const totalValue = deals.reduce((sum, d) => sum + d.value, 0)
+  const customStageLabel = pipelineStages.find((s) => s.id === stage)?.name
+  const stageLabel = customStageLabel || stage
 
   return (
     <div className="flex flex-col w-72 flex-shrink-0">
@@ -21,7 +25,7 @@ export function KanbanColumn({ stage, deals, onDealClick, color }: KanbanColumnP
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-          <span className="text-sm font-semibold text-slate-300">{t.deals.stageLabels[stage]}</span>
+          <span className="text-sm font-semibold text-slate-300">{stageLabel}</span>
           <span className="text-xs text-slate-500 bg-white/4 px-1.5 py-0.5 rounded-full">
             {deals.length}
           </span>
@@ -38,7 +42,7 @@ export function KanbanColumn({ stage, deals, onDealClick, color }: KanbanColumnP
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={`
-              flex-1 rounded-xl min-h-[200px] p-2 space-y-2 transition-colors
+              kanban-dropzone flex-1 rounded-xl min-h-[200px] p-2 space-y-2 transition-colors
               ${snapshot.isDraggingOver
                 ? 'bg-indigo-500/10 border border-indigo-500/30'
                 : 'bg-navy-800/30 border border-white/6'
@@ -56,7 +60,7 @@ export function KanbanColumn({ stage, deals, onDealClick, color }: KanbanColumnP
             {provided.placeholder}
             {deals.length === 0 && !snapshot.isDraggingOver && (
               <div className="flex items-center justify-center h-20 text-slate-700 text-xs">
-                Arrastra deals aquí
+                {t.deals.dragDealsHere}
               </div>
             )}
           </div>

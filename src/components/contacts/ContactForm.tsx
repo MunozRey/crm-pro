@@ -10,6 +10,7 @@ import type { Contact } from '../../types'
 import { useCompaniesStore } from '../../store/companiesStore'
 import { useAuthStore } from '../../store/authStore'
 import { CustomFieldsForm } from '../shared/CustomFieldRenderer'
+import { useTranslations } from '../../i18n'
 
 type FormValues = z.infer<typeof contactSchema>
 
@@ -21,6 +22,7 @@ interface ContactFormProps {
 }
 
 export function ContactForm({ contact, onSubmit, onCancel, isLoading }: ContactFormProps) {
+  const t = useTranslations()
   const companies = useCompaniesStore((s) => s.companies)
   const orgUsers = useAuthStore((s) => s.users)
 
@@ -43,17 +45,17 @@ export function ContactForm({ contact, onSubmit, onCancel, isLoading }: ContactF
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Input label="Nombre" required error={errors.firstName?.message} {...register('firstName')} />
-        <Input label="Apellido" required error={errors.lastName?.message} {...register('lastName')} />
+        <Input label={t.contacts.firstName} required error={errors.firstName?.message} {...register('firstName')} />
+        <Input label={t.contacts.lastName} required error={errors.lastName?.message} {...register('lastName')} />
       </div>
-      <Input label="Email" type="email" required error={errors.email?.message} {...register('email')} />
-      <Input label="Teléfono" type="tel" {...register('phone')} />
-      <Input label="Cargo" {...register('jobTitle')} />
+      <Input label={t.common.email} type="email" required error={errors.email?.message} {...register('email')} />
+      <Input label={t.common.phone} type="tel" {...register('phone')} />
+      <Input label={t.contacts.jobTitle} {...register('jobTitle')} />
 
       <Select
-        label="Empresa"
+        label={t.contacts.company}
         options={[
-          { value: '', label: 'Sin empresa' },
+          { value: '', label: t.contacts.noCompany },
           ...companies.map((c) => ({ value: c.id, label: c.name })),
         ]}
         {...register('companyId')}
@@ -61,26 +63,26 @@ export function ContactForm({ contact, onSubmit, onCancel, isLoading }: ContactF
 
       <div className="grid grid-cols-2 gap-4">
         <Select
-          label="Estado"
+          label={t.common.status}
           required
           options={[
-            { value: 'prospect', label: 'Prospecto' },
-            { value: 'customer', label: 'Cliente' },
-            { value: 'churned', label: 'Perdido' },
+            { value: 'prospect', label: t.contacts.statusLabels.prospect },
+            { value: 'customer', label: t.contacts.statusLabels.customer },
+            { value: 'churned', label: t.contacts.statusLabels.churned },
           ]}
           error={errors.status?.message}
           {...register('status')}
         />
         <Select
-          label="Fuente"
+          label={t.contacts.source}
           required
           options={[
-            { value: 'website', label: 'Web' },
-            { value: 'referral', label: 'Referido' },
-            { value: 'outbound', label: 'Outbound' },
-            { value: 'event', label: 'Evento' },
-            { value: 'linkedin', label: 'LinkedIn' },
-            { value: 'other', label: 'Otro' },
+            { value: 'website', label: t.contacts.sourceLabels.website },
+            { value: 'referral', label: t.contacts.sourceLabels.referral },
+            { value: 'outbound', label: t.contacts.sourceLabels.outbound },
+            { value: 'event', label: t.contacts.sourceLabels.event },
+            { value: 'linkedin', label: t.contacts.sourceLabels.linkedin },
+            { value: 'other', label: t.contacts.sourceLabels.other },
           ]}
           error={errors.source?.message}
           {...register('source')}
@@ -88,14 +90,14 @@ export function ContactForm({ contact, onSubmit, onCancel, isLoading }: ContactF
       </div>
 
       <Select
-        label="Asignado a"
+        label={t.common.assignedTo}
         required
         options={orgUsers.map((u) => ({ value: u.name, label: u.name }))}
         error={errors.assignedTo?.message}
         {...register('assignedTo')}
       />
 
-      <Textarea label="Notas" rows={3} {...register('notes')} />
+      <Textarea label={t.common.notes} rows={3} {...register('notes')} />
 
       {contact && (
         <CustomFieldsForm entityId={contact.id} entityType="contact" />
@@ -103,10 +105,10 @@ export function ContactForm({ contact, onSubmit, onCancel, isLoading }: ContactF
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" loading={isLoading} className="flex-1">
-          {contact ? 'Guardar cambios' : 'Crear contacto'}
+          {contact ? t.common.save : t.contacts.createContact}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancelar
+          {t.common.cancel}
         </Button>
       </div>
     </form>

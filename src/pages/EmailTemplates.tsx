@@ -68,12 +68,24 @@ export function EmailTemplates() {
   const t = useTranslations()
   const categoryLabels = getCategoryLabels(t)
   const tabs = getTabs(t)
-  const { templates, addTemplate, updateTemplate, deleteTemplate, incrementUsage } = useTemplateStore()
+  const {
+    templates,
+    quickReplies,
+    addTemplate,
+    updateTemplate,
+    deleteTemplate,
+    incrementUsage,
+    addQuickReply,
+    updateQuickReply,
+    deleteQuickReply,
+  } = useTemplateStore()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all')
   const [search, setSearch] = useState('')
   const [preview, setPreview] = useState(false)
+  const [quickReplyTitle, setQuickReplyTitle] = useState('')
+  const [quickReplyBody, setQuickReplyBody] = useState('')
 
   // Editable draft fields
   const [draftName, setDraftName] = useState('')
@@ -184,6 +196,60 @@ export function EmailTemplates() {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{t.emailTemplates.title}</h1>
           <p className="text-sm text-slate-400 mt-1">{templates.length} {t.emailTemplates.usageCount.toLowerCase()}</p>
+        </div>
+      </div>
+
+      <div className="px-6 pb-4">
+        <div className="glass rounded-2xl p-4 border border-white/8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-white">Quick Replies</h2>
+            <span className="text-xs text-slate-500">{quickReplies.length}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+            <input
+              value={quickReplyTitle}
+              onChange={(e) => setQuickReplyTitle(e.target.value)}
+              placeholder="Reply title"
+              className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600"
+            />
+            <input
+              value={quickReplyBody}
+              onChange={(e) => setQuickReplyBody(e.target.value)}
+              placeholder="Reply body"
+              className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600"
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!quickReplyTitle.trim() || !quickReplyBody.trim()) return
+              addQuickReply({ title: quickReplyTitle.trim(), body: quickReplyBody })
+              setQuickReplyTitle('')
+              setQuickReplyBody('')
+              toast.success(t.common.save)
+            }}
+            className="btn-gradient text-white text-xs font-medium px-3 py-1.5 rounded-full"
+          >
+            {t.common.add}
+          </button>
+          <div className="mt-3 space-y-2">
+            {quickReplies.map((reply) => (
+              <div key={reply.id} className="flex items-center gap-2 bg-white/4 border border-white/8 rounded-lg px-3 py-2">
+                <input
+                  value={reply.title}
+                  onChange={(e) => updateQuickReply(reply.id, { title: e.target.value })}
+                  className="w-48 bg-transparent text-xs text-slate-200"
+                />
+                <input
+                  value={reply.body}
+                  onChange={(e) => updateQuickReply(reply.id, { body: e.target.value })}
+                  className="flex-1 bg-transparent text-xs text-slate-400"
+                />
+                <button onClick={() => deleteQuickReply(reply.id)} className="text-red-400">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

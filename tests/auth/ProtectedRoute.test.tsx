@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import { ProtectedRoute } from '../../src/components/auth/ProtectedRoute'
 import { useAuthStore } from '../../src/store/authStore'
+import { TestRouter } from '../utils/TestRouter'
 
 vi.mock('../../src/lib/supabase', () => ({
   supabase: null,
@@ -16,9 +16,9 @@ vi.mock('../../src/utils/permissions', () => ({
 
 function renderProtectedRoute(children = <div>Protected Content</div>) {
   return render(
-    <MemoryRouter>
+    <TestRouter>
       <ProtectedRoute>{children}</ProtectedRoute>
-    </MemoryRouter>
+    </TestRouter>
   )
 }
 

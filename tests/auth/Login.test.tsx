@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import { Login } from '../../src/pages/Login'
+import { TestRouter } from '../utils/TestRouter'
 
 const { mockSignIn, mockNavigate } = vi.hoisted(() => ({
   mockSignIn: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 function renderLogin() {
-  return render(<MemoryRouter><Login /></MemoryRouter>)
+  return render(<TestRouter><Login /></TestRouter>)
 }
 
 describe('Login', () => {

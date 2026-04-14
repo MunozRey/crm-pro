@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import { ResetPassword } from '../../src/pages/ResetPassword'
+import { TestRouter } from '../utils/TestRouter'
 
 const { mockUpdateUser, mockNavigate } = vi.hoisted(() => ({
   mockUpdateUser: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 function renderResetPassword() {
-  return render(<MemoryRouter><ResetPassword /></MemoryRouter>)
+  return render(<TestRouter><ResetPassword /></TestRouter>)
 }
 
 describe('ResetPassword', () => {

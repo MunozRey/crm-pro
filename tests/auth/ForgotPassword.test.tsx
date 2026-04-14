@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
 import { ForgotPassword } from '../../src/pages/ForgotPassword'
+import { TestRouter } from '../utils/TestRouter'
 
 const { mockResetPassword } = vi.hoisted(() => ({
   mockResetPassword: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('../../src/lib/supabase', () => ({
 }))
 
 function renderForgotPassword() {
-  return render(<MemoryRouter><ForgotPassword /></MemoryRouter>)
+  return render(<TestRouter><ForgotPassword /></TestRouter>)
 }
 
 describe('ForgotPassword', () => {

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Register } from '../../src/pages/Register'
+import { TestRouter } from '../utils/TestRouter'
 
 const { mockSignUp, mockNavigate } = vi.hoisted(() => ({
   mockSignUp: vi.fn(),
@@ -20,19 +21,20 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 function renderRegister() {
   return render(
-    <MemoryRouter>
+    <TestRouter>
       <Register />
-    </MemoryRouter>
+    </TestRouter>
   )
 }
 
 async function fillAndSubmit() {
+  const user = userEvent.setup()
   const companyInput = screen.getByPlaceholderText(/companies|empresa/i)
-  fireEvent.change(companyInput, { target: { value: 'Test Corp' } })
-  fireEvent.change(screen.getByPlaceholderText(/name|nombre/i), { target: { value: 'Test User' } })
-  fireEvent.change(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), { target: { value: 'test@example.com' } })
-  fireEvent.change(screen.getByPlaceholderText(/password|contraseña/i), { target: { value: 'password123' } })
-  fireEvent.click(screen.getByRole('button', { name: /create account|crear cuenta/i }))
+  await user.type(companyInput, 'Test Corp')
+  await user.type(screen.getByPlaceholderText(/name|nombre/i), 'Test User')
+  await user.type(screen.getByPlaceholderText(/you@company\.com|tu@empresa\.com/i), 'test@example.com')
+  await user.type(screen.getByPlaceholderText(/password|contraseña/i), 'password123')
+  await user.click(screen.getByRole('button', { name: /create account|crear cuenta/i }))
 }
 
 describe('Register', () => {

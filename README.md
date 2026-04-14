@@ -2,6 +2,12 @@
 
 A production-grade, full-featured CRM single-page application built with React 18, TypeScript, Vite, and Tailwind CSS. Inspired by HubSpot/Pipedrive, designed for Spanish/European B2B sales teams.
 
+## Workspace READMEs
+
+- Main app: `README.md`
+- Documentation index: `docs/README.md`
+- Supabase setup and migrations: `supabase/README.md`
+
 ## Features
 
 | Module | Features |
@@ -24,6 +30,12 @@ A production-grade, full-featured CRM single-page application built with React 1
 
 ## Quick Start
 
+### Prerequisites
+
+- Node.js 20+
+- npm 10+
+- (Optional) A Supabase project for production-like mode
+
 ```bash
 # Install dependencies
 npm install
@@ -33,9 +45,29 @@ npm run dev
 
 # Build for production
 npm run build
+
+# Preview production build locally
+npm run preview
 ```
 
 The app runs at `http://localhost:5173`. In mock mode it auto-seeds demo data; in Supabase mode data is fetched from your project.
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```bash
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Optional variables for maintenance scripts:
+
+```bash
+LEAD_MAINTENANCE_API_URL=http://localhost:5173/api/maintenance/lead
+LEAD_MAINTENANCE_API_KEY=your_maintenance_api_key
+LEAD_MAINTENANCE_ORG_ID=your_organization_id
+```
 
 ## Lead Score Maintenance Runner
 
@@ -50,10 +82,32 @@ npm run maintenance:lead:all
 
 # Health / last runs (optional LEAD_MAINTENANCE_ORG_ID filter)
 npm run maintenance:lead:health
+
+# SLA check report
+npm run maintenance:lead:sla
 ```
 
 Contract and headers are documented in:
 - `docs/lead-score-maintenance-backend.md`
+
+## Testing
+
+```bash
+# Unit/integration tests (watch mode)
+npm run test
+
+# Unit/integration tests (single run)
+npm run test:run
+
+# Coverage report
+npm run test:coverage
+
+# End-to-end tests
+npm run test:e2e
+
+# End-to-end tests with browser UI
+npm run test:e2e:headed
+```
 
 ## Tech Stack
 
@@ -120,6 +174,8 @@ All components are kept under 200 lines. Large pages (Contacts, Deals) delegate 
 
 ## Documentation Index
 
+- Docs index:
+  - `docs/README.md`
 - Full implementation history and technical handoff:
   - `docs/implementation-history.md`
 - PRO roadmap (30/60/90) with execution priorities:
@@ -128,6 +184,12 @@ All components are kept under 200 lines. Large pages (Contacts, Deals) delegate 
   - `docs/pro-backlog.md`
 - SSO backend integration contract and provider handoff:
   - `docs/auth-sso-backend-handoff.md`
+- User profile display name behavior:
+  - `docs/user-profile-display-names.md`
+- Navigation i18n release handoff:
+  - `docs/navigation-i18n-release-handoff.md`
+- Navigation + Settings + Sidebar runbook:
+  - `docs/navigation-settings-sidebar-runbook.md`
 - Lead scoring backend maintenance scheduler contract:
   - `docs/lead-score-maintenance-backend.md`
 - Lead maintenance Ops dashboard (Settings) behavior:

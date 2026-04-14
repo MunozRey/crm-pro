@@ -2,7 +2,13 @@
 
 Updated: 2026-04-14
 
-This index groups the documentation in `docs/` by purpose and marks canonical sources when there are related artifacts.
+This file is the canonical index for all documentation under `docs/`. Use it as the starting point before opening feature-specific docs.
+
+## Quick Navigation
+
+- Main project overview: `../README.md`
+- Supabase setup and SQL migration context: `../supabase/README.md`
+- This docs index: `docs/README.md`
 
 ## Document Control
 
@@ -54,3 +60,9 @@ This index groups the documentation in `docs/` by purpose and marks canonical so
 
 - Prefer one canonical document per feature area and link related artifacts instead of duplicating operational steps.
 - When scope changes, update both the feature doc and this index in the same PR.
+
+## Maintenance Checklist
+
+- Add new docs here the same day they are created.
+- Keep names action-oriented (`*-runbook.md`, `*-checklist.md`, `*-handoff.md`).
+- Archive or relabel outdated docs instead of silently replacing behavior.

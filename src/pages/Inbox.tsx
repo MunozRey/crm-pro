@@ -719,12 +719,12 @@ export function Inbox() {
     }
   }
 
-  const handleLoadThreads = async (query = '') => {
+  const handleLoadThreads = async (query = '', options: { silent?: boolean } = {}) => {
     try {
       await refreshAndRetry((token) => useEmailStore.getState().loadThreads(token, query))
       if (query.trim()) trackUxAction('inbox_search', { queryLength: query.trim().length })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.errors.generic)
+      if (!options.silent) toast.error(err instanceof Error ? err.message : t.errors.generic)
     }
   }
 
@@ -767,19 +767,10 @@ export function Inbox() {
     toast.success(t.common.delete)
   }
 
-  // Folder list built with translations
-  const FOLDERS = [
-    { id: 'inbox', label: t.inbox.title, icon: <InboxIcon size={15} /> },
-    { id: 'sent', label: t.inbox.sent, icon: <Send size={15} /> },
-    { id: 'scheduled', label: t.email.sendLater, icon: <Clock size={15} /> },
-    { id: 'drafts', label: t.inbox.drafts, icon: <Mail size={15} /> },
-    { id: 'snoozed', label: t.inbox.snoozed, icon: <Clock size={15} /> },
-  ]
-
   // Load Gmail threads when connected (token can be refreshed on-demand)
   useEffect(() => {
     if (connected && folder === 'inbox') {
-      handleLoadThreads()
+      handleLoadThreads('', { silent: true })
     }
   }, [connected, folder])
 
@@ -793,7 +784,7 @@ export function Inbox() {
   useEffect(() => {
     if (!connected || folder !== 'inbox') return
     const timer = window.setTimeout(() => {
-      handleLoadThreads(listQuery.trim())
+      handleLoadThreads(listQuery.trim(), { silent: true })
     }, 280)
     return () => window.clearTimeout(timer)
   }, [listQuery, connected, folder])
@@ -846,6 +837,21 @@ export function Inbox() {
   const scheduledEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'scheduled'), [mailboxEmails])
   const draftEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'draft'), [mailboxEmails])
   const snoozedEmails = useMemo(() => mailboxEmails.filter((e) => e.status === 'snoozed'), [mailboxEmails])
+  const countNeedsAttention = (items: CRMEmail[]) => items.filter((email) => (
+    email.isRead === false
+    || (
+      (email.status === 'sent' || email.status === 'scheduled' || email.status === 'snoozed')
+      && email.trackingEnabled
+      && (email.openCount ?? 0) === 0
+    )
+  )).length
+  const FOLDERS = [
+    { id: 'inbox', label: t.inbox.title, icon: <InboxIcon size={15} />, count: threads.filter((th) => th.messages[th.messages.length - 1]?.labelIds?.includes('UNREAD')).length },
+    { id: 'sent', label: t.inbox.sent, icon: <Send size={15} />, count: countNeedsAttention(sentEmails) },
+    { id: 'scheduled', label: t.email.sendLater, icon: <Clock size={15} />, count: countNeedsAttention(scheduledEmails) },
+    { id: 'drafts', label: t.inbox.drafts, icon: <Mail size={15} />, count: countNeedsAttention(draftEmails) },
+    { id: 'snoozed', label: t.inbox.snoozed, icon: <Clock size={15} />, count: countNeedsAttention(snoozedEmails) },
+  ]
   const queryMatcher = useMemo(() => buildInboxQueryMatcher(listQuery), [listQuery])
   const filteredThreads = threads.filter((thread) => {
     const lastMsg = thread.messages[thread.messages.length - 1]
@@ -1342,7 +1348,12 @@ export function Inbox() {
               }`}
             >
               {f.icon}
-              {f.label}
+              <span className="flex-1 text-left">{f.label}</span>
+              {(f.count ?? 0) > 0 && (
+                <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-brand-500/20 border border-brand-500/30 text-[10px] text-brand-300">
+                  {f.count}
+                </span>
+              )}
             </button>
           ))}
         </nav>

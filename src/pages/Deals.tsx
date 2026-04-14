@@ -31,7 +31,6 @@ import { DEAL_PRIORITY_COLORS } from '../utils/constants'
 import type { Deal, DealStage, QuoteItem, SmartViewFilter } from '../types'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { EmailComposer } from '../components/email/EmailComposer'
-import { useEmailStore } from '../store/emailStore'
 import { useAuthStore } from '../store/authStore'
 import { useProductsStore } from '../store/productsStore'
 import { useSettingsStore } from '../store/settingsStore'
@@ -70,33 +69,80 @@ function calcTotal(q: number, u: number, d: number) {
   return Math.round(q * u * (1 - d / 100) * 100) / 100
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]!)
+  return btoa(binary)
+}
+
+function escapePdfText(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
+    .replace(/[^\x20-\x7E]/g, '')
+}
+
+function buildSimplePdfBase64(lines: string[]): string {
+  const contentLines = ['BT', '/F1 10 Tf', '40 800 Td']
+  lines.slice(0, 45).forEach((line, idx) => {
+    if (idx > 0) contentLines.push('0 -14 Td')
+    contentLines.push(`(${escapePdfText(line)}) Tj`)
+  })
+  contentLines.push('ET')
+  const contentStream = `${contentLines.join('\n')}\n`
+  const objects = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n',
+    `4 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}endstream\nendobj\n`,
+    '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+  ]
+  let pdf = '%PDF-1.4\n'
+  const offsets: number[] = [0]
+  for (const obj of objects) {
+    offsets.push(pdf.length)
+    pdf += obj
+  }
+  const xrefOffset = pdf.length
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+  for (let i = 1; i <= objects.length; i += 1) {
+    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`
+  }
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+  return bytesToBase64(new TextEncoder().encode(pdf))
+}
+
 function QuoteBuilder({
   dealId,
   dealTitle,
   initialItems,
   contactEmail,
-  contactId,
-  companyId,
   companyName,
   currency,
+  onComposeQuoteDraft,
 }: {
   dealId: string
   dealTitle: string
   initialItems: QuoteItem[]
   contactEmail?: string
-  contactId?: string
-  companyId?: string
   companyName?: string
   currency: Deal['currency']
+  onComposeQuoteDraft: (draft: {
+    to: string
+    subject: string
+    body: string
+    attachments: Array<{ name: string; mimeType: string; size: number; dataBase64: string }>
+  }) => void
 }) {
   const t = useTranslations()
+  const branding = useSettingsStore((s) => s.settings.branding)
   const language = useI18nStore((s) => s.language)
   const [allProducts, setAllProducts] = useState(() => useProductsStore.getState().products)
   useEffect(() => useProductsStore.subscribe((s) => setAllProducts(s.products)), [])
   const products = useMemo(() => allProducts.filter((p) => p.isActive), [allProducts])
   const [items, setItems] = useState<QuoteItem[]>(initialItems)
   const [saved, setSaved] = useState(false)
-  const [sendingQuote, setSendingQuote] = useState(false)
   const [vatPercent, setVatPercent] = useState(21)
   const [validityDays, setValidityDays] = useState(15)
   const [quoteNumber, setQuoteNumber] = useState(`Q-${dealId.toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`)
@@ -147,6 +193,10 @@ function QuoteBuilder({
   }
 
   const exportPdf = () => {
+    if (items.length === 0) {
+      toast.error(t.deals.addItem)
+      return
+    }
     const lines = items.map((item) => {
       const rowTotal = fmt(item.total)
       return `
@@ -168,8 +218,10 @@ function QuoteBuilder({
         <body style="font-family:Arial,sans-serif;padding:24px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
             <div>
+              ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="logo" style="max-height:44px;max-width:200px;display:block;margin-bottom:10px" />` : ''}
               <h2 style="margin:0 0 6px">${t.deals.quoteBuilder}</h2>
-              <p style="margin:0;color:#555">${companyName || t.deals.company}</p>
+              <p style="margin:0;color:#555;font-weight:600">${branding.appName || companyName || t.deals.company}</p>
+              <p style="margin:2px 0 0;color:#666;font-size:12px">${companyName || ''}</p>
             </div>
             <div style="text-align:right;color:#444;font-size:12px">
               <div><strong>${quoteNumber}</strong></div>
@@ -200,24 +252,33 @@ function QuoteBuilder({
       </html>
     `
 
-    const w = window.open('', '_blank', 'noopener,noreferrer')
-    if (!w) {
+    try {
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.right = '0'
+      iframe.style.bottom = '0'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      iframe.style.border = '0'
+      document.body.appendChild(iframe)
+      const doc = iframe.contentWindow?.document
+      if (!doc || !iframe.contentWindow) throw new Error('print_unavailable')
+      doc.open()
+      doc.write(html)
+      doc.close()
+      iframe.contentWindow.focus()
+      iframe.contentWindow.print()
+      window.setTimeout(() => iframe.remove(), 600)
+    } catch {
       toast.error(t.errors.generic)
-      return
     }
-    w.document.open()
-    w.document.write(html)
-    w.document.close()
-    w.focus()
-    w.print()
   }
 
-  const sendQuoteByEmail = async () => {
-    if (!contactEmail) {
-      toast.error(t.errors.generic)
+  const sendQuoteByEmail = () => {
+    if (items.length === 0) {
+      toast.error(t.deals.addItem)
       return
     }
-
     const body = [
       `Hi,`,
       '',
@@ -235,23 +296,32 @@ function QuoteBuilder({
       '',
       'Best regards,',
     ].join('\n')
-
-    setSendingQuote(true)
-    try {
-      await useEmailStore.getState().sendEmail({
-        to: [contactEmail],
-        subject: `Quote - ${dealTitle}`,
-        body,
-        contactId,
-        dealId,
-        companyId,
-      })
-      toast.success(t.inbox.sent)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.errors.generic)
-    } finally {
-      setSendingQuote(false)
-    }
+    const pdfLines = [
+      `${t.deals.quoteBuilder} - ${dealTitle}`,
+      `${t.deals.quoteNumber}: ${quoteNumber}`,
+      `${t.common.date}: ${formatDateForQuote(new Date())}`,
+      `${t.deals.expectedClose}: ${formatDateForQuote(new Date(Date.now() + validityDays * 86400000))}`,
+      `Company: ${companyName ?? '-'}`,
+      '',
+      ...items.map((item) => `${item.name || '-'} | ${item.quantity} x ${fmt(item.unitPrice)} | ${item.discount}% | ${fmt(item.total)}`),
+      '',
+      `${t.deals.subtotal}: ${fmt(subtotal)}`,
+      `${t.deals.discount}: -${fmt(totalDiscount)}`,
+      `${t.deals.vatPercent} (${vatPercent}%): ${fmt(vatAmount)}`,
+      `${t.common.total}: ${fmt(grandTotal)}`,
+    ]
+    const pdfBase64 = buildSimplePdfBase64(pdfLines)
+    onComposeQuoteDraft({
+      to: contactEmail ?? '',
+      subject: `Quote - ${dealTitle}`,
+      body,
+      attachments: [{
+        name: `${quoteNumber}.pdf`,
+        mimeType: 'application/pdf',
+        size: Math.ceil((pdfBase64.length * 3) / 4),
+        dataBase64: pdfBase64,
+      }],
+    })
   }
 
   return (
@@ -412,23 +482,23 @@ function QuoteBuilder({
       {/* Save / Actions */}
       <div className="flex justify-end gap-2">
         <button
+          type="button"
           onClick={exportPdf}
-          disabled={items.length === 0}
-          className="px-4 py-1.5 rounded-lg border border-white/10 hover:bg-white/4 disabled:opacity-40 text-xs text-slate-300 font-medium transition-colors"
+          className="px-4 py-1.5 rounded-lg border border-white/10 hover:bg-white/4 text-xs text-slate-300 font-medium transition-colors"
         >
           {t.common.export} PDF
         </button>
         <button
+          type="button"
           onClick={sendQuoteByEmail}
-          disabled={items.length === 0 || sendingQuote}
-          className="px-4 py-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 disabled:opacity-40 text-xs text-brand-300 font-medium transition-colors"
+          className="px-4 py-1.5 rounded-lg border border-brand-500/30 bg-brand-500/10 hover:bg-brand-500/20 text-xs text-brand-300 font-medium transition-colors"
         >
-          {sendingQuote ? `${t.inbox.compose}...` : t.inbox.compose}
+          {t.inbox.compose}
         </button>
         <button
+          type="button"
           onClick={handleSave}
-          disabled={saved}
-          className="px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-xs text-white font-medium transition-colors"
+          className="px-4 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-xs text-white font-medium transition-colors"
         >
           {saved ? `${t.deals.quoteBuilder} ✓` : t.deals.quoteBuilder}
         </button>
@@ -460,6 +530,12 @@ export function Deals() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isActivityOpen, setIsActivityOpen] = useState(false)
   const [isEmailOpen, setIsEmailOpen] = useState(false)
+  const [emailDraft, setEmailDraft] = useState<{
+    to: string
+    subject: string
+    body: string
+    attachments: Array<{ name: string; mimeType: string; size: number; dataBase64: string }>
+  } | null>(null)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -894,7 +970,15 @@ export function Deals() {
                   </>
                 </PermissionGate>
               )}
-              <Button size="sm" variant="secondary" leftIcon={<Mail size={14} />} onClick={() => setIsEmailOpen(true)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                leftIcon={<Mail size={14} />}
+                onClick={() => {
+                  setEmailDraft(null)
+                  setIsEmailOpen(true)
+                }}
+              >
                 {t.inbox.compose}
               </Button>
               <PermissionGate permission="deals:update">
@@ -974,10 +1058,12 @@ export function Deals() {
                 dealTitle={selectedDeal.title}
                 initialItems={selectedDeal.quoteItems ?? []}
                 contactEmail={getContact(selectedDeal.contactId)?.email}
-                contactId={selectedDeal.contactId}
-                companyId={selectedDeal.companyId}
                 companyName={getCompany(selectedDeal.companyId)?.name}
                 currency={selectedDeal.currency}
+                onComposeQuoteDraft={(draft) => {
+                  setEmailDraft(draft)
+                  setIsEmailOpen(true)
+                }}
               />
             </div>
 
@@ -1009,7 +1095,14 @@ export function Deals() {
         {selectedDeal && (
           <EmailComposer
             isOpen={isEmailOpen}
-            onClose={() => setIsEmailOpen(false)}
+            onClose={() => {
+              setIsEmailOpen(false)
+              setEmailDraft(null)
+            }}
+            defaultTo={emailDraft?.to ?? ''}
+            defaultSubject={emailDraft?.subject ?? ''}
+            defaultBody={emailDraft?.body ?? ''}
+            defaultAttachments={emailDraft?.attachments ?? []}
             dealId={selectedDeal.id}
             contactId={selectedDeal.contactId}
           />

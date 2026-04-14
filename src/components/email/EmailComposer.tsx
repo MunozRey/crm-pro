@@ -18,6 +18,12 @@ interface EmailComposerProps {
   defaultTo?: string
   defaultSubject?: string
   defaultBody?: string
+  defaultAttachments?: Array<{
+    name: string
+    mimeType: string
+    size: number
+    dataBase64?: string
+  }>
   contactId?: string
   dealId?: string
   companyId?: string
@@ -30,6 +36,7 @@ export function EmailComposer({
   defaultTo = '',
   defaultSubject = '',
   defaultBody = '',
+  defaultAttachments = [],
   contactId,
   dealId,
   companyId,
@@ -56,6 +63,8 @@ export function EmailComposer({
     size: number
     dataBase64: string
   }>>([])
+  const [activeDraftId, setActiveDraftId] = useState<string | undefined>(draftId)
+  const [draftCreatedForOpen, setDraftCreatedForOpen] = useState(false)
 
   const { scheduleEmail, isGmailConnected, enableTracking } = useEmailStore()
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -83,6 +92,16 @@ export function EmailComposer({
 
   useEffect(() => {
     if (!isOpen) return
+    setActiveDraftId(draftId)
+    setDraftCreatedForOpen(false)
+    if (defaultAttachments.length > 0) {
+      setAttachments(defaultAttachments.filter((a) => !!a.dataBase64).map((a) => ({
+        name: a.name,
+        mimeType: a.mimeType,
+        size: a.size,
+        dataBase64: a.dataBase64 as string,
+      })))
+    }
     const raw = localStorage.getItem(draftKey)
     if (!raw) return
     try {
@@ -108,7 +127,25 @@ export function EmailComposer({
     } catch {
       localStorage.removeItem(draftKey)
     }
-  }, [defaultBody, defaultSubject, defaultTo, draftKey, isOpen])
+  }, [defaultAttachments, defaultBody, defaultSubject, defaultTo, draftId, draftKey, isOpen])
+
+  useEffect(() => {
+    if (!isOpen || draftCreatedForOpen) return
+    const created = useEmailStore.getState().saveDraft({
+      draftId: activeDraftId,
+      to: to.split(',').map((s) => s.trim()).filter(Boolean),
+      cc: cc.split(',').map((s) => s.trim()).filter(Boolean),
+      bcc: bcc.split(',').map((s) => s.trim()).filter(Boolean),
+      replyTo: replyTo.trim() || undefined,
+      subject,
+      body,
+      contactId,
+      dealId,
+      companyId,
+    })
+    setActiveDraftId(created.id)
+    setDraftCreatedForOpen(true)
+  }, [activeDraftId, bcc, body, cc, companyId, contactId, dealId, draftCreatedForOpen, isOpen, replyTo, subject, to])
 
   useEffect(() => {
     if (!isOpen) return
@@ -620,7 +657,7 @@ export function EmailComposer({
             onClick={() => {
               const toList = to.split(',').map((s) => s.trim()).filter(Boolean)
               const draft = useEmailStore.getState().saveDraft({
-                draftId,
+                draftId: activeDraftId,
                 to: toList,
                 cc: cc.split(',').map((s) => s.trim()).filter(Boolean),
                 bcc: bcc.split(',').map((s) => s.trim()).filter(Boolean),

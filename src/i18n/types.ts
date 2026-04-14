@@ -265,6 +265,39 @@ export interface Translations {
     quoteNumber: string
     vatPercent: string
     validityDays: string
+    taxableBase: string
+    withholdingPercent: string
+    documentType: string
+    documentTypeQuote: string
+    documentTypeInvoice: string
+    documentTypeProforma: string
+    lineDescriptionPlaceholder: string
+    clientTaxIdPlaceholder: string
+    contactPersonPlaceholder: string
+    clientAddressPlaceholder: string
+    globalDiscountPlaceholder: string
+    paymentDaysPlaceholder: string
+    paymentMethodPlaceholder: string
+    referencePlaceholder: string
+    bankNamePlaceholder: string
+    ibanPlaceholder: string
+    accountHolderPlaceholder: string
+    lateFeeClausePlaceholder: string
+    acceptanceClausePlaceholder: string
+    additionalNotesPlaceholder: string
+    clientData: string
+    referenceShort: string
+    lineDiscountLabel: string
+    globalDiscountLabel: string
+    termsAndConditions: string
+    validityLabel: string
+    paymentMethodLabel: string
+    paymentTermLabel: string
+    bankDetailsLabel: string
+    lateFeeLabel: string
+    acceptanceClauseLabel: string
+    notesLabel: string
+    pageLabel: string
     emptyTitle: string
     emptyDescription: string
     deleteConfirm: string
@@ -514,6 +547,57 @@ export interface Translations {
     signatureSaved: string
     signatureDeleted: string
     signatureNamePlaceholder: string
+    tabGeneral: string
+    tabBranding: string
+    tabPipeline: string
+    tabEmail: string
+    tabPermissions: string
+    tabData: string
+    tabNavigation: string
+    tabAdvanced: string
+    legalCompanyName: string
+    taxIdVat: string
+    addressLine1: string
+    postalCode: string
+    billingEmail: string
+    billingPhone: string
+    quoteFooter: string
+    quoteFooterPlaceholder: string
+    navEditorTitle: string
+    navEditorSubtitle: string
+    navNewGroup: string
+    navReset: string
+    navBaseSections: string
+    navCustomGroups: string
+    navNoCustomGroups: string
+    navSectionHidden: string
+    navSectionVisible: string
+    navGroupName: string
+    navGroupIcon: string
+    navItemsCount: string
+    navRoleRules: string
+    navAddLink: string
+    navDeleteGroup: string
+    navMoveUp: string
+    navLabel: string
+    navRoute: string
+    navSavedViews: string
+    permissionActionLabels: {
+      read: string
+      create: string
+      update: string
+      delete: string
+      export: string
+      send: string
+      link: string
+      move: string
+      enroll: string
+      use: string
+      manage_roles: string
+      invite: string
+      csv: string
+      json: string
+    }
   }
 
   // ─── Reports ─────────────────────────────────────────────────────────────────
@@ -529,6 +613,31 @@ export interface Translations {
     lastMonth: string
     thisQuarter: string
     thisYear: string
+  }
+
+  csvImport: {
+    title: string
+    rows: string
+    contacts: string
+    companies: string
+    downloadTemplate: string
+    dropTitle: string
+    dropSubtitle: string
+    dropHint: string
+    expectedFieldsFor: string
+    mapColumns: string
+    doNotMap: string
+    requiredFieldsWarning: string
+    back: string
+    preview: string
+    previewRows: string
+    toImport: string
+    importRecords: string
+    importing: string
+    completed: string
+    importedSummary: string
+    importMore: string
+    close: string
   }
 
   // ─── Other pages ─────────────────────────────────────────────────────────────
@@ -723,6 +832,9 @@ export interface Translations {
   emailTemplates: {
     title: string
     newTemplate: string
+    quickReplies: string
+    quickReplyTitlePlaceholder: string
+    quickReplyBodyPlaceholder: string
     category: string
     variables: string
     usageCount: string
@@ -791,6 +903,8 @@ export interface Translations {
     syncStale: string
     syncError: string
     snoozeOneDay: string
+    snoozeOneHour: string
+    snoozeOneWeek: string
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -839,7 +953,16 @@ export interface Translations {
     orgNameLabel: string
     orgNamePlaceholder: string
     slugLabel: string
+    slugPrefix: string
+    slugPlaceholder: string
     slugHint: string
+    legalCompanyName: string
+    taxIdVat: string
+    addressLine1: string
+    city: string
+    country: string
+    billingEmail: string
+    billingPhone: string
     createButton: string
     errorNameRequired: string
     errorSlugRequired: string

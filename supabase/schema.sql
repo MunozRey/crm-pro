@@ -146,6 +146,24 @@ create policy "authenticated_read_activities" on public.activities
 create policy "authenticated_write_activities" on public.activities
   for all using (auth.role() = 'authenticated');
 
+-- ─── Navigation Preferences ────────────────────────────────────────────────
+create table if not exists public.navigation_preferences (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  prefs jsonb not null default '{}'::jsonb,
+  unique (organization_id, user_id)
+);
+alter table public.navigation_preferences enable row level security;
+create trigger set_updated_at_navigation_preferences before update on public.navigation_preferences
+  for each row execute function public.handle_updated_at();
+create policy "authenticated_read_navigation_preferences" on public.navigation_preferences
+  for select using (auth.role() = 'authenticated' and auth.uid() = user_id);
+create policy "authenticated_write_navigation_preferences" on public.navigation_preferences
+  for all using (auth.role() = 'authenticated' and auth.uid() = user_id);
+
 -- Notifications: users only see their own
 create policy "own_notifications" on public.notifications
   for all using (auth.uid() = user_id);

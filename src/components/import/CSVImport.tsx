@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Upload, FileSpreadsheet, ArrowRight, Check, AlertTriangle, Loader2 } from 'lucide-react'
+import { X, Upload, FileSpreadsheet, ArrowRight, Check, AlertTriangle, Loader2, Download } from 'lucide-react'
 import { useContactsStore } from '../../store/contactsStore'
 import { useCompaniesStore } from '../../store/companiesStore'
 import { useAuditStore } from '../../store/auditStore'
@@ -16,27 +16,86 @@ type EntityType = 'contacts' | 'companies'
 type Step = 'upload' | 'mapping' | 'preview' | 'importing' | 'done'
 
 const CONTACT_FIELDS = [
-  { key: 'firstName', label: 'Nombre', required: true },
-  { key: 'lastName', label: 'Apellido', required: true },
-  { key: 'email', label: 'Email', required: true },
-  { key: 'phone', label: 'Teléfono', required: false },
-  { key: 'jobTitle', label: 'Cargo', required: false },
-  { key: 'status', label: 'Estado (lead/prospect/customer/churned)', required: false },
-  { key: 'source', label: 'Fuente (website/referral/outbound/event/linkedin/other)', required: false },
-  { key: 'notes', label: 'Notas', required: false },
+  { key: 'firstName', required: true },
+  { key: 'lastName', required: true },
+  { key: 'email', required: true },
+  { key: 'phone', required: false },
+  { key: 'jobTitle', required: false },
+  { key: 'status', required: false },
+  { key: 'source', required: false },
+  { key: 'notes', required: false },
 ]
 
 const COMPANY_FIELDS = [
-  { key: 'name', label: 'Nombre', required: true },
-  { key: 'domain', label: 'Dominio', required: false },
-  { key: 'industry', label: 'Industria', required: false },
-  { key: 'size', label: 'Tamaño', required: false },
-  { key: 'country', label: 'País', required: false },
-  { key: 'city', label: 'Ciudad', required: false },
-  { key: 'website', label: 'Website', required: false },
-  { key: 'phone', label: 'Teléfono', required: false },
-  { key: 'notes', label: 'Notas', required: false },
+  { key: 'name', required: true },
+  { key: 'domain', required: false },
+  { key: 'industry', required: false },
+  { key: 'size', required: false },
+  { key: 'country', required: false },
+  { key: 'city', required: false },
+  { key: 'website', required: false },
+  { key: 'phone', required: false },
+  { key: 'notes', required: false },
 ]
+
+const CONTACT_TEMPLATE_HEADERS = ['firstName', 'lastName', 'email', 'phone', 'jobTitle', 'status', 'source', 'notes']
+const COMPANY_TEMPLATE_HEADERS = ['name', 'domain', 'industry', 'size', 'country', 'city', 'website', 'phone', 'notes']
+
+const CONTACT_HEADER_ALIASES: Record<string, string[]> = {
+  firstName: ['firstname', 'nombre', 'first', 'nombrecontacto'],
+  lastName: ['lastname', 'apellido', 'surname', 'last'],
+  email: ['email', 'correo', 'correoelectronico', 'mail', 'e-mail'],
+  phone: ['phone', 'telefono', 'movil', 'celular', 'tel'],
+  jobTitle: ['jobtitle', 'cargo', 'puesto', 'rol', 'title'],
+  status: ['status', 'estado', 'contactstatus', 'estadolead'],
+  source: ['source', 'fuente', 'origen', 'leadsource'],
+  notes: ['notes', 'notas', 'comentarios', 'observaciones'],
+}
+
+const COMPANY_HEADER_ALIASES: Record<string, string[]> = {
+  name: ['name', 'nombre', 'empresa', 'company', 'companyname'],
+  domain: ['domain', 'dominio'],
+  industry: ['industry', 'industria', 'sector'],
+  size: ['size', 'tamano', 'tamaño', 'employees', 'headcount'],
+  country: ['country', 'pais', 'país'],
+  city: ['city', 'ciudad'],
+  website: ['website', 'web', 'sitio', 'sitoweb', 'url'],
+  phone: ['phone', 'telefono', 'tel', 'movil', 'celular'],
+  notes: ['notes', 'notas', 'comentarios', 'observaciones'],
+}
+
+function normalizeHeader(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\s-]/g, '')
+    .trim()
+}
+
+function downloadCSVTemplate(entityType: EntityType) {
+  const rows = entityType === 'contacts'
+    ? [
+      CONTACT_TEMPLATE_HEADERS,
+      ['Juan', 'Perez', 'juan@acme.com', '+34111222333', 'CEO', 'lead', 'website', 'Interesado en demo'],
+      ['Laura', 'Gomez', 'laura@beta.io', '+34123456789', 'CTO', 'prospect', 'linkedin', 'Seguimiento en 7 dias'],
+    ]
+    : [
+      COMPANY_TEMPLATE_HEADERS,
+      ['Acme SL', 'acme.com', 'technology', '51-200', 'Espana', 'Madrid', 'https://acme.com', '+34911122334', 'Cliente potencial enterprise'],
+      ['Beta Labs', 'betalabs.io', 'consulting', '11-50', 'Mexico', 'CDMX', 'https://betalabs.io', '+525511223344', 'Vino por referencia'],
+    ]
+  const csv = rows
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `crm-template-${entityType}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter((l) => l.trim())
@@ -87,7 +146,27 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
 
   if (!isOpen) return null
 
-  const fields = entityType === 'contacts' ? CONTACT_FIELDS : COMPANY_FIELDS
+  const fieldLabels: Record<string, string> = {
+    firstName: t.contacts.firstName,
+    lastName: t.contacts.lastName,
+    email: t.common.email,
+    phone: t.common.phone,
+    jobTitle: t.contacts.jobTitle,
+    status: t.common.status,
+    source: t.contacts.source,
+    notes: t.common.notes,
+    name: t.common.name,
+    domain: t.companies.domain,
+    industry: t.companies.industry,
+    size: t.companies.size,
+    country: t.companies.country,
+    city: t.companies.city,
+    website: t.companies.website,
+  }
+  const fields = (entityType === 'contacts' ? CONTACT_FIELDS : COMPANY_FIELDS).map((f) => ({
+    ...f,
+    label: fieldLabels[f.key] ?? f.key,
+  }))
 
   const handleFileSelect = (file: File) => {
     const reader = new FileReader()
@@ -101,13 +180,18 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
       setCsvHeaders(headers)
       setCsvRows(rows)
 
-      // Auto-map by matching header names
+      // Auto-map by matching header names + common aliases.
       const autoMapping: Record<string, string> = {}
+      const aliases = entityType === 'contacts' ? CONTACT_HEADER_ALIASES : COMPANY_HEADER_ALIASES
+      const normalizedHeaders = headers.map((h) => ({ raw: h, normalized: normalizeHeader(h) }))
       for (const field of fields) {
-        const match = headers.find((h) =>
-          h.toLowerCase().replace(/[_\s-]/g, '') === field.key.toLowerCase().replace(/[_\s-]/g, '') ||
-          h.toLowerCase().includes(field.label.toLowerCase())
-        )
+        const fieldKeyNormalized = normalizeHeader(field.key)
+        const fieldLabelNormalized = normalizeHeader(field.label)
+        const aliasCandidates = [fieldKeyNormalized, fieldLabelNormalized, ...(aliases[field.key] ?? []).map(normalizeHeader)]
+        const uniqueCandidates = Array.from(new Set(aliasCandidates))
+        const exact = normalizedHeaders.find((h) => uniqueCandidates.includes(h.normalized))
+        const partial = normalizedHeaders.find((h) => uniqueCandidates.some((candidate) => h.normalized.includes(candidate) || candidate.includes(h.normalized)))
+        const match = exact?.raw ?? partial?.raw
         if (match) autoMapping[field.key] = match
       }
       setMapping(autoMapping)
@@ -220,10 +304,10 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/8 flex-shrink-0">
           <div className="flex items-center gap-3">
             <FileSpreadsheet size={18} className="text-brand-400" />
-            <span className="text-sm font-semibold text-white">Importar CSV</span>
+            <span className="text-sm font-semibold text-white">{t.csvImport.title}</span>
             {step !== 'upload' && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/8 text-slate-400">
-                {csvRows.length} filas
+                {csvRows.length} {t.csvImport.rows}
               </span>
             )}
           </div>
@@ -247,9 +331,17 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
                         : 'bg-white/4 text-slate-500 hover:text-white hover:bg-white/8 border border-transparent'
                     }`}
                   >
-                    {type === 'contacts' ? 'Contactos' : 'Empresas'}
+                    {type === 'contacts' ? t.csvImport.contacts : t.csvImport.companies}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => downloadCSVTemplate(entityType)}
+                  className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-white/4 text-slate-300 hover:text-white hover:bg-white/8 border border-white/10 transition-colors"
+                >
+                  <Download size={12} />
+                  {t.csvImport.downloadTemplate}
+                </button>
               </div>
 
               <div
@@ -259,9 +351,9 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
                 className="border-2 border-dashed border-white/10 rounded-2xl p-12 text-center cursor-pointer hover:border-brand-500/30 hover:bg-white/2 transition-all"
               >
                 <Upload size={36} className="mx-auto text-slate-600 mb-3" />
-                <p className="text-sm text-slate-300 font-medium">Arrastra tu archivo CSV aquí</p>
-                <p className="text-xs text-slate-500 mt-1">o haz clic para seleccionar</p>
-                <p className="text-[10px] text-slate-600 mt-3">Soporta archivos .csv con separador de coma o punto y coma</p>
+                <p className="text-sm text-slate-300 font-medium">{t.csvImport.dropTitle}</p>
+                <p className="text-xs text-slate-500 mt-1">{t.csvImport.dropSubtitle}</p>
+                <p className="text-[10px] text-slate-600 mt-3">{t.csvImport.dropHint}</p>
               </div>
               <input
                 ref={fileRef}
@@ -276,7 +368,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
 
               {/* Expected fields */}
               <div className="glass rounded-xl border-white/8 p-4">
-                <p className="text-xs font-semibold text-slate-400 mb-2">Campos esperados para {entityType === 'contacts' ? 'contactos' : 'empresas'}</p>
+                <p className="text-xs font-semibold text-slate-400 mb-2">{t.csvImport.expectedFieldsFor} {entityType === 'contacts' ? t.csvImport.contacts.toLowerCase() : t.csvImport.companies.toLowerCase()}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {fields.map((f) => (
                     <span key={f.key} className={`text-[10px] px-2 py-0.5 rounded-full ${f.required ? 'bg-brand-500/15 text-brand-400' : 'bg-white/6 text-slate-500'}`}>
@@ -291,7 +383,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
           {/* Step 2: Mapping */}
           {step === 'mapping' && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-300 mb-2">Mapea las columnas de tu CSV a los campos del CRM</p>
+              <p className="text-sm text-slate-300 mb-2">{t.csvImport.mapColumns}</p>
               <div className="space-y-2">
                 {fields.map((field) => (
                   <div key={field.key} className="flex items-center gap-3">
@@ -306,7 +398,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
                       onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
                       className="flex-1 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-brand-500/40"
                     >
-                      <option value="">— No mapear —</option>
+                      <option value="">— {t.csvImport.doNotMap} —</option>
                       {csvHeaders.map((h) => (
                         <option key={h} value={h}>{h}</option>
                       ))}
@@ -318,20 +410,20 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
               {!requiredFieldsMapped && (
                 <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 rounded-xl px-3 py-2">
                   <AlertTriangle size={13} />
-                  Mapea todos los campos obligatorios (*) para continuar
+                  {t.csvImport.requiredFieldsWarning}
                 </div>
               )}
 
               <div className="flex justify-between pt-2">
                 <button onClick={reset} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/6 transition-colors">
-                  Atrás
+                  {t.csvImport.back}
                 </button>
                 <button
                   onClick={() => setStep('preview')}
                   disabled={!requiredFieldsMapped}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl btn-gradient text-white text-sm font-semibold disabled:opacity-40"
                 >
-                  Vista previa <ArrowRight size={14} />
+                  {t.csvImport.preview} <ArrowRight size={14} />
                 </button>
               </div>
             </div>
@@ -340,7 +432,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
           {/* Step 3: Preview */}
           {step === 'preview' && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-300">Vista previa de las primeras {Math.min(5, csvRows.length)} filas</p>
+              <p className="text-sm text-slate-300">{t.csvImport.previewRows.replace('{count}', String(Math.min(5, csvRows.length)))}</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -369,20 +461,22 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
 
               <div className="glass rounded-xl border-white/8 p-3 flex items-center justify-between">
                 <p className="text-xs text-slate-400">
-                  Se importarán <span className="text-white font-semibold">{csvRows.length}</span> {entityType === 'contacts' ? 'contactos' : 'empresas'}
+                  {t.csvImport.toImport
+                    .replace('{count}', String(csvRows.length))
+                    .replace('{entity}', entityType === 'contacts' ? t.csvImport.contacts.toLowerCase() : t.csvImport.companies.toLowerCase())}
                 </p>
               </div>
 
               <div className="flex justify-between pt-2">
                 <button onClick={() => setStep('mapping')} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/6 transition-colors">
-                  Atrás
+                  {t.csvImport.back}
                 </button>
                 <button
                   onClick={handleImport}
                   className="flex items-center gap-2 px-5 py-2 rounded-xl btn-gradient text-white text-sm font-semibold"
                 >
                   <Upload size={14} />
-                  Importar {csvRows.length} registros
+                  {t.csvImport.importRecords.replace('{count}', String(csvRows.length))}
                 </button>
               </div>
             </div>
@@ -392,7 +486,7 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
           {step === 'importing' && (
             <div className="py-12 text-center">
               <Loader2 size={36} className="mx-auto text-brand-400 animate-spin mb-4" />
-              <p className="text-sm text-slate-300">Importando registros...</p>
+              <p className="text-sm text-slate-300">{t.csvImport.importing}</p>
             </div>
           )}
 
@@ -403,20 +497,19 @@ export function CSVImport({ isOpen, onClose }: CSVImportProps) {
                 <Check size={28} className="text-emerald-400" />
               </div>
               <div>
-                <p className="text-lg font-bold text-white">Importación completada</p>
+                <p className="text-lg font-bold text-white">{t.csvImport.completed}</p>
                 <p className="text-sm text-slate-400 mt-1">
-                  {importedCount} registro{importedCount !== 1 ? 's' : ''} importado{importedCount !== 1 ? 's' : ''}
-                  {errorCount > 0 && (
-                    <span className="text-red-400"> · {errorCount} error{errorCount !== 1 ? 'es' : ''}</span>
-                  )}
+                  {t.csvImport.importedSummary
+                    .replace('{imported}', String(importedCount))
+                    .replace('{errors}', String(errorCount))}
                 </p>
               </div>
               <div className="flex justify-center gap-3 pt-2">
                 <button onClick={() => { reset(); }} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white hover:bg-white/6 transition-colors">
-                  Importar más
+                  {t.csvImport.importMore}
                 </button>
                 <button onClick={onClose} className="px-5 py-2 rounded-xl btn-gradient text-white text-sm font-semibold">
-                  Cerrar
+                  {t.csvImport.close}
                 </button>
               </div>
             </div>

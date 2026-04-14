@@ -253,9 +253,9 @@ function LocalEmailItem({
               <option value="">{t.common.actions}</option>
               <option value="mark_read">{t.inbox.markRead}</option>
               <option value="mark_unread">{t.inbox.markUnread}</option>
-              <option value="snooze_1h">Snooze 1h</option>
+              <option value="snooze_1h">{t.inbox.snoozeOneHour}</option>
               <option value="snooze_1d">{t.inbox.snoozeOneDay}</option>
-              <option value="snooze_1w">Snooze 1w</option>
+              <option value="snooze_1w">{t.inbox.snoozeOneWeek}</option>
               <option value="delete">{t.common.delete}</option>
             </select>
           </div>
@@ -582,9 +582,9 @@ function LocalEmailView({
               <option value="">{t.common.actions}</option>
               <option value="mark_read">{t.inbox.markRead}</option>
               <option value="mark_unread">{t.inbox.markUnread}</option>
-              <option value="snooze_1h">Snooze 1h</option>
+              <option value="snooze_1h">{t.inbox.snoozeOneHour}</option>
               <option value="snooze_1d">{t.inbox.snoozeOneDay}</option>
-              <option value="snooze_1w">Snooze 1w</option>
+              <option value="snooze_1w">{t.inbox.snoozeOneWeek}</option>
               {canDeleteEmails ? <option value="delete">{t.common.delete}</option> : null}
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden />
@@ -1434,7 +1434,7 @@ export function Inbox() {
               onClick={() => applyBulkLocalEmailAction('snooze_1h')}
               className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
             >
-              Snooze 1h
+              {t.inbox.snoozeOneHour}
             </button>
             <button
               type="button"
@@ -1448,7 +1448,7 @@ export function Inbox() {
               onClick={() => applyBulkLocalEmailAction('snooze_1w')}
               className="text-[10px] px-2 py-1 rounded-full bg-white/6 text-slate-300 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
             >
-              Snooze 1w
+              {t.inbox.snoozeOneWeek}
             </button>
             {canDeleteEmails && (
               <button

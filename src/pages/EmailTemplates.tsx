@@ -202,20 +202,20 @@ export function EmailTemplates() {
       <div className="px-6 pb-4">
         <div className="glass rounded-2xl p-4 border border-white/8">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-white">Quick Replies</h2>
+            <h2 className="text-sm font-semibold text-white">{t.emailTemplates.quickReplies}</h2>
             <span className="text-xs text-slate-500">{quickReplies.length}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
             <input
               value={quickReplyTitle}
               onChange={(e) => setQuickReplyTitle(e.target.value)}
-              placeholder="Reply title"
+              placeholder={t.emailTemplates.quickReplyTitlePlaceholder}
               className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600"
             />
             <input
               value={quickReplyBody}
               onChange={(e) => setQuickReplyBody(e.target.value)}
-              placeholder="Reply body"
+              placeholder={t.emailTemplates.quickReplyBodyPlaceholder}
               className="bg-[#0d0e1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600"
             />
           </div>

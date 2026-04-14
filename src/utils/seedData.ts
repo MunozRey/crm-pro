@@ -13,6 +13,8 @@ export const seedSettings: AppSettings = {
   branding: {
     appName: 'CRM Pro',
     primaryColor: '#7c3aed',
+    legalName: 'CRM Pro SL',
+    country: 'España',
   },
   tags: [
     'VIP', 'Hot Lead', 'Follow Up', 'Decision Maker', 'Technical',

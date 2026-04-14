@@ -37,7 +37,7 @@ export function initRealtimeSubscriptions(): () => void {
       scheduleFetch('companies', () => useCompaniesStore.getState().fetchCompanies())
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, () => {
-      scheduleFetch('deals', () => useDealsStore.getState().fetchDeals())
+      scheduleFetch('deals', () => useDealsStore.getState().fetchDeals({ silent: true }))
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, () => {
       scheduleFetch('activities', () => useActivitiesStore.getState().fetchActivities())

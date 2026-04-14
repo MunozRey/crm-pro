@@ -20,95 +20,138 @@ import { canAccessRoute } from '../../utils/permissions'
 import { useTranslations } from '../../i18n'
 import type { Translations } from '../../i18n'
 import type { UserRole } from '../../types/auth'
+import type { SidebarBuiltinItemId, SidebarCustomItem, SidebarIconKey, SidebarSectionId } from '../../types/navigation'
+import { useNavigationPrefsStore } from '../../store/navigationPrefsStore'
+import { createDefaultNavigationPreferences } from '../../config/navigationDefaults'
 
 interface NavItem {
+  id: SidebarBuiltinItemId | string
   to: string
   icon: React.ReactNode
   label: string
   badge?: number
   dot?: boolean
+  children?: NavItem[]
 }
 
 function buildMainItems(t: Translations): NavItem[] {
   return [
-    { to: '/', icon: <LayoutDashboard size={17} />, label: t.nav.dashboard },
-    { to: '/leads', icon: <FunnelPlus size={17} />, label: t.nav.leads },
-    { to: '/contacts', icon: <Users size={17} />, label: t.nav.contacts },
-    { to: '/companies', icon: <Building2 size={17} />, label: t.nav.companies },
-    { to: '/deals', icon: <KanbanSquare size={17} />, label: t.nav.deals },
-    { to: '/timeline', icon: <GanttChart size={17} />, label: t.nav.timeline },
+    { id: 'dashboard', to: '/', icon: <LayoutDashboard size={17} />, label: t.nav.dashboard },
+    { id: 'leads', to: '/leads', icon: <FunnelPlus size={17} />, label: t.nav.leads },
+    { id: 'contacts', to: '/contacts', icon: <Users size={17} />, label: t.nav.contacts },
+    { id: 'companies', to: '/companies', icon: <Building2 size={17} />, label: t.nav.companies },
+    { id: 'deals', to: '/deals', icon: <KanbanSquare size={17} />, label: t.nav.deals },
+    { id: 'timeline', to: '/timeline', icon: <GanttChart size={17} />, label: t.nav.timeline },
   ]
 }
 
 function buildSalesItems(t: Translations): NavItem[] {
   return [
-    { to: '/calendar', icon: <CalendarDays size={17} />, label: t.nav.calendar },
-    { to: '/activities', icon: <Activity size={17} />, label: t.nav.activities },
-    { to: '/follow-ups', icon: <UserCheck size={17} />, label: t.nav.followUps },
-    { to: '/goals', icon: <Target size={17} />, label: t.nav.goals },
-    { to: '/notifications', icon: <BellRing size={17} />, label: t.nav.notifications },
-    { to: '/inbox', icon: <Mail size={17} />, label: t.nav.inbox },
-    { to: '/reports', icon: <BarChart3 size={17} />, label: t.nav.reports },
-    { to: '/forecast', icon: <LineChart size={17} />, label: t.nav.forecast },
+    { id: 'calendar', to: '/calendar', icon: <CalendarDays size={17} />, label: t.nav.calendar },
+    { id: 'activities', to: '/activities', icon: <Activity size={17} />, label: t.nav.activities },
+    { id: 'followUps', to: '/follow-ups', icon: <UserCheck size={17} />, label: t.nav.followUps },
+    { id: 'goals', to: '/goals', icon: <Target size={17} />, label: t.nav.goals },
+    { id: 'notifications', to: '/notifications', icon: <BellRing size={17} />, label: t.nav.notifications },
+    { id: 'inbox', to: '/inbox', icon: <Mail size={17} />, label: t.nav.inbox },
+    { id: 'reports', to: '/reports', icon: <BarChart3 size={17} />, label: t.nav.reports },
+    { id: 'forecast', to: '/forecast', icon: <LineChart size={17} />, label: t.nav.forecast },
   ]
 }
 
 function buildCommsItems(t: Translations): NavItem[] {
   return [
-    { to: '/templates', icon: <FileText size={17} />, label: t.nav.templates },
-    { to: '/sequences', icon: <ListOrdered size={17} />, label: t.nav.sequences },
+    { id: 'templates', to: '/templates', icon: <FileText size={17} />, label: t.nav.templates },
+    { id: 'sequences', to: '/sequences', icon: <ListOrdered size={17} />, label: t.nav.sequences },
   ]
 }
 
 function buildConfigItems(t: Translations): NavItem[] {
   return [
-    { to: '/team', icon: <UsersRound size={17} />, label: t.nav.team },
-    { to: '/products', icon: <Package size={17} />, label: t.nav.products },
-    { to: '/automations', icon: <Workflow size={17} />, label: t.nav.automations },
-    { to: '/settings', icon: <Settings size={17} />, label: t.nav.settings },
-    { to: '/audit', icon: <ScrollText size={17} />, label: t.nav.audit },
+    { id: 'team', to: '/team', icon: <UsersRound size={17} />, label: t.nav.team },
+    { id: 'products', to: '/products', icon: <Package size={17} />, label: t.nav.products },
+    { id: 'automations', to: '/automations', icon: <Workflow size={17} />, label: t.nav.automations },
+    { id: 'settings', to: '/settings', icon: <Settings size={17} />, label: t.nav.settings },
+    { id: 'audit', to: '/audit', icon: <ScrollText size={17} />, label: t.nav.audit },
   ]
+}
+
+function iconForKey(iconKey?: SidebarIconKey): React.ReactNode {
+  switch (iconKey) {
+    case 'layout-dashboard': return <LayoutDashboard size={17} />
+    case 'funnel-plus': return <FunnelPlus size={17} />
+    case 'users': return <Users size={17} />
+    case 'building-2': return <Building2 size={17} />
+    case 'kanban-square': return <KanbanSquare size={17} />
+    case 'gantt-chart': return <GanttChart size={17} />
+    case 'calendar-days': return <CalendarDays size={17} />
+    case 'activity': return <Activity size={17} />
+    case 'user-check': return <UserCheck size={17} />
+    case 'target': return <Target size={17} />
+    case 'bell-ring': return <BellRing size={17} />
+    case 'mail': return <Mail size={17} />
+    case 'bar-chart-3': return <BarChart3 size={17} />
+    case 'line-chart': return <LineChart size={17} />
+    case 'file-text': return <FileText size={17} />
+    case 'list-ordered': return <ListOrdered size={17} />
+    case 'users-round': return <UsersRound size={17} />
+    case 'package': return <Package size={17} />
+    case 'workflow': return <Workflow size={17} />
+    case 'settings': return <Settings size={17} />
+    case 'scroll-text': return <ScrollText size={17} />
+    case 'flame': return <Flame size={17} />
+    case 'handshake': return <Handshake size={17} />
+    case 'cloud': return <Cloud size={17} />
+    case 'trending-up': return <TrendingUp size={17} />
+    default: return <Bookmark size={17} />
+  }
 }
 
 interface SidebarNavItemProps {
   item: NavItem
   collapsed: boolean
+  nested?: boolean
 }
 
-function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
+function SidebarNavItem({ item, collapsed, nested = false }: SidebarNavItemProps) {
   return (
-    <NavLink
-      to={item.to}
-      end={item.to === '/'}
-      aria-label={collapsed ? item.label : undefined}
-      title={collapsed ? item.label : undefined}
-      className={({ isActive }) => `
-        flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
-        transition-all duration-150 group relative
-        ${isActive
-          ? 'nav-active sidebar-active text-white'
-          : 'sidebar-inactive text-slate-500 hover:text-slate-100 hover:bg-white/5 border-l-2 border-transparent'
-        }
-        ${collapsed ? 'justify-center' : ''}
-      `}
-    >
-      <span className="flex-shrink-0">{item.icon}</span>
-      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
-      {!collapsed && item.badge != null && item.badge > 0 && (
-        <span className="ml-auto text-[10px] font-bold bg-red-500/20 text-red-400 rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-          {item.badge > 99 ? '99+' : item.badge}
-        </span>
-      )}
-      {!collapsed && item.dot && (
-        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
-      )}
-      {collapsed && item.badge != null && item.badge > 0 && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500" />
-      )}
-      {collapsed && item.dot && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-400" />
-      )}
-    </NavLink>
+    <>
+      <NavLink
+        to={item.to}
+        end={item.to === '/'}
+        aria-label={collapsed ? item.label : undefined}
+        title={collapsed ? item.label : undefined}
+        className={({ isActive }) => `
+          flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
+          transition-all duration-150 group relative
+          ${isActive
+            ? 'nav-active sidebar-active text-white'
+            : 'sidebar-inactive text-slate-500 hover:text-slate-100 hover:bg-white/5 border-l-2 border-transparent'
+          }
+          ${collapsed ? 'justify-center' : ''}
+          ${nested && !collapsed ? 'ml-3' : ''}
+        `}
+      >
+        <span className="flex-shrink-0">{item.icon}</span>
+        {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+        {!collapsed && item.badge != null && item.badge > 0 && (
+          <span className="ml-auto text-[10px] font-bold bg-red-500/20 text-red-400 rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+            {item.badge > 99 ? '99+' : item.badge}
+          </span>
+        )}
+        {!collapsed && item.dot && (
+          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+        )}
+        {collapsed && item.badge != null && item.badge > 0 && (
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500" />
+        )}
+        {collapsed && item.dot && (
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-400" />
+        )}
+      </NavLink>
+      {!collapsed && item.children?.map((child) => (
+        <SidebarNavItem key={child.id} item={child} collapsed={collapsed} nested />
+      ))}
+    </>
   )
 }
 
@@ -116,18 +159,20 @@ interface SidebarSectionProps {
   label: string
   items: NavItem[]
   collapsed: boolean
+  icon?: React.ReactNode
 }
 
-function SidebarSection({ label, items, collapsed }: SidebarSectionProps) {
+function SidebarSection({ label, items, collapsed, icon }: SidebarSectionProps) {
   return (
     <div className="space-y-0.5">
       {!collapsed && (
-        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
-          {label}
-        </p>
+        <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600 flex items-center gap-1.5">
+          {icon && <span className="text-slate-500">{icon}</span>}
+          <p>{label}</p>
+        </div>
       )}
       {items.map((item) => (
-        <SidebarNavItem key={item.to} item={item} collapsed={collapsed} />
+        <SidebarNavItem key={item.id} item={item} collapsed={collapsed} />
       ))}
     </div>
   )
@@ -148,6 +193,7 @@ export function Sidebar() {
   const [urgentFollowUpCount, setUrgentFollowUpCount] = useState(0)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const [pinnedViewItems, setPinnedViewItems] = useState<NavItem[]>([])
+  const prefs = useNavigationPrefsStore((s) => s.preferences)
 
   // Auth subscription
   useEffect(() => {
@@ -173,6 +219,7 @@ export function Sidebar() {
     const compute = () => {
       const pinnedViews = useViewsStore.getState().views.filter((v) => v.isPinned)
       const items: NavItem[] = pinnedViews.map((v) => ({
+        id: `pinned-${v.id}`,
         to: `/${v.entityType === 'contact' ? 'contacts' : v.entityType === 'company' ? 'companies' : 'deals'}?view=${v.id}`,
         icon: VIEW_ICON_MAP[v.icon ?? ''] ?? <Bookmark size={17} />,
         label: (() => {
@@ -226,6 +273,7 @@ export function Sidebar() {
   const salesItems = useMemo(() => buildSalesItems(t), [t])
   const commsItems = useMemo(() => buildCommsItems(t), [t])
   const configItems = useMemo(() => buildConfigItems(t), [t])
+  const defaults = useMemo(() => createDefaultNavigationPreferences(), [])
 
   const salesWithBadges = salesItems.map((item) => {
     if (item.to === '/activities') return { ...item, badge: overdueCount }
@@ -234,6 +282,68 @@ export function Sidebar() {
     if (item.to === '/inbox') return { ...item, dot: isGmailConnected }
     return item
   })
+
+  const builtinBySection: Record<SidebarSectionId, NavItem[]> = {
+    main: filterByPermission(mainItems),
+    sales: filterByPermission(salesWithBadges),
+    comms: filterByPermission(commsItems),
+    config: filterByPermission(configItems),
+  }
+
+  const sectionLabelById: Record<SidebarSectionId, string> = {
+    main: t.navSections.main,
+    sales: t.navSections.sales,
+    comms: t.navSections.comms,
+    config: t.navSections.config,
+  }
+
+  const orderedSections = (prefs.sectionOrder.length > 0 ? prefs.sectionOrder : defaults.sectionOrder)
+    .filter((sectionId) => !prefs.hiddenSections.includes(sectionId))
+    .map((sectionId) => {
+      const desiredOrder = prefs.itemOrderBySection[sectionId] ?? defaults.itemOrderBySection[sectionId]
+      const existing = builtinBySection[sectionId]
+      const byId = new Map(existing.map((item) => [item.id, item]))
+      const ordered = desiredOrder.map((id) => byId.get(id)).filter(Boolean) as NavItem[]
+      const remainder = existing.filter((item) => !ordered.some((x) => x.id === item.id))
+      const items = [...ordered, ...remainder].filter((item) => !prefs.hiddenBuiltinItems.includes(item.id as SidebarBuiltinItemId))
+      return { id: sectionId, label: sectionLabelById[sectionId], items }
+    })
+    .filter((section) => section.items.length > 0)
+
+  const routeMap = new Map<string, NavItem>()
+  Object.values(builtinBySection).flat().forEach((item) => routeMap.set(item.to, item))
+  pinnedViewItems.forEach((item) => routeMap.set(item.to, item))
+
+  const customSections = [...prefs.customGroups]
+    .sort((a, b) => a.order - b.order)
+    .filter((group) => !group.hidden && (!group.roleRules || group.roleRules.includes(userRole)))
+    .map((group) => {
+      const items: NavItem[] = group.items
+        .filter((item) => !item.hidden && (!item.roleRules || item.roleRules.includes(userRole)))
+        .map((item: SidebarCustomItem) => {
+          const mapped = item.to ? routeMap.get(item.to) : undefined
+          const children = (item.children ?? [])
+            .filter((child) => !child.hidden && (!child.roleRules || child.roleRules.includes(userRole)))
+            .map((child) => {
+              const childMapped = child.to ? routeMap.get(child.to) : undefined
+              return {
+                id: child.id,
+                to: child.to ?? childMapped?.to ?? '/settings',
+                icon: childMapped?.icon ?? iconForKey(child.iconKey),
+                label: child.label || childMapped?.label || child.to || '',
+              }
+            })
+          return {
+            id: item.id,
+            to: item.to ?? mapped?.to ?? '/settings',
+            icon: mapped?.icon ?? iconForKey(item.iconKey),
+            label: item.label || mapped?.label || item.to || '',
+            children: children.length > 0 ? children : undefined,
+          }
+        })
+      return { id: group.id, label: group.label, icon: iconForKey(group.iconKey), items: filterByPermission(items) }
+    })
+    .filter((section) => section.items.length > 0)
 
   return (
     <aside
@@ -262,10 +372,12 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-5">
-        <SidebarSection label={t.navSections.main} items={filterByPermission(mainItems)} collapsed={collapsed} />
-        <SidebarSection label={t.navSections.sales} items={filterByPermission(salesWithBadges)} collapsed={collapsed} />
-        <SidebarSection label={t.navSections.comms} items={filterByPermission(commsItems)} collapsed={collapsed} />
-        <SidebarSection label={t.navSections.config} items={filterByPermission(configItems)} collapsed={collapsed} />
+        {orderedSections.map((section) => (
+          <SidebarSection key={section.id} label={section.label} items={section.items} collapsed={collapsed} />
+        ))}
+        {customSections.map((section) => (
+          <SidebarSection key={section.id} label={section.label} items={section.items} collapsed={collapsed} icon={section.icon} />
+        ))}
       </nav>
 
       {/* Collapse toggle */}

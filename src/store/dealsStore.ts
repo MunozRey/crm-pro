@@ -75,7 +75,7 @@ interface DealsState {
   error: string | null
   viewMode: 'kanban' | 'list'
 
-  fetchDeals: () => Promise<void>
+  fetchDeals: (options?: { silent?: boolean }) => Promise<void>
   addDeal: (deal: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>) => Deal
   updateDeal: (id: string, updates: Partial<Deal>) => void
   deleteDeal: (id: string) => void
@@ -105,6 +105,32 @@ const defaultFilters: DealFilters = {
   dueDateTo: '',
 }
 
+let pendingDealsMemory: Deal[] = []
+
+function readPendingDeals(): Deal[] {
+  return [...pendingDealsMemory]
+}
+
+function writePendingDeals(items: Deal[]): void {
+  pendingDealsMemory = [...items]
+}
+
+function upsertPendingDeal(deal: Deal): void {
+  const prev = readPendingDeals()
+  const next = [deal, ...prev.filter((d) => d.id !== deal.id)]
+  writePendingDeals(next)
+}
+
+function removePendingDeal(dealId: string): void {
+  writePendingDeals(readPendingDeals().filter((d) => d.id !== dealId))
+}
+
+function updatePendingDeal(dealId: string, patch: Partial<Deal>): void {
+  writePendingDeals(
+    readPendingDeals().map((d) => (d.id === dealId ? { ...d, ...patch, updatedAt: new Date().toISOString() } : d)),
+  )
+}
+
 export const useDealsStore = create<DealsState>()(
   (set, get) => ({
     deals: [],
@@ -114,15 +140,44 @@ export const useDealsStore = create<DealsState>()(
     error: null,
     viewMode: 'kanban',
 
-    fetchDeals: async () => {
-      set({ isLoading: true, error: null })
+    fetchDeals: async (options) => {
+      if (options?.silent) {
+        set({ error: null })
+      } else {
+        set({ isLoading: true, error: null })
+      }
       try {
         if (isSupabaseConfigured && supabase) {
           const { data, error } = await supabase.from('deals').select('*').order('created_at', { ascending: false })
           if (error) throw error
-          set({ deals: (data ?? []).map(rowToDeal), isLoading: false })
+          const remoteDeals = (data ?? []).map(rowToDeal)
+          const pending = readPendingDeals()
+          const stillPending: Deal[] = []
+          const syncedPending: Deal[] = []
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          const createdBy = currentUserId && isUuid(currentUserId) ? currentUserId : null
+
+          for (const pendingDeal of pending) {
+            try {
+              const row = dealToRow(pendingDeal)
+              const { data: inserted, error: insertError } = await supabase
+                .from('deals')
+                .insert({ ...row, created_by: createdBy, organization_id: getOrgId() } as never)
+                .select()
+                .single()
+              if (insertError || !inserted) throw insertError ?? new Error('Empty Supabase insert response')
+              syncedPending.push(rowToDeal(inserted as Record<string, unknown>))
+            } catch {
+              stillPending.push(pendingDeal)
+            }
+          }
+          writePendingDeals(stillPending)
+          const merged = [...syncedPending, ...remoteDeals, ...stillPending].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )
+          set({ deals: merged, isLoading: false })
         } else {
-          set({ deals: seedDeals, isLoading: false })
+          set({ deals: [...readPendingDeals(), ...seedDeals], isLoading: false })
         }
       } catch (e: unknown) {
         set({ error: (e as Error).message, isLoading: false })
@@ -155,16 +210,19 @@ export const useDealsStore = create<DealsState>()(
                 return
               }
               const real = rowToDeal(data)
+              removePendingDeal(id)
               set((s) => ({ deals: s.deals.map((d) => d.id === id ? real : d) }))
             }, (error: unknown) => {
               const message = getErrorMessage(error)
+              upsertPendingDeal(deal)
               set({ error: message })
-              toast.error(message)
+              toast.error(`${message}. Deal saved locally and will retry sync.`)
             })
         } catch (error) {
           const message = getErrorMessage(error)
+          upsertPendingDeal(deal)
           set({ error: message })
-          toast.error(message)
+          toast.error(`${message}. Deal saved locally and will retry sync.`)
         }
       }
 
@@ -188,6 +246,7 @@ export const useDealsStore = create<DealsState>()(
           (message) => set({ error: message }),
         )
       }
+      updatePendingDeal(id, updates)
     },
 
     deleteDeal: (id) => {
@@ -198,6 +257,7 @@ export const useDealsStore = create<DealsState>()(
       if (isSupabaseConfigured && supabase) {
         sbDelete('deals', id).then(null, (e) => set({ error: (e as Error).message }))
       }
+      removePendingDeal(id)
     },
 
     moveDeal: (id, newStage) => {
@@ -254,6 +314,7 @@ export const useDealsStore = create<DealsState>()(
           (message) => set({ error: message }),
         )
       }
+      updatePendingDeal(id, { stage: newStage })
     },
 
     updateQuote: (dealId, items) => {
@@ -272,6 +333,7 @@ export const useDealsStore = create<DealsState>()(
           (message) => set({ error: message }),
         )
       }
+      updatePendingDeal(dealId, { quoteItems: items })
     },
 
     setFilter: (key, value) => {

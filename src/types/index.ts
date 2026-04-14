@@ -162,6 +162,15 @@ export interface AppSettings {
     customDomain?: string
     privacyUrl?: string
     termsUrl?: string
+    legalName?: string
+    taxId?: string
+    addressLine1?: string
+    postalCode?: string
+    city?: string
+    country?: string
+    billingEmail?: string
+    billingPhone?: string
+    quoteFooter?: string
   }
   tags: string[]
   users: User[]

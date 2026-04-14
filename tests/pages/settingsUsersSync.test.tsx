@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { Settings } from '../../src/pages/Settings'
 import { useAuthStore } from '../../src/store/authStore'
 import { useSettingsStore } from '../../src/store/settingsStore'
@@ -35,7 +36,11 @@ describe('Settings users sync', () => {
   })
 
   it('renders organization users from auth store in settings users section', () => {
-    render(<Settings />)
+    render(
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>,
+    )
 
     expect(screen.getByText(/david@clovrlabs\.com/i)).toBeInTheDocument()
     expect(screen.queryByText(/seed@crmpro\.es/i)).not.toBeInTheDocument()

@@ -13,6 +13,7 @@ import { useProductsStore } from '../store/productsStore'
 import { useAuditStore } from '../store/auditStore'
 import { useCustomFieldsStore } from '../store/customFieldsStore'
 import { useLeadsStore } from '../store/leadsStore'
+import { useNavigationPrefsStore } from '../store/navigationPrefsStore'
 import { initRealtimeSubscriptions } from '../lib/realtimeSubscriptions'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { useEmailStore } from '../store/emailStore'
@@ -60,6 +61,7 @@ export function useDataInit() {
     useAuditStore.getState().fetchEntries()
     useCustomFieldsStore.getState().fetchCustomFields()
     useLeadsStore.getState().fetchLeads()
+    useNavigationPrefsStore.getState().loadPreferences()
 
     const cleanup = initRealtimeSubscriptions()
     const runServerMaintenance = () => {
@@ -76,6 +78,13 @@ export function useDataInit() {
     const maintenanceInterval = window.setInterval(() => {
       runServerMaintenance()
     }, 30 * 60 * 1000)
+    const dealsSyncInterval = window.setInterval(() => {
+      useDealsStore.getState().fetchDeals({ silent: true })
+    }, 20 * 1000)
+    const handleBackOnline = () => {
+      useDealsStore.getState().fetchDeals({ silent: true })
+    }
+    window.addEventListener('online', handleBackOnline)
 
     window.setTimeout(() => {
       runServerMaintenance()
@@ -83,6 +92,8 @@ export function useDataInit() {
     return () => {
       cleanup()
       window.clearInterval(maintenanceInterval)
+      window.clearInterval(dealsSyncInterval)
+      window.removeEventListener('online', handleBackOnline)
       didInit.current = false
     }
   }, [currentUser])

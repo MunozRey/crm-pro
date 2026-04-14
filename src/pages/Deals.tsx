@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslations, useI18nStore } from '../i18n'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { DragDropContext } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
 import {
@@ -69,48 +71,24 @@ function calcTotal(q: number, u: number, d: number) {
   return Math.round(q * u * (1 - d / 100) * 100) / 100
 }
 
+type QuoteDocumentType = 'quote' | 'invoice' | 'proforma'
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = ''
   for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]!)
   return btoa(binary)
 }
 
-function escapePdfText(value: string): string {
-  return value
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)')
-    .replace(/[^\x20-\x7E]/g, '')
-}
-
-function buildSimplePdfBase64(lines: string[]): string {
-  const contentLines = ['BT', '/F1 10 Tf', '40 800 Td']
-  lines.slice(0, 45).forEach((line, idx) => {
-    if (idx > 0) contentLines.push('0 -14 Td')
-    contentLines.push(`(${escapePdfText(line)}) Tj`)
-  })
-  contentLines.push('ET')
-  const contentStream = `${contentLines.join('\n')}\n`
-  const objects = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n',
-    `4 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}endstream\nendobj\n`,
-    '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-  ]
-  let pdf = '%PDF-1.4\n'
-  const offsets: number[] = [0]
-  for (const obj of objects) {
-    offsets.push(pdf.length)
-    pdf += obj
-  }
-  const xrefOffset = pdf.length
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
-  for (let i = 1; i <= objects.length; i += 1) {
-    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`
-  }
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
-  return bytesToBase64(new TextEncoder().encode(pdf))
+function nextSequentialDocNumber(docType: QuoteDocumentType): string {
+  const date = new Date()
+  const y = String(date.getFullYear())
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const scope = `${docType}:${y}${m}`
+  const key = `crm_doc_seq:${scope}`
+  const next = Number(localStorage.getItem(key) ?? '0') + 1
+  localStorage.setItem(key, String(next))
+  const prefix = docType === 'invoice' ? 'FAC' : docType === 'proforma' ? 'PRO' : 'PRE'
+  return `${prefix}-${y}${m}-${String(next).padStart(4, '0')}`
 }
 
 function QuoteBuilder({
@@ -145,7 +123,22 @@ function QuoteBuilder({
   const [saved, setSaved] = useState(false)
   const [vatPercent, setVatPercent] = useState(21)
   const [validityDays, setValidityDays] = useState(15)
-  const [quoteNumber, setQuoteNumber] = useState(`Q-${dealId.toUpperCase()}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`)
+  const [documentType, setDocumentType] = useState<QuoteDocumentType>('quote')
+  const [quoteNumber, setQuoteNumber] = useState(() => nextSequentialDocNumber('quote'))
+  const [clientTaxId, setClientTaxId] = useState('')
+  const [clientAddress, setClientAddress] = useState('')
+  const [contactPerson, setContactPerson] = useState('')
+  const [globalDiscountPercent, setGlobalDiscountPercent] = useState(0)
+  const [withholdingPercent, setWithholdingPercent] = useState(0)
+  const [paymentMethod, setPaymentMethod] = useState('Transferencia')
+  const [paymentDays, setPaymentDays] = useState(30)
+  const [bankIban, setBankIban] = useState('')
+  const [bankName, setBankName] = useState('')
+  const [accountHolder, setAccountHolder] = useState('')
+  const [lateFeeClause, setLateFeeClause] = useState('Se aplicará interés de demora legal tras vencimiento.')
+  const [acceptanceClause, setAcceptanceClause] = useState('La aceptación de este documento implica conformidad con las condiciones indicadas.')
+  const [additionalNotes, setAdditionalNotes] = useState('')
+  const [reference, setReference] = useState('')
 
   const updateItem = (id: string, patch: Partial<QuoteItem>) => {
     setItems((prev) =>
@@ -170,10 +163,15 @@ function QuoteBuilder({
   const addBlank = () => { setItems((prev) => [...prev, newItem()]); setSaved(false) }
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-  const totalDiscount = items.reduce((s, i) => s + i.quantity * i.unitPrice * (i.discount / 100), 0)
-  const total = items.reduce((s, i) => s + i.total, 0)
-  const vatAmount = Math.round(total * (vatPercent / 100) * 100) / 100
-  const grandTotal = total + vatAmount
+  const lineDiscount = items.reduce((s, i) => s + i.quantity * i.unitPrice * (i.discount / 100), 0)
+  const lineNet = items.reduce((s, i) => s + i.total, 0)
+  const globalDiscountAmount = Math.round(lineNet * (globalDiscountPercent / 100) * 100) / 100
+  const baseTaxable = Math.max(0, lineNet - globalDiscountAmount)
+  const vatAmount = Math.round(baseTaxable * (vatPercent / 100) * 100) / 100
+  const withholdingAmount = Math.round(baseTaxable * (withholdingPercent / 100) * 100) / 100
+  const grandTotal = Math.round((baseTaxable + vatAmount - withholdingAmount) * 100) / 100
+  const issueDate = new Date()
+  const validUntil = new Date(Date.now() + validityDays * 86400000)
 
   const localeByLanguage: Record<typeof language, string> = {
     en: 'en-US',
@@ -186,95 +184,175 @@ function QuoteBuilder({
   const fmt = (n: number) => new Intl.NumberFormat(localeByLanguage[language], { style: 'currency', currency }).format(n)
   const formatDateForQuote = (value: Date) => formatDateShort(value.toISOString())
 
+  useEffect(() => {
+    setQuoteNumber(nextSequentialDocNumber(documentType))
+  }, [documentType])
+
   const handleSave = () => {
     useDealsStore.getState().updateQuote(dealId, items)
     setSaved(true)
     toast.success(t.deals.quoteBuilder)
   }
 
-  const exportPdf = () => {
+  const generateQuotePdfAttachment = async () => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const accent = branding.primaryColor || '#7c3aed'
+    const title = documentType === 'invoice'
+      ? t.deals.documentTypeInvoice
+      : documentType === 'proforma'
+        ? t.deals.documentTypeProforma
+        : t.deals.documentTypeQuote
+    const companyLines = [
+      branding.legalName || branding.appName || 'CRM Pro',
+      ...(branding.taxId ? [`${t.settings.taxIdVat}: ${branding.taxId}`] : []),
+      ...((branding.addressLine1 || branding.postalCode || branding.city || branding.country)
+        ? [[branding.addressLine1, branding.postalCode, branding.city, branding.country].filter(Boolean).join(', ')]
+        : []),
+      ...(branding.billingPhone ? [`${t.common.phone}: ${branding.billingPhone}`] : []),
+      ...(branding.billingEmail ? [`Email: ${branding.billingEmail}`] : []),
+      ...(branding.customDomain ? [`Web: ${branding.customDomain}`] : []),
+    ]
+    doc.setFillColor(accent)
+    doc.rect(0, 0, pageWidth, 30, 'F')
+    doc.setTextColor('#FFFFFF')
+    doc.setFontSize(15)
+    doc.text(title.toUpperCase(), 14, 12)
+    doc.setFontSize(10)
+    doc.text(quoteNumber, 14, 19)
+    doc.text(`${t.common.date}: ${formatDateForQuote(issueDate)}`, 14, 24)
+    doc.text(`${t.deals.validityLabel}: ${formatDateForQuote(validUntil)}`, 72, 24)
+    doc.setTextColor('#111111')
+    doc.setFontSize(10)
+    let y = 38
+    companyLines.forEach((line) => { doc.text(line, 14, y); y += 5 })
+
+    doc.setFillColor(245, 247, 250)
+    doc.roundedRect(pageWidth - 95, 36, 81, 34, 2, 2, 'F')
+    doc.setFontSize(10)
+    doc.setTextColor('#444444')
+    doc.text(t.deals.clientData, pageWidth - 91, 43)
+    const clientLines = [
+      companyName || '-',
+      ...(clientTaxId ? [`${t.deals.clientTaxIdPlaceholder}: ${clientTaxId}`] : []),
+      ...(clientAddress ? [clientAddress] : []),
+      ...(contactPerson ? [`${t.deals.contactPersonPlaceholder}: ${contactPerson}`] : []),
+      ...(contactEmail ? [`Email: ${contactEmail}`] : []),
+      ...(reference ? [`${t.deals.referenceShort}: ${reference}`] : []),
+    ]
+    let clientY = 49
+    clientLines.forEach((line) => { doc.text(line, pageWidth - 91, clientY); clientY += 4.8 })
+
+    autoTable(doc, {
+      startY: Math.max(y + 4, 76),
+      head: [[t.deals.referenceShort, t.common.description, t.deals.lineDescriptionPlaceholder, t.common.total, t.products.price, `${t.deals.discount} %`, t.common.total]],
+      body: items.map((item, idx) => [
+        item.productId || `L${idx + 1}`,
+        item.name || '-',
+        item.description || item.name || '-',
+        String(item.quantity),
+        fmt(item.unitPrice),
+        `${item.discount}%`,
+        fmt(item.total),
+      ]),
+      styles: { fontSize: 8.5, cellPadding: 1.8, overflow: 'linebreak' },
+      headStyles: { fillColor: accent, textColor: 255 },
+      columnStyles: { 0: { cellWidth: 18 }, 1: { cellWidth: 28 }, 2: { cellWidth: 64 }, 3: { halign: 'right', cellWidth: 12 }, 4: { halign: 'right', cellWidth: 22 }, 5: { halign: 'right', cellWidth: 14 }, 6: { halign: 'right', cellWidth: 22 } },
+      margin: { left: 14, right: 14 },
+    })
+
+    const bodyRows = [
+      ['Subtotal', fmt(subtotal)],
+      [t.deals.lineDiscountLabel, `-${fmt(lineDiscount)}`],
+      [t.deals.globalDiscountLabel, `${globalDiscountPercent}% (-${fmt(globalDiscountAmount)})`],
+      [t.deals.taxableBase, fmt(baseTaxable)],
+      [`IVA (${vatPercent}%)`, fmt(vatAmount)],
+      [`Retención IRPF (${withholdingPercent}%)`, `-${fmt(withholdingAmount)}`],
+      ['TOTAL', fmt(grandTotal)],
+    ]
+    const finalY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 120
+    let totalsY = finalY + 8
+    if (totalsY > pageHeight - 80) {
+      doc.addPage()
+      totalsY = 20
+    }
+    autoTable(doc, {
+      startY: totalsY,
+      body: bodyRows,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 2 },
+      columnStyles: { 0: { cellWidth: 46, fontStyle: 'bold' }, 1: { cellWidth: 44, halign: 'right' } },
+      margin: { left: pageWidth - 104, right: 14 },
+    })
+    let termsY = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? totalsY) + 8
+    if (termsY > pageHeight - 70) {
+      doc.addPage()
+      termsY = 20
+    }
+    doc.setFontSize(10)
+    doc.setTextColor('#222222')
+    doc.text(t.deals.termsAndConditions, 14, termsY)
+    const terms = [
+      `${t.deals.validityLabel}: ${validityDays} ${t.dashboard.days}`,
+      `${t.deals.paymentMethodLabel}: ${paymentMethod}`,
+      `${t.deals.paymentTermLabel}: ${paymentDays} ${t.dashboard.days}`,
+      `${t.deals.bankDetailsLabel}: ${bankName || '-'} | ${t.deals.ibanPlaceholder} ${bankIban || '-'} | ${t.deals.accountHolderPlaceholder} ${accountHolder || '-'}`,
+      `${t.deals.lateFeeLabel}: ${lateFeeClause || '-'}`,
+      `${t.deals.acceptanceClauseLabel}: ${acceptanceClause || '-'}`,
+      ...(additionalNotes ? [`${t.deals.notesLabel}: ${additionalNotes}`] : []),
+    ]
+    let lineY = termsY + 5
+    doc.setFontSize(8.8)
+    terms.forEach((line) => {
+      const wrapped = doc.splitTextToSize(line, pageWidth - 28)
+      doc.text(wrapped, 14, lineY)
+      lineY += wrapped.length * 4.4
+      if (lineY > pageHeight - 18) {
+        doc.addPage()
+        lineY = 18
+      }
+    })
+
+    const pages = doc.getNumberOfPages()
+    for (let page = 1; page <= pages; page += 1) {
+      doc.setPage(page)
+      doc.setFontSize(8)
+      doc.setTextColor('#666666')
+      doc.text(`${branding.legalName || branding.appName || ''} • ${branding.taxId || ''} • ${branding.billingEmail || ''}`, 14, pageHeight - 8)
+      doc.text(`${t.deals.pageLabel} ${page}/${pages}`, pageWidth - 30, pageHeight - 8)
+    }
+
+    const arrayBuffer = doc.output('arraybuffer')
+    const dataBase64 = bytesToBase64(new Uint8Array(arrayBuffer))
+    return {
+      fileName: `${quoteNumber}.pdf`,
+      mimeType: 'application/pdf',
+      size: new Uint8Array(arrayBuffer).length,
+      dataBase64,
+      blob: new Blob([arrayBuffer], { type: 'application/pdf' }),
+    }
+  }
+
+  const exportPdf = async () => {
     if (items.length === 0) {
       toast.error(t.deals.addItem)
       return
     }
-    const lines = items.map((item) => {
-      const rowTotal = fmt(item.total)
-      return `
-        <tr>
-          <td style="padding:8px;border-bottom:1px solid #ddd">${item.name || '-'}</td>
-          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${item.quantity}</td>
-          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${fmt(item.unitPrice)}</td>
-          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${item.discount}%</td>
-          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">${rowTotal}</td>
-        </tr>
-      `
-    }).join('')
-
-    const html = `
-      <html>
-        <head>
-          <title>${quoteNumber} - ${dealTitle}</title>
-        </head>
-        <body style="font-family:Arial,sans-serif;padding:24px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
-            <div>
-              ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="logo" style="max-height:44px;max-width:200px;display:block;margin-bottom:10px" />` : ''}
-              <h2 style="margin:0 0 6px">${t.deals.quoteBuilder}</h2>
-              <p style="margin:0;color:#555;font-weight:600">${branding.appName || companyName || t.deals.company}</p>
-              <p style="margin:2px 0 0;color:#666;font-size:12px">${companyName || ''}</p>
-            </div>
-            <div style="text-align:right;color:#444;font-size:12px">
-              <div><strong>${quoteNumber}</strong></div>
-              <div>${t.common.date}: ${formatDateForQuote(new Date())}</div>
-              <div>${t.deals.expectedClose}: ${formatDateForQuote(new Date(Date.now() + validityDays * 86400000))}</div>
-            </div>
-          </div>
-          <p style="margin:0 0 18px;color:#555">${dealTitle}</p>
-          <table style="width:100%;border-collapse:collapse">
-            <thead>
-              <tr>
-                <th style="padding:8px;text-align:left;border-bottom:2px solid #111">${t.common.description}</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.common.total}</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.common.value}</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.deals.discount}</th>
-                <th style="padding:8px;text-align:right;border-bottom:2px solid #111">${t.common.total}</th>
-              </tr>
-            </thead>
-            <tbody>${lines}</tbody>
-          </table>
-          <div style="margin-top:16px;text-align:right">
-            <div>${t.deals.subtotal}: ${fmt(subtotal)}</div>
-            <div>${t.deals.discount}: -${fmt(totalDiscount)}</div>
-            <div>${t.deals.vatPercent} (${vatPercent}%): ${fmt(vatAmount)}</div>
-            <div style="font-weight:700;margin-top:4px">${t.common.total}: ${fmt(grandTotal)}</div>
-          </div>
-        </body>
-      </html>
-    `
-
     try {
-      const iframe = document.createElement('iframe')
-      iframe.style.position = 'fixed'
-      iframe.style.right = '0'
-      iframe.style.bottom = '0'
-      iframe.style.width = '0'
-      iframe.style.height = '0'
-      iframe.style.border = '0'
-      document.body.appendChild(iframe)
-      const doc = iframe.contentWindow?.document
-      if (!doc || !iframe.contentWindow) throw new Error('print_unavailable')
-      doc.open()
-      doc.write(html)
-      doc.close()
-      iframe.contentWindow.focus()
-      iframe.contentWindow.print()
-      window.setTimeout(() => iframe.remove(), 600)
+      const pdf = await generateQuotePdfAttachment()
+      const url = URL.createObjectURL(pdf.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = pdf.fileName
+      a.click()
+      URL.revokeObjectURL(url)
     } catch {
       toast.error(t.errors.generic)
     }
   }
 
-  const sendQuoteByEmail = () => {
+  const sendQuoteByEmail = async () => {
     if (items.length === 0) {
       toast.error(t.deals.addItem)
       return
@@ -290,36 +368,31 @@ function QuoteBuilder({
       ...items.map((item) => `- ${item.name || t.common.description}: ${item.quantity} x ${fmt(item.unitPrice)} (${item.discount}%) = ${fmt(item.total)}`),
       '',
       `${t.deals.subtotal}: ${fmt(subtotal)}`,
-      `${t.deals.discount}: -${fmt(totalDiscount)}`,
+      `${t.deals.discount}: -${fmt(lineDiscount + globalDiscountAmount)}`,
       `${t.deals.vatPercent} (${vatPercent}%): ${fmt(vatAmount)}`,
       `${t.common.total}: ${fmt(grandTotal)}`,
+      '',
+      ...(branding.legalName ? [branding.legalName] : []),
+      ...(branding.taxId ? [`Tax ID: ${branding.taxId}`] : []),
+      ...((branding.addressLine1 || branding.postalCode || branding.city || branding.country)
+        ? [[branding.addressLine1, branding.postalCode, branding.city, branding.country].filter(Boolean).join(', ')]
+        : []),
+      ...(branding.billingEmail ? [`Email: ${branding.billingEmail}`] : []),
+      ...(branding.billingPhone ? [`Phone: ${branding.billingPhone}`] : []),
+      ...(branding.quoteFooter ? [branding.quoteFooter] : []),
       '',
       'Best regards,',
     ].join('\n')
-    const pdfLines = [
-      `${t.deals.quoteBuilder} - ${dealTitle}`,
-      `${t.deals.quoteNumber}: ${quoteNumber}`,
-      `${t.common.date}: ${formatDateForQuote(new Date())}`,
-      `${t.deals.expectedClose}: ${formatDateForQuote(new Date(Date.now() + validityDays * 86400000))}`,
-      `Company: ${companyName ?? '-'}`,
-      '',
-      ...items.map((item) => `${item.name || '-'} | ${item.quantity} x ${fmt(item.unitPrice)} | ${item.discount}% | ${fmt(item.total)}`),
-      '',
-      `${t.deals.subtotal}: ${fmt(subtotal)}`,
-      `${t.deals.discount}: -${fmt(totalDiscount)}`,
-      `${t.deals.vatPercent} (${vatPercent}%): ${fmt(vatAmount)}`,
-      `${t.common.total}: ${fmt(grandTotal)}`,
-    ]
-    const pdfBase64 = buildSimplePdfBase64(pdfLines)
+    const pdf = await generateQuotePdfAttachment()
     onComposeQuoteDraft({
       to: contactEmail ?? '',
       subject: `Quote - ${dealTitle}`,
       body,
       attachments: [{
-        name: `${quoteNumber}.pdf`,
-        mimeType: 'application/pdf',
-        size: Math.ceil((pdfBase64.length * 3) / 4),
-        dataBase64: pdfBase64,
+        name: pdf.fileName,
+        mimeType: pdf.mimeType,
+        size: pdf.size,
+        dataBase64: pdf.dataBase64,
       }],
     })
   }
@@ -375,6 +448,12 @@ function QuoteBuilder({
                       title={t.common.name}
                       className="w-full bg-transparent border-b border-white/10 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand-500/50 py-0.5"
                     />
+                    <textarea
+                      value={item.description ?? ''}
+                      onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                      placeholder={t.deals.lineDescriptionPlaceholder}
+                      className="w-full mt-1 bg-transparent border border-white/10 rounded px-1.5 py-1 text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-brand-500/50 min-h-[42px]"
+                    />
                   </td>
                   <td className="py-1.5 px-1">
                     <input
@@ -428,17 +507,27 @@ function QuoteBuilder({
           <div className="flex justify-between text-slate-500">
             <span>{t.deals.subtotal}</span><span>{fmt(subtotal)}</span>
           </div>
-          {totalDiscount > 0 && (
+          {lineDiscount > 0 && (
             <div className="flex justify-between text-amber-400">
-              <span>{t.deals.discount}</span><span>-{fmt(totalDiscount)}</span>
+              <span>{t.deals.discount} ({t.common.details})</span><span>-{fmt(lineDiscount)}</span>
+            </div>
+          )}
+          {globalDiscountAmount > 0 && (
+            <div className="flex justify-between text-amber-400">
+              <span>{t.deals.discount} ({globalDiscountPercent}%)</span><span>-{fmt(globalDiscountAmount)}</span>
             </div>
           )}
           <div className="flex justify-between text-white font-bold text-sm pt-1 border-t border-white/6">
-            <span>{t.common.total}</span><span>{fmt(total)}</span>
+            <span>{t.deals.taxableBase}</span><span>{fmt(baseTaxable)}</span>
           </div>
           <div className="flex justify-between text-slate-400">
             <span>{t.deals.vatPercent} ({vatPercent}%)</span><span>{fmt(vatAmount)}</span>
           </div>
+          {withholdingAmount > 0 && (
+            <div className="flex justify-between text-slate-400">
+              <span>{t.deals.withholdingPercent} ({withholdingPercent}%)</span><span>-{fmt(withholdingAmount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-emerald-400 font-semibold text-sm">
             <span>{t.common.total}</span><span>{fmt(grandTotal)}</span>
           </div>
@@ -447,6 +536,17 @@ function QuoteBuilder({
 
       {/* Commercial metadata */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <select
+          value={documentType}
+          onChange={(e) => setDocumentType(e.target.value as QuoteDocumentType)}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+          aria-label={t.deals.documentType}
+          title={t.deals.documentType}
+        >
+          <option value="quote">{t.deals.documentTypeQuote}</option>
+          <option value="invoice">{t.deals.documentTypeInvoice}</option>
+          <option value="proforma">{t.deals.documentTypeProforma}</option>
+        </select>
         <input
           type="text"
           value={quoteNumber}
@@ -476,6 +576,114 @@ function QuoteBuilder({
           aria-label={t.deals.validityDays}
           title={t.deals.validityDays}
           placeholder={t.deals.validityDays}
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input
+          type="text"
+          value={clientTaxId}
+          onChange={(e) => setClientTaxId(e.target.value)}
+          placeholder={t.deals.clientTaxIdPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="text"
+          value={contactPerson}
+          onChange={(e) => setContactPerson(e.target.value)}
+          placeholder={t.deals.contactPersonPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="text"
+          value={clientAddress}
+          onChange={(e) => setClientAddress(e.target.value)}
+          placeholder={t.deals.clientAddressPlaceholder}
+          className="sm:col-span-2 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={globalDiscountPercent}
+          onChange={(e) => setGlobalDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+          placeholder={t.deals.globalDiscountPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="number"
+          min={0}
+          max={100}
+          value={withholdingPercent}
+          onChange={(e) => setWithholdingPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+          placeholder={t.deals.withholdingPercent}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="number"
+          min={0}
+          value={paymentDays}
+          onChange={(e) => setPaymentDays(Math.max(0, Number(e.target.value)))}
+          placeholder={t.deals.paymentDaysPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input
+          type="text"
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+          placeholder={t.deals.paymentMethodPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="text"
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          placeholder={t.deals.referencePlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="text"
+          value={bankName}
+          onChange={(e) => setBankName(e.target.value)}
+          placeholder={t.deals.bankNamePlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="text"
+          value={bankIban}
+          onChange={(e) => setBankIban(e.target.value)}
+          placeholder={t.deals.ibanPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+        <input
+          type="text"
+          value={accountHolder}
+          onChange={(e) => setAccountHolder(e.target.value)}
+          placeholder={t.deals.accountHolderPlaceholder}
+          className="sm:col-span-2 bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        <textarea
+          value={lateFeeClause}
+          onChange={(e) => setLateFeeClause(e.target.value)}
+          placeholder={t.deals.lateFeeClausePlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white min-h-[60px]"
+        />
+        <textarea
+          value={acceptanceClause}
+          onChange={(e) => setAcceptanceClause(e.target.value)}
+          placeholder={t.deals.acceptanceClausePlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white min-h-[60px]"
+        />
+        <textarea
+          value={additionalNotes}
+          onChange={(e) => setAdditionalNotes(e.target.value)}
+          placeholder={t.deals.additionalNotesPlaceholder}
+          className="bg-[#0d0e1a] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white min-h-[60px]"
         />
       </div>
 

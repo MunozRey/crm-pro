@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Download, Upload, RotateCcw, Tag, Mail, Wifi, WifiOff, FileSpreadsheet, SlidersHorizontal, Pencil, X, Check, Globe, Activity, RefreshCw, ShieldAlert, Lock, Bold, Italic, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
@@ -27,6 +28,9 @@ import { useTranslations, useI18nStore, LANGUAGE_LABELS, LANGUAGE_FLAGS } from '
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
 import { useAuditStore } from '../store/auditStore'
+import { useNavigationPrefsStore } from '../store/navigationPrefsStore'
+import type { NavigationPreferences, SidebarBuiltinItemId, SidebarCustomGroup, SidebarIconKey, SidebarSectionId } from '../types/navigation'
+import { createDefaultNavigationPreferences } from '../config/navigationDefaults'
 import type { Language } from '../i18n'
 import type { DealCurrency, CustomFieldEntityType, CustomFieldType, PipelineStage } from '../types'
 import type { NotificationType } from '../types'
@@ -39,8 +43,21 @@ const FIELD_TYPES: CustomFieldType[] = [
   'checkbox', 'url', 'email', 'currency', 'textarea',
 ]
 
+type SettingsTab = 'general' | 'branding' | 'pipeline' | 'email' | 'permissions' | 'data' | 'navigation' | 'advanced'
+
 export function Settings() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = useTranslations()
+  const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
+    { id: 'general', label: t.settings.tabGeneral },
+    { id: 'branding', label: t.settings.tabBranding },
+    { id: 'pipeline', label: t.settings.tabPipeline },
+    { id: 'email', label: t.settings.tabEmail },
+    { id: 'permissions', label: t.settings.tabPermissions },
+    { id: 'data', label: t.settings.tabData },
+    { id: 'navigation', label: t.settings.tabNavigation },
+    { id: 'advanced', label: t.settings.tabAdvanced },
+  ]
   const { language, setLanguage } = useI18nStore()
   const { settings, updateThemePreference, updateCurrency, updateLeadSlaHours, updatePermissionProfile, updateBranding, updateGoogleClientId, addTag, removeTag, resetToDefaults, reorderStages, addPipelineStage } = useSettingsStore()
   const { disabledTypes, toggleType } = useNotificationsStore()
@@ -50,6 +67,15 @@ export function Settings() {
   const activitiesStore = useActivitiesStore()
   const { isGmailConnected, gmailAddress, disconnectGmail, syncState, threadsLastSyncedAt, lastSyncErrorMessage } = useEmailStore()
   const orgUsers = useAuthStore((s) => s.users)
+  const navPrefs = useNavigationPrefsStore((s) => s.preferences)
+  const updateNavPrefs = useNavigationPrefsStore((s) => s.updatePreferences)
+  const resetNavPrefs = useNavigationPrefsStore((s) => s.resetPreferences)
+  const activeTab = (searchParams.get('tab') as SettingsTab | null) ?? 'general'
+  const setActiveTab = (tab: SettingsTab) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', tab)
+    setSearchParams(next, { replace: true })
+  }
 
   // ── Custom Fields state (manual subscription — persisted store) ────────────
   const [cfDefinitions, setCfDefinitions] = useState(() => useCustomFieldsStore.getState().definitions)
@@ -102,14 +128,14 @@ export function Settings() {
 
   const cfHandleSave = () => {
     const trimmedLabel = cfLabel.trim()
-    if (!trimmedLabel) { toast.error(t.settings.fieldName + ' required'); return }
+    if (!trimmedLabel) { toast.error(`${t.settings.fieldName} ${t.settings.required}`); return }
 
     const optionsArray = ['select', 'multiselect'].includes(cfFieldType)
       ? cfOptions.split('\n').map((o) => o.trim()).filter(Boolean)
       : undefined
 
     if (['select', 'multiselect'].includes(cfFieldType) && (!optionsArray || optionsArray.length === 0)) {
-      toast.error(t.settings.options + ' required')
+      toast.error(`${t.settings.options} ${t.settings.required}`)
       return
     }
 
@@ -294,6 +320,49 @@ export function Settings() {
   }
 
   const rolePermissions = settings.permissionProfiles?.[rbacRole] ?? []
+  const permissionGroups = useMemo(() => {
+    const preferredOrder = ['contacts', 'companies', 'deals', 'activities', 'email', 'reports', 'templates', 'sequences', 'products', 'automations', 'goals', 'users', 'custom_fields', 'settings', 'audit', 'import', 'ai']
+    const grouped = new Map<string, Permission[]>()
+    for (const permission of ALL_PERMISSIONS) {
+      const [resource] = permission.split(':')
+      const list = grouped.get(resource) ?? []
+      list.push(permission)
+      grouped.set(resource, list)
+    }
+    const labels: Record<string, string> = {
+      contacts: t.nav.contacts,
+      companies: t.nav.companies,
+      deals: t.nav.deals,
+      activities: t.nav.activities,
+      email: t.nav.inbox,
+      reports: t.nav.reports,
+      templates: t.nav.templates,
+      sequences: t.nav.sequences,
+      products: t.nav.products,
+      automations: t.nav.automations,
+      goals: t.nav.goals,
+      users: t.settings.users,
+      custom_fields: t.settings.customFields,
+      settings: t.nav.settings,
+      audit: t.nav.audit,
+      import: t.settings.importExport,
+      ai: t.nav.aiAssistant,
+    }
+    return Array.from(grouped.entries())
+      .sort((a, b) => {
+        const ai = preferredOrder.indexOf(a[0])
+        const bi = preferredOrder.indexOf(b[0])
+        if (ai === -1 && bi === -1) return a[0].localeCompare(b[0])
+        if (ai === -1) return 1
+        if (bi === -1) return -1
+        return ai - bi
+      })
+      .map(([resource, permissions]) => ({
+        resource,
+        label: labels[resource] ?? resource.replace('_', ' '),
+        permissions,
+      }))
+  }, [t])
 
   const handleTogglePermission = (permission: Permission) => {
     const current = settings.permissionProfiles?.[rbacRole] ?? []
@@ -319,6 +388,15 @@ export function Settings() {
       customDomain: brandingDraft.customDomain?.trim() || undefined,
       privacyUrl: brandingDraft.privacyUrl?.trim() || undefined,
       termsUrl: brandingDraft.termsUrl?.trim() || undefined,
+      legalName: brandingDraft.legalName?.trim() || undefined,
+      taxId: brandingDraft.taxId?.trim() || undefined,
+      addressLine1: brandingDraft.addressLine1?.trim() || undefined,
+      postalCode: brandingDraft.postalCode?.trim() || undefined,
+      city: brandingDraft.city?.trim() || undefined,
+      country: brandingDraft.country?.trim() || undefined,
+      billingEmail: brandingDraft.billingEmail?.trim() || undefined,
+      billingPhone: brandingDraft.billingPhone?.trim() || undefined,
+      quoteFooter: brandingDraft.quoteFooter?.trim() || undefined,
     })
     toast.success(t.common.save + ' ✓')
   }
@@ -361,6 +439,15 @@ export function Settings() {
       customDomain: undefined,
       privacyUrl: undefined,
       termsUrl: undefined,
+      legalName: undefined,
+      taxId: undefined,
+      addressLine1: undefined,
+      postalCode: undefined,
+      city: undefined,
+      country: undefined,
+      billingEmail: undefined,
+      billingPhone: undefined,
+      quoteFooter: undefined,
     })
     toast.success(t.settings.resetBranding)
   }
@@ -519,11 +606,83 @@ export function Settings() {
     return `${days}${t.settings.leadOpsDaysAgo}`
   }
 
+  const tabVisible = (...tabs: SettingsTab[]) => tabs.includes(activeTab)
+
+  const sectionOptions: Array<{ id: SidebarSectionId; label: string }> = [
+    { id: 'main', label: t.navSections.main },
+    { id: 'sales', label: t.navSections.sales },
+    { id: 'comms', label: t.navSections.comms },
+    { id: 'config', label: t.navSections.config },
+  ]
+
+  const ICON_OPTIONS: SidebarIconKey[] = ['bookmark', 'flame', 'handshake', 'cloud', 'trending-up', 'settings', 'workflow', 'bar-chart-3']
+
+  const moveSection = (sectionId: SidebarSectionId, direction: -1 | 1) => {
+    void updateNavPrefs((current) => {
+      const idx = current.sectionOrder.indexOf(sectionId)
+      if (idx < 0) return current
+      const nextIndex = idx + direction
+      if (nextIndex < 0 || nextIndex >= current.sectionOrder.length) return current
+      const nextOrder = [...current.sectionOrder]
+      const [moved] = nextOrder.splice(idx, 1)
+      nextOrder.splice(nextIndex, 0, moved)
+      return { ...current, sectionOrder: nextOrder }
+    })
+  }
+
+  const moveBuiltinItem = (section: SidebarSectionId, itemId: SidebarBuiltinItemId, direction: -1 | 1) => {
+    void updateNavPrefs((current) => {
+      const source = current.itemOrderBySection[section]
+      const idx = source.indexOf(itemId)
+      if (idx < 0) return current
+      const nextIndex = idx + direction
+      if (nextIndex < 0 || nextIndex >= source.length) return current
+      const nextOrder = [...source]
+      const [moved] = nextOrder.splice(idx, 1)
+      nextOrder.splice(nextIndex, 0, moved)
+      return {
+        ...current,
+        itemOrderBySection: { ...current.itemOrderBySection, [section]: nextOrder },
+      }
+    })
+  }
+
+  const addCustomGroup = () => {
+    void updateNavPrefs((current) => {
+      const group: SidebarCustomGroup = {
+        id: `grp-${Date.now().toString(36)}`,
+        label: t.settings.navNewGroup,
+        iconKey: 'bookmark',
+        order: current.customGroups.length,
+        items: [],
+      }
+      return { ...current, customGroups: [...current.customGroups, group] }
+    })
+  }
+
   return (
     <div className="p-6 space-y-8">
+      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-3">
+        <div className="flex gap-2 flex-wrap">
+          {SETTINGS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                activeTab === tab.id
+                  ? 'bg-brand-500 border-brand-500 text-white shadow-brand-sm'
+                  : 'bg-white/4 border-white/8 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* ── Language Selector ──────────────────────────────────────────── */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('general') ? '' : 'hidden'}`}>
         <div className="flex items-center gap-2 mb-4">
           <div className="w-7 h-7 rounded-lg bg-sky-500/20 flex items-center justify-center">
             <Globe size={14} className="text-sky-400" />
@@ -565,7 +724,7 @@ export function Settings() {
         </div>
       </section>
 
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('email') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-3">{t.settings.emailProviderHealth}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="p-3 rounded-xl bg-white/4 border border-white/8">
@@ -584,7 +743,7 @@ export function Settings() {
       </section>
 
       {/* ── Gmail Configuration ──────────────────────────────────────────── */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('email') ? '' : 'hidden'}`}>
         <div className="flex items-center gap-2 mb-4">
           <div className="w-7 h-7 rounded-lg bg-red-500/20 flex items-center justify-center">
             <Mail size={14} className="text-red-400" />
@@ -639,7 +798,7 @@ export function Settings() {
         )}
       </section>
 
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('email') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-3">{t.settings.emailSignatures}</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -724,7 +883,7 @@ export function Settings() {
       </section>
 
       {/* ── Custom Fields ────────────────────────────────────────────────────── */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('data') ? '' : 'hidden'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center">
@@ -936,7 +1095,7 @@ export function Settings() {
       </section>
 
       {/* Currency */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('general') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-4">{t.settings.currency}</h2>
         <Select
           label={t.settings.currency}
@@ -952,7 +1111,7 @@ export function Settings() {
       </section>
 
       {/* Branding */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('branding') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-4">{t.settings.branding}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Input
@@ -989,6 +1148,52 @@ export function Settings() {
             onChange={(e) => setBrandingDraft((prev) => ({ ...prev, termsUrl: e.target.value }))}
             placeholder="https://yourcompany.com/terms"
           />
+          <Input
+            label={t.settings.legalCompanyName}
+            value={brandingDraft.legalName ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, legalName: e.target.value }))}
+          />
+          <Input
+            label={t.settings.taxIdVat}
+            value={brandingDraft.taxId ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, taxId: e.target.value }))}
+          />
+          <Input
+            label={t.settings.addressLine1}
+            value={brandingDraft.addressLine1 ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, addressLine1: e.target.value }))}
+          />
+          <Input
+            label={t.settings.postalCode}
+            value={brandingDraft.postalCode ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, postalCode: e.target.value }))}
+          />
+          <Input
+            label={t.companies.city}
+            value={brandingDraft.city ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, city: e.target.value }))}
+          />
+          <Input
+            label={t.companies.country}
+            value={brandingDraft.country ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, country: e.target.value }))}
+          />
+          <Input
+            label={t.settings.billingEmail}
+            value={brandingDraft.billingEmail ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, billingEmail: e.target.value }))}
+          />
+          <Input
+            label={t.settings.billingPhone}
+            value={brandingDraft.billingPhone ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, billingPhone: e.target.value }))}
+          />
+          <Input
+            label={t.settings.quoteFooter}
+            value={brandingDraft.quoteFooter ?? ''}
+            onChange={(e) => setBrandingDraft((prev) => ({ ...prev, quoteFooter: e.target.value }))}
+            placeholder={t.settings.quoteFooterPlaceholder}
+          />
         </div>
         <div className="mt-3 flex gap-2">
           <Button size="sm" onClick={handleSaveBranding}>{t.common.save}</Button>
@@ -997,7 +1202,7 @@ export function Settings() {
       </section>
 
       {/* Pipeline Stages */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('pipeline') ? '' : 'hidden'}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-white">{t.settings.pipeline}</h2>
           <Button size="sm" leftIcon={<Plus size={13} />} onClick={handleAddPipelineStage}>
@@ -1107,7 +1312,7 @@ export function Settings() {
       </section>
 
       {/* Tags */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('general') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-4">{t.settings.tags}</h2>
         <div className="flex gap-2 mb-4">
           <Input
@@ -1139,11 +1344,11 @@ export function Settings() {
       </section>
 
       {/* Users */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('permissions') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-4">{t.settings.users}</h2>
         <div className="space-y-3">
           {usersForSettings.map((user) => (
-            <div key={user.id} className="flex items-center gap-3 p-3 bg-white/4 rounded-xl">
+            <div key={user.id} className="flex items-center gap-3 p-3 rounded-xl border border-brand-500/20 bg-brand-500/10">
               <Avatar name={user.name} size="sm" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-slate-200">{user.name}</p>
@@ -1157,9 +1362,9 @@ export function Settings() {
       </section>
 
       {/* Permission Profiles */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
-        <h2 className="text-base font-semibold text-white mb-2">{t.settings.permissionProfiles}</h2>
-        <p className="text-xs text-slate-500 mb-4">{t.settings.permissionProfilesHint}</p>
+      <section className={`bg-white border border-slate-200 rounded-2xl p-6 shadow-sm ${tabVisible('permissions') ? '' : 'hidden'}`}>
+        <h2 className="text-base font-semibold text-slate-900 mb-2">{t.settings.permissionProfiles}</h2>
+        <p className="text-xs text-slate-600 mb-4">{t.settings.permissionProfilesHint}</p>
         <div className="max-w-xs mb-4">
           <Select
             label={t.team.role}
@@ -1173,26 +1378,43 @@ export function Settings() {
             ]}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-          {ALL_PERMISSIONS.map((permission) => {
-            const active = rolePermissions.includes(permission)
-            return (
-              <label key={permission} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors ${active ? 'border-brand-500/40 bg-brand-500/10 text-brand-200' : 'border-white/8 bg-white/3 text-slate-400'}`}>
-                <input
-                  type="checkbox"
-                  checked={active}
-                  onChange={() => handleTogglePermission(permission)}
-                  className="accent-brand-500"
-                />
-                <span>{permission}</span>
-              </label>
-            )
-          })}
+        <div className="space-y-3">
+          {permissionGroups.map((group) => (
+            <div key={group.resource} className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-900">{group.label}</h3>
+                <span className="text-[11px] text-slate-600">{group.permissions.length}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                {group.permissions.map((permission) => {
+                  const active = rolePermissions.includes(permission)
+                  const [, action = permission] = permission.split(':')
+                  const actionLabel = t.settings.permissionActionLabels[action as keyof typeof t.settings.permissionActionLabels]
+                  return (
+                    <label key={permission} className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs transition-colors ${active ? 'border-brand-500/40 bg-brand-500/10 text-slate-900' : 'border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100'}`}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={() => handleTogglePermission(permission)}
+                          className="accent-brand-500"
+                        />
+                        <span className="truncate">{actionLabel ?? action.replace('_', ' ').toUpperCase()}</span>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${active ? 'border-brand-500/40 text-brand-700 bg-brand-50' : 'border-slate-300 text-slate-600 bg-white'}`}>
+                        {active ? t.common.enabled : t.common.disabled}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Data Management */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('data') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-2">{t.settings.importExport}</h2>
         <p className="text-xs text-slate-500 mb-4">{t.settings.exportData} / {t.settings.importData}</p>
         <div className="flex flex-wrap gap-3">
@@ -1220,7 +1442,7 @@ export function Settings() {
       </section>
 
       {/* Notification Preferences */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('permissions') ? '' : 'hidden'}`}>
         <h2 className="text-base font-semibold text-white mb-1">{t.settings.notifications}</h2>
         <p className="text-xs text-slate-500 mb-4">{t.common.enabled} / {t.common.disabled}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1240,7 +1462,7 @@ export function Settings() {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                   enabled ? 'bg-brand-500/20 text-brand-300' : 'bg-white/8 text-slate-600'
                 }`}>
-                  {enabled ? 'ON' : 'OFF'}
+                  {enabled ? t.common.enabled : t.common.disabled}
                 </span>
               </button>
             )
@@ -1248,8 +1470,219 @@ export function Settings() {
         </div>
       </section>
 
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('navigation') ? '' : 'hidden'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">{t.settings.navEditorTitle}</h2>
+            <p className="text-xs text-slate-500">{t.settings.navEditorSubtitle}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={addCustomGroup}>{t.settings.navNewGroup}</Button>
+            <Button size="sm" variant="ghost" onClick={() => { void resetNavPrefs() }}>{t.settings.navReset}</Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t.settings.navBaseSections}</p>
+            {sectionOptions.map((section) => {
+              const hidden = navPrefs.hiddenSections.includes(section.id)
+              return (
+                <div key={section.id} className="p-3 rounded-xl bg-white/4 border border-white/8 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm text-slate-200">{section.label}</p>
+                    <div className="flex items-center gap-1">
+                      <button className="px-2 py-1 text-xs rounded border border-white/10 text-slate-400" onClick={() => moveSection(section.id, -1)}>↑</button>
+                      <button className="px-2 py-1 text-xs rounded border border-white/10 text-slate-400" onClick={() => moveSection(section.id, 1)}>↓</button>
+                      <button
+                        className={`px-2 py-1 text-xs rounded border ${hidden ? 'border-red-500/30 text-red-300' : 'border-emerald-500/30 text-emerald-300'}`}
+                        onClick={() => {
+                          void updateNavPrefs((current) => ({
+                            ...current,
+                            hiddenSections: hidden
+                              ? current.hiddenSections.filter((id) => id !== section.id)
+                              : [...current.hiddenSections, section.id],
+                          }))
+                        }}
+                      >
+                        {hidden ? t.settings.navSectionHidden : t.settings.navSectionVisible}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    {(navPrefs.itemOrderBySection[section.id] ?? createDefaultNavigationPreferences().itemOrderBySection[section.id]).map((itemId) => {
+                      const itemHidden = navPrefs.hiddenBuiltinItems.includes(itemId)
+                      return (
+                        <div key={itemId} className="flex items-center justify-between text-xs text-slate-400 bg-[#0d0e1a] border border-white/10 rounded-lg px-2 py-1.5">
+                          <span>{itemId}</span>
+                          <div className="flex gap-1">
+                            <button className="px-1.5 py-0.5 border border-white/12 rounded" onClick={() => moveBuiltinItem(section.id, itemId, -1)}>↑</button>
+                            <button className="px-1.5 py-0.5 border border-white/12 rounded" onClick={() => moveBuiltinItem(section.id, itemId, 1)}>↓</button>
+                            <button
+                              className={`px-1.5 py-0.5 border rounded ${itemHidden ? 'border-red-500/30 text-red-300' : 'border-emerald-500/30 text-emerald-300'}`}
+                              onClick={() => {
+                                void updateNavPrefs((current) => ({
+                                  ...current,
+                                  hiddenBuiltinItems: itemHidden
+                                    ? current.hiddenBuiltinItems.filter((id) => id !== itemId)
+                                    : [...current.hiddenBuiltinItems, itemId],
+                                }))
+                              }}
+                            >
+                              {itemHidden ? t.common.disabled : t.common.enabled}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t.settings.navCustomGroups}</p>
+            {navPrefs.customGroups.length === 0 && (
+              <p className="text-xs text-slate-500">{t.settings.navNoCustomGroups}</p>
+            )}
+            {navPrefs.customGroups.map((group, index) => (
+              <div key={group.id} className="p-3 rounded-xl bg-white/4 border border-white/8 space-y-2">
+                <Input
+                  label={t.settings.navGroupName}
+                  value={group.label}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    void updateNavPrefs((current) => ({
+                      ...current,
+                      customGroups: current.customGroups.map((g) => g.id === group.id ? { ...g, label: value } : g),
+                    }))
+                  }}
+                />
+                <Select
+                  label={t.settings.navGroupIcon}
+                  value={group.iconKey ?? 'bookmark'}
+                  onChange={(e) => {
+                    const value = e.target.value as SidebarIconKey
+                    void updateNavPrefs((current) => ({
+                      ...current,
+                      customGroups: current.customGroups.map((g) => g.id === group.id ? { ...g, iconKey: value } : g),
+                    }))
+                  }}
+                  options={ICON_OPTIONS.map((icon) => ({ value: icon, label: icon }))}
+                />
+                <div className="text-xs text-slate-400">{t.settings.navItemsCount}: {group.items.length}</div>
+                <div className="flex gap-2 flex-wrap">
+                  <span className="text-[11px] text-slate-500 w-full">{t.settings.navRoleRules}</span>
+                  {(['admin', 'manager', 'sales_rep', 'viewer'] as UserRole[]).map((role) => {
+                    const active = group.roleRules?.includes(role) ?? false
+                    return (
+                      <button
+                        key={role}
+                        className={`px-2 py-1 rounded border text-[11px] ${active ? 'border-brand-500/40 text-brand-200' : 'border-white/12 text-slate-500'}`}
+                        onClick={() => {
+                          void updateNavPrefs((current) => ({
+                            ...current,
+                            customGroups: current.customGroups.map((g) => {
+                              if (g.id !== group.id) return g
+                              const roleRules = g.roleRules ?? []
+                              return {
+                                ...g,
+                                roleRules: active ? roleRules.filter((r) => r !== role) : [...roleRules, role],
+                              }
+                            }),
+                          }))
+                        }}
+                      >
+                        {role}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    onClick={() => {
+                      void updateNavPrefs((current) => ({
+                        ...current,
+                        customGroups: current.customGroups.map((g) => g.id === group.id ? {
+                          ...g,
+                          items: [...g.items, { id: `item-${Date.now().toString(36)}`, label: t.settings.navAddLink, to: '/settings' }],
+                        } : g),
+                      }))
+                    }}
+                  >
+                    {t.settings.navAddLink}
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => {
+                      void updateNavPrefs((current) => ({
+                        ...current,
+                        customGroups: current.customGroups
+                          .filter((g) => g.id !== group.id)
+                          .map((g, idx) => ({ ...g, order: idx })),
+                      }))
+                    }}
+                  >
+                    {t.settings.navDeleteGroup}
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => {
+                      if (index === 0) return
+                      void updateNavPrefs((current) => {
+                        const next = [...current.customGroups]
+                        const [moved] = next.splice(index, 1)
+                        next.splice(index - 1, 0, moved)
+                        return { ...current, customGroups: next.map((g, idx) => ({ ...g, order: idx })) }
+                      })
+                    }}
+                  >
+                    {t.settings.navMoveUp}
+                  </Button>
+                </div>
+                {group.items.map((item) => (
+                  <div key={item.id} className="p-2 bg-[#0d0e1a] border border-white/10 rounded-lg space-y-2">
+                    <Input
+                      label={t.settings.navLabel}
+                      value={item.label}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        void updateNavPrefs((current) => ({
+                          ...current,
+                          customGroups: current.customGroups.map((g) => g.id === group.id
+                            ? { ...g, items: g.items.map((it) => it.id === item.id ? { ...it, label: value } : it) }
+                            : g),
+                        }))
+                      }}
+                    />
+                    <Input
+                      label={t.settings.navRoute}
+                      value={item.to ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        void updateNavPrefs((current) => ({
+                          ...current,
+                          customGroups: current.customGroups.map((g) => g.id === group.id
+                            ? { ...g, items: g.items.map((it) => it.id === item.id ? { ...it, to: value } : it) }
+                            : g),
+                        }))
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Lead Maintenance Ops */}
-      <section className="bg-navy-800/60 border border-white/8 rounded-2xl p-6">
+      <section className={`bg-navy-800/60 border border-white/8 rounded-2xl p-6 ${tabVisible('advanced') ? '' : 'hidden'}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isSlaBreached ? 'bg-amber-500/20' : 'bg-emerald-500/20'}`}>

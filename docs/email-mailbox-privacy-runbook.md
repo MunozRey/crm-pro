@@ -2,6 +2,13 @@
 
 This runbook helps support and operations teams validate and troubleshoot per-user mailbox privacy in CRM Pro.
 
+## Document Control
+
+- Status: Active
+- Owner: Support/Ops
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Scope
 
 - Inbox visibility for local CRM emails (`sent`, `scheduled`)

@@ -2,6 +2,13 @@
 
 This CRM now supports three theme preferences:
 
+## Document Control
+
+- Status: Active
+- Owner: Frontend
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 - `system` (default): follows OS/browser preference.
 - `light`: always light mode.
 - `dark`: always dark mode.

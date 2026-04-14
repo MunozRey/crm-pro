@@ -2,6 +2,15 @@
 
 This roadmap starts from the current implemented baseline and prioritizes features that move the product closer to HubSpot/Pipedrive-level value.
 
+> Status refresh (2026-04-14): Navigation customization, full core i18n pack, and sell-ready baseline artifacts are already shipped. This roadmap tracks what remains after those deliveries.
+
+## Document Control
+
+- Status: Active
+- Owner: Product
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## 0-30 days (Revenue + execution fundamentals)
 
 ### Objective

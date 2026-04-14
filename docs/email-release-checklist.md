@@ -2,6 +2,13 @@
 
 Use this checklist before promoting CRM email changes to production.
 
+## Document Control
+
+- Status: Active
+- Owner: QA/Ops
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Functional checks
 
 - [ ] Compose flow works for `to`, `cc`, `bcc`, `reply-to`.

@@ -2,6 +2,13 @@
 
 Team register: what was implemented, how it works technically, what is covered for day-to-day use, and what remains for a “complete” model.
 
+## Document Control
+
+- Status: Active
+- Owner: Auth/Frontend
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ---
 
 ## 1. Problem we addressed

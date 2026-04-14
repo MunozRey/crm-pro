@@ -2,6 +2,13 @@
 
 Use this checklist before shipping a "sell-ready" baseline release.
 
+## Document Control
+
+- Status: Active
+- Owner: Product/QA
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Scope and Planning
 
 - [x] Version/tag and release window confirmed.

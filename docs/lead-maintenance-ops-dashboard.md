@@ -2,6 +2,13 @@
 
 This document describes the operational dashboard added to `Settings` for lead score maintenance observability.
 
+## Document Control
+
+- Status: Active
+- Owner: Ops/Frontend
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Goal
 
 Provide tenant-scoped operational visibility without requiring direct access to Supabase Dashboard.

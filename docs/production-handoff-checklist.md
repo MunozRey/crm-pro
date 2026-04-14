@@ -2,6 +2,13 @@
 
 This checklist is the operational handoff for go-live and post-go-live stabilization.
 
+## Document Control
+
+- Status: Active
+- Owner: Ops/Engineering
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## 1) Pre-Go-Live (T-7 to T-1 days)
 
 - [ ] **Environment Variables**

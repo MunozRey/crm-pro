@@ -2,6 +2,13 @@
 
 This document defines how backend jobs can execute lead score maintenance without requiring an end-user session.
 
+## Document Control
+
+- Status: Active
+- Owner: Backend
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Edge Function
 
 - Function name: `lead-score-maintenance`

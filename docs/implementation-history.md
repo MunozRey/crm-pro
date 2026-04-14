@@ -3,6 +3,13 @@
 This document consolidates the major implementation work completed in this repository so far.
 It is intended as the canonical handoff artifact for product, frontend, backend, and operations teams.
 
+## Document Control
+
+- Status: Active
+- Owner: Engineering
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## 1) Platform and foundation
 
 - React + TypeScript + Vite application architecture consolidated.
@@ -218,6 +225,23 @@ It is intended as the canonical handoff artifact for product, frontend, backend,
 - Legacy data continuity path added:
   - `backfill_email_tracking_user(text[])` RPC claims old tracking rows (`user_id IS NULL`)
     for the authenticated user in the active organization.
+
+## 16) Navigation pack (Settings tabs + customizable sidebar)
+
+- Settings now supports internal tab navigation with deep-link query params:
+  - `general`, `branding`, `pipeline`, `email`, `permissions`, `data`, `navigation`, `advanced`.
+- Sidebar moved toward a declarative renderer based on persisted preferences.
+- Navigation preferences model added with sanitizer + defaults:
+  - `sectionOrder`, `hiddenSections`, `itemOrderBySection`, `hiddenBuiltinItems`, `customGroups`.
+- New preference store added with boot-time loading in app init flow.
+- Advanced sidebar editor integrated into `Settings > Navigation` for:
+  - section/item ordering and visibility
+  - custom groups
+  - role-based visibility
+  - submenu-ready custom items.
+- Supabase persistence path introduced via `navigation_preferences` (organization + user scoped).
+- Canonical technical/deployment runbook:
+  - `docs/navigation-settings-sidebar-runbook.md`.
 - Support/ops runbook added:
   - `docs/email-mailbox-privacy-runbook.md`.
 - Email release gate checklist added:
@@ -225,7 +249,7 @@ It is intended as the canonical handoff artifact for product, frontend, backend,
 - Guided smoke validation script added:
   - `docs/email-smoke-test-15min.md` for QA/support reproducible verification.
 
-## 16) Email Ola 3 (productivity + reliability visibility)
+## 17) Email Ola 3 (productivity + reliability visibility)
 
 - Inbox advanced filters expanded with high-impact operators:
   - attachment-only

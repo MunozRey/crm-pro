@@ -1,5 +1,12 @@
 # Go/No-Go Review - Sell-Ready Baseline
 
+## Document Control
+
+- Status: Active
+- Owner: Product/Engineering
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Decision
 
 - Decision: **GO (internal/beta rollout)**

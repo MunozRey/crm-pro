@@ -2,6 +2,13 @@
 
 Fill this document for each release candidate.
 
+## Document Control
+
+- Status: Active
+- Owner: QA
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Build Metadata
 
 - Release candidate:

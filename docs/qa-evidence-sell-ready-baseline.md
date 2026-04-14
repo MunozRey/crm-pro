@@ -1,5 +1,12 @@
 # QA Evidence - Sell-Ready Baseline
 
+## Document Control
+
+- Status: Active
+- Owner: QA/Engineering
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Build Metadata
 
 - Release candidate: `sell-ready-baseline-rc1`

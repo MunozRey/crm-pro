@@ -2,6 +2,13 @@
 
 Purpose: quick manual validation for Inbox + tracking + per-user privacy before release.
 
+## Document Control
+
+- Status: Active
+- Owner: QA/Support
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Preconditions (2 min)
 
 - Two active users in the same organization (`User A`, `User B`).

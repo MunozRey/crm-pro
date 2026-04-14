@@ -2,6 +2,15 @@
 
 This is the actionable backlog derived from the 30/60/90 roadmap.
 
+> Status refresh (2026-04-14): This board was aligned with the current shipped baseline and the docs index in `docs/README.md`. Keep this file focused on remaining work, and move completed tracks to `docs/implementation-history.md`.
+
+## Document Control
+
+- Status: Active
+- Owner: Product/Engineering
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## In progress now
 
 - [x] Workflow Automations v1
@@ -39,6 +48,13 @@ This is the actionable backlog derived from the 30/60/90 roadmap.
   - [x] Inbox advanced filters + saved views
   - [x] Inbox sync status indicators + provider health panel
   - [x] Quick replies/snippets persisted per user (`quick_replies`)
+- [x] Navigation Pack (Settings + Sidebar)
+  - [x] Settings tabbed navigation with URL deep-link (`?tab=...`)
+  - [x] Declarative sidebar rendering from user preferences
+  - [x] Navigation sanitizer + defaults + runtime fallback
+  - [x] Advanced navigation editor (`Settings > Navigation`)
+  - [x] Supabase persistence model (`navigation_preferences`)
+  - [x] Technical runbook (`docs/navigation-settings-sidebar-runbook.md`)
 
 ## Reference docs (team register)
 

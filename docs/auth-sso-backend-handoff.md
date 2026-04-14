@@ -2,6 +2,13 @@
 
 This project is ready to integrate backend-managed SSO for Google, Azure, Apple, and SAML 2.0.
 
+## Document Control
+
+- Status: Active
+- Owner: Backend/Auth
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Frontend contract already implemented
 
 - OAuth buttons call Supabase directly:

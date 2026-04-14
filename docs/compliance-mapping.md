@@ -3,6 +3,13 @@
 This document maps current CRM Pro controls to common enterprise compliance expectations.
 It is a pragmatic engineering mapping (not legal advice and not a formal certification artifact).
 
+## Document Control
+
+- Status: Active
+- Owner: Security/Backend/Ops
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Scope
 
 - Application: CRM Pro

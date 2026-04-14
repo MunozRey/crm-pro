@@ -2,6 +2,13 @@
 
 This runbook is for on-call and operations teams maintaining lead score maintenance in production.
 
+## Document Control
+
+- Status: Active
+- Owner: Ops
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Scope
 
 - Edge Function: `lead-score-maintenance`

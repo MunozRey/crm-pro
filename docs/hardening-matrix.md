@@ -2,6 +2,13 @@
 
 This matrix tracks production hardening posture across security, reliability, operations, and governance.
 
+## Document Control
+
+- Status: Active
+- Owner: Security/Ops/Backend
+- Last updated: 2026-04-14
+- Canonical: Yes
+
 ## Scoring Legend
 
 - **Impact**: Low / Medium / High / Critical
